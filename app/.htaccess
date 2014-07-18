@@ -1,0 +1,6 @@
+Order Allow,Deny
+Deny from all
+
+#<Files "main.php">
+#	Allow from all
+#</Files>

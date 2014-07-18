@@ -1,0 +1,11 @@
+{
+    "name": "solver/shake",
+    "homepage": "http://www.solver.bg",
+    "license": "Apache-2.0",
+    "autoload": {
+		"classmap": ["app/classes/"]
+    },
+    "require": {
+        "php": ">=5.4.11"
+    }
+}

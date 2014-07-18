@@ -1,0 +1,6 @@
+/.project
+/.settings
+/.buildpath
+/app/composer.lock
+/*.sublime-workspace
+/*.sublime-project

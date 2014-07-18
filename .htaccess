@@ -1,0 +1,11 @@
+Options -Indexes
+DirectorySlash Off
+DirectoryIndex main.php
+
+RewriteEngine On
+
+RewriteRule \.(ctrl|view)\.php([?/]|$) - [F,L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . main.php
