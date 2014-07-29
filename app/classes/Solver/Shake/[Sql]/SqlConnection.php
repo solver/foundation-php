@@ -6,13 +6,20 @@ use PDOStatement;
 use PDOException;
 
 /**
- * This is a forward compatible subset of the full Solver\Shake\SqlConnection class, supports only MySQL.
+ * This is a forward compatible subset of the full Solver\Shake\SqlConnection class, supports MySQL and SQLite for now.
  * 
  * @author Stan Vass
  * @copyright © 2011-2014 Solver Ltd. (http://www.solver.bg)
  * @license Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
  */
 class SqlConnection {
+	/**
+	 * Database type ("sqlite" or "mysql").
+	 * 
+	 * @var string
+	 */
+	var $type;
+	
 	/**
 	 * @var array
 	 */
@@ -39,11 +46,15 @@ class SqlConnection {
 	 * @param array $config
 	 * Supported $config keys:
 	 * 
+	 * For MySQL:
 	 * - String "host", required.
 	 * - Int "port", optional.
 	 * - String "user", required.
 	 * - String "password", required.
 	 * - String "database", required.
+	 * 
+	 * For SQLite:
+	 * - String "file", required. Use ":memory:" to create a temp database, or an absolute filepath to an SQLite db.
 	 */
 	public function __construct($config) {
 		$this->config = $config;
@@ -54,20 +65,44 @@ class SqlConnection {
 		
 		try {
 			$config = $this->config;
-			$this->handle = new PDO('mysql:host=' . $config['host'].
-									(isset($config['port'])?':' . $config['port']:'').
-									';dbname=' . $config['database'], 
-									$config['user'], 
-									$config['password']
-							);
 			
+			// SQLite.
+			if (isset($config['file'])) {
+				$this->handle = new PDO('sqlite:' . $config['file']);
+				
+				$this->transIsoLevels = $this->transIsoLevelsSqlite;
+				
+				$this->type = 'sqlite';
+			} 
+			
+			// MySQL.
+			else {
+				$this->handle = new PDO('mysql:host=' . $config['host'].
+					(isset($config['port'])?':' . $config['port']:'').
+					';dbname=' . $config['database'], 
+					$config['user'], 
+					$config['password']
+				);
+				
+				$this->transIsoLevels = $this->transIsoLevelsStandard;
+				
+				$this->type = 'mysql';
+			}
 			$this->handle->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		} catch (PDOException $e) {
 			throw new SqlConnectionException($e->getMessage(), $e->getCode(), $e);
 		}
 	}
 	
-	protected $transIsoLevels = [
+	protected $transIsoLevels;
+	
+	protected $transIsoLevelsSqlite = [
+		'DEFERRED' => 1, 
+		'IMMEDIATE' => 2, 
+		'EXCLUSIVE' => 3,
+	];
+	
+	protected $transIsoLevelsStandard = [
 		'READ UNCOMMITTED' => 1,
 		'READ COMMITTED' => 2,
 		'REPEATABLE READ' => 3,
@@ -129,10 +164,15 @@ class SqlConnection {
 		if (!$this->open) $this->open();
 		
 		if ($this->lastId === null) {
-			$result = $this->query('SELECT LAST_INSERT_ID()')->fetchOne(0);
+			if ($this->type === 'sqlite') {
+				$result = $this->query('SELECT last_insert_rowid()')->fetchOne(0);
+			} else {
+				$result = $this->query('SELECT LAST_INSERT_ID()')->fetchOne(0);
+			}
+			
 			$this->lastId = $result;
 		}
-		
+
 		return $this->lastId;
 	}
 	
@@ -221,18 +261,39 @@ class SqlConnection {
 	 * Quoted value.
 	 */
 	public function quoteIdentifier($identifier, $respectDots = false) {
+		// TODO: Quoting identifiers doesn't need an open connection, but it needs the $this->type, so for now, as a workaround we open it.		
+		if (!$this->open) $this->open();
+		
 		if (!\is_array($identifier)) {
-			return $respectDots 
-				? '`' . \str_replace(['`', '.'], ['``', '`.`'], $identifier) . '`'
-				: '`' . \str_replace('`', '``', $identifier) . '`';
+			switch ($this->type) {
+				case 'mysql':
+					return $respectDots 
+					? '`' . \str_replace(['`', '.'], ['``', '`.`'], $identifier) . '`'
+					: '`' . \str_replace('`', '``', $identifier) . '`';
+					break;
+				case 'sqlite':
+// 				case 'pgsql':
+					return $respectDots 
+					? '"' . \str_replace(['"', '.'], ['""', '"."'], $identifier) . '"'
+					: '"' . \str_replace('"', '""', $identifier) . '"';
+					break;
+// 				case 'mssql':	
+// 					return $respectDots 
+// 					? '"' . \str_replace(['"', '.'], ['""', '"."'], $identifier) . '"'
+// 					: '"' . \str_replace('"', '""', $identifier) . '"';
+// 					break;
+				default:
+					throw new \Exception('Server not supported.');
+			}
 		} else {		
-			foreach ($identifier as & $i) {
+			foreach ($identifier as $i) {
 				$i = $this->quoteIdentifier($i);
 			}
-			unset($i);
 			
 			return $identifier;
 		}
+		
+
 	}
 	
 	/**
@@ -291,9 +352,13 @@ class SqlConnection {
 			throw new \Exception('Unknown isolation level "' . $isolation . '".');
 		}
 		
-		$this->execute('SET TRANSACTION ISOLATION LEVEL ' . $isolation);
-		$this->execute('BEGIN');
-		
+		if ($this->type === 'sqlite') { // Pgsql also supports this, for when I add it.
+			$this->exec('BEGIN ' . $isolation);
+		} else {
+			$this->execute('SET TRANSACTION ISOLATION LEVEL ' . $isolation);
+			$this->execute('BEGIN');
+		}
+				
 		try {
 			$result = $function();
 			if ($result === false) {
