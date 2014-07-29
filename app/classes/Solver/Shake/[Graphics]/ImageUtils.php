@@ -47,10 +47,17 @@ class ImageUtils {
 	 * files have an internal resolution of 8x8 pixel blocks, so when multiple images are combined in a single sprite
 	 * sheet (or other similar operations), it's helpful to snap the size to 8px to match the blocks for best quality.
 	 * 
-	 * Keep in mind snapping will product slight ratio distortion (not perceptible for small snap values). 
+	 * Anapping may produce slight ratio distortion, but it's not perceptible for small snap values. 
+	 * 
+	 * # bool "upsample"
+	 * Default true. Set to false to avoid small images being blown up in size. This is typically unwanted. If
+	 * upsampling is disabled, the image will be just recompressed with the given quality option without modification.
+	 * 
+	 * The "snap" setting doesn't apply in this case (as width/height won't be modified).
 	 */
 	public static function resize($sourceFilepath, $targetFilepath, $targetWidth, $targetHeight, array $options = null) {
 		static $defaults = [
+			'upsample' => true,
 			'cover' => false,
 			'crop' => false,
 			'quality' => 0.75,
@@ -115,15 +122,20 @@ class ImageUtils {
 			}
 		}
 		
-		if ($options['snap'] != 1) {
-			$snap = $options['snap'];
-			$targetWidth = (int) ($snap * \round($targetWidth / $snap)); 
-			$targetHeight = (int) ($snap * \round($targetHeight / $snap)); 
+		if ($options['upsample'] == false && ($targetWidth > $sourceWidth || $targetHeight > $sourceHeight)) {
+			$target = $source;
+		} else {
+			if ($options['snap'] != 1) {
+				$snap = $options['snap'];
+				$targetWidth = (int) ($snap * \round($targetWidth / $snap)); 
+				$targetHeight = (int) ($snap * \round($targetHeight / $snap)); 
+			}
+			
+			$target = \imagecreatetruecolor($targetWidth, $targetHeight);
+		
+			\imagecopyresampled($target, $source, 0, 0, $sourceCopyX, $sourceCopyY, $targetWidth, $targetHeight, $sourceCopyWidth, $sourceCopyHeight);
 		}
 		
-		$target = \imagecreatetruecolor($targetWidth, $targetHeight);
-		
-		\imagecopyresampled($target, $source, 0, 0, $sourceCopyX, $sourceCopyY, $targetWidth, $targetHeight, $sourceCopyWidth, $sourceCopyHeight);
 		
 		\imagejpeg($target, $targetFilepath, (int) (100 * $options['quality']));
 	}
