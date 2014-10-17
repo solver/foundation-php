@@ -1,8 +1,8 @@
 {
-    "name": "solver/shake",
+    "name": "solver/foundation",
     "homepage": "http://www.solver.bg",
     "license": "Apache-2.0",
-    "description": "A fast, small PHP framework for building and organizing large web projects.",
+    "description": "A fast, small collection of PHP components for building and organizing large web projects.",
     "autoload": {
 		"classmap": ["app/classes/"]
     },
