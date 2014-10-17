@@ -181,6 +181,14 @@ class Core {
 					$symbolName = \preg_replace('/\s*\[.*?\]\s*/', '', $symbolName);
 					$symbolName = \preg_replace('/\\\\+/', '\\', $symbolName);
 					
+					// Legacy Solver framework "Flow" used extension ".class.php" for classes. "Flow" also had supported
+					// arbitrary folders for class placement, without namespacing. To support loading these classes we 
+					// filter out ".class" and any namespace when we detect a Flow class. This should be removed when we
+					// no longer have Flow code to maintain.
+					if (\preg_match('/\.class$/D', $symbolName)) {
+						$symbolName = \preg_replace('/(.*\\\\)|\.class$/D', '', $symbolName);
+					}
+					
 					// Using quick heuristics to detect & support legacy classes using underscores (vs. namespaces).
 					$symbolLegacyName = \str_replace('\\', '_', $symbolName);
 				
