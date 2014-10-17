@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Thrown by SqlConnection & SqlStatement instances.

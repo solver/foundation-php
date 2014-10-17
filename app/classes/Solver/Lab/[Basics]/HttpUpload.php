@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Wraps a single $_FILES entry into an object. See InputFromGlobals for automatically producing these out of a $_FILES

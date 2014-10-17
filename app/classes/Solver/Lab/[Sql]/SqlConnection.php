@@ -1,12 +1,12 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 use PDO;
 use PDOStatement;
 use PDOException;
 
 /**
- * This is a forward compatible subset of the full Solver\Shake\SqlConnection class, supports MySQL and SQLite for now.
+ * This is a forward compatible subset of the full Solver\Lab\SqlConnection class, supports MySQL and SQLite for now.
  * 
  * @author Stan Vass
  * @copyright © 2011-2014 Solver Ltd. (http://www.solver.bg)
@@ -119,7 +119,7 @@ class SqlConnection {
 	 * Optional (default = null). A list of values that will be "quoted into" the $query in place of question marks (see
 	 * quoteInto).
 	 * 
-	 * @return \Solver\Shake\SqlStatement
+	 * @return \Solver\Lab\SqlStatement
 	 */
 	public function query($sql, array $values = null) {		
 		if (!$this->open) $this->open();

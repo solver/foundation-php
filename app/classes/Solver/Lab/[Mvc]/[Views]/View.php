@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * This class existing to hide the private properties of the parent from templates.

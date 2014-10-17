@@ -5,8 +5,8 @@
  * This file sets up the app, it's the only file Apache invokes directly for the entire site.
  */
  
-use Solver\Shake\Router;
-use Solver\Shake\InputFromGlobals;
+use Solver\Lab\Router;
+use Solver\Lab\InputFromGlobals;
 
 /*
  * Define global constants.
@@ -34,7 +34,7 @@ function debuglog($message) {
 
 require __DIR__ . '/core.php';
 
-Solver\Shake\Core::init([
+Solver\Lab\Core::init([
 	'classes' => '',
 	'templates' => '',
 ]);
@@ -50,7 +50,7 @@ Solver\Shake\Core::init([
 // Output has to be buffered so we can send proper headers to close the connection early (see below).
 ob_start();
 
-$router = new Router(require __DIR__ . '/config/Solver-Shake-Router.php');
+$router = new Router(require __DIR__ . '/config/Solver-Lab-Router.php');
 $router->dispatch(InputFromGlobals::get());
 
 if (!\DEBUG) { // We don't run the following headers in debug mode so we can see all errors.

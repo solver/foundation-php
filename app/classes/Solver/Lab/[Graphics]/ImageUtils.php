@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Quick image processing utilities.

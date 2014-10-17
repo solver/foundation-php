@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A log capable of holding error events.

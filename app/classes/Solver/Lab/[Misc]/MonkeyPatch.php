@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Utilites of last resort allowing you to monkey-patch broken third party PHP libraries, when forking the source to fix

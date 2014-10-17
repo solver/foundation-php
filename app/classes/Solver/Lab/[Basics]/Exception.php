@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * The purpose of this class is to allow $code to be a string (the native \Exception class only allows integers).

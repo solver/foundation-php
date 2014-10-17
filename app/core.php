@@ -1,8 +1,8 @@
 <?php
-namespace Solver\Shake { // This file contains multiple namespace blocks.
+namespace Solver\Lab { // This file contains multiple namespace blocks.
 
 /** 
- * Startup routines for Solver\Shake.
+ * Startup routines for Solver\Lab.
  * 
  * @author Stan Vass
  * @copyright © 2014 Solver Ltd. (http://www.solver.bg)
@@ -205,12 +205,12 @@ class Core {
 		return $map;
 	}
 } // Class Core.
-} // Namespace Solver\Shake.
+} // Namespace Solver\Lab.
 
 namespace {
 	// TRICKY: This should be defined in the root namespace.
 	function __autoload($class) {
-		$path = Solver\Shake\Core::resolve($class);
+		$path = Solver\Lab\Core::resolve($class);
 		if ($path !== false) require $path;
 	}
 }

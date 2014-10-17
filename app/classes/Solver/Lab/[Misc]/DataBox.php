@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Reading information from deeply nested arrays, often coming from untrusted sources may mean a lot of isset() & data
@@ -191,6 +191,6 @@ class DataBox {
 	}
 	
 	private function errorReadOnly() {
-		throw new \Exception('This array is wrapped in an instance of Solver\Shake\DataBox, which makes it read-only. You can get a copy of the entire array via method unbox() and modify the copy instead.');
+		throw new \Exception('This array is wrapped in an instance of Solver\Lab\DataBox, which makes it read-only. You can get a copy of the entire array via method unbox() and modify the copy instead.');
 	}
 }

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Takes multiple formats and runs the value through each of them in order, feeding the output of one as the input of
@@ -15,7 +15,7 @@ class PipedFormat extends AbstractFormat implements Format {
 	protected $formats;
 			
 	/**
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * 
 	 * @return self
 	 */

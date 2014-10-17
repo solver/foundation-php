@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /** 
  * Prepares an array of input values from PHP's globals (as used by Router's dispatch method).

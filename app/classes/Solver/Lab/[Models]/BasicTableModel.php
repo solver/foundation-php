@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Implements an SQL-backed basic table model with optional local (in memory) cache for reads (writes are committed
@@ -26,7 +26,7 @@ class BasicTableModel {
 	protected $decoder;
 	
 	/**
-	 * @var \Solver\Shake\SqlConnection
+	 * @var \Solver\Lab\SqlConnection
 	 */
 	protected $sqlConnection;
 	
@@ -37,7 +37,7 @@ class BasicTableModel {
 	protected $tableName;
 	
 	/**
-	 * @param \Solver\Shake\SqlConnection $sqlConnection
+	 * @param \Solver\Lab\SqlConnection $sqlConnection
 	 * @param string $idName
 	 * Optional (default = 'id'). The field name that represents the (primary) key of the record.
 	 * 

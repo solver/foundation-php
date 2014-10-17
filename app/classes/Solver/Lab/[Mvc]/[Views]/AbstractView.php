@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A simple host for rendering templates. The reason there are separate AbstractView & View classes is to hide the  
@@ -13,28 +13,28 @@ abstract class AbstractView {
 	/**
 	 * The router which invoked the active controller instance.
 	 * 
-	 * @var \Solver\Shake\Router
+	 * @var \Solver\Lab\Router
 	 */
 	protected $router;
 		
 	/**
 	 * The controller which invoked this view instance.
 	 * 
-	 * @var \Solver\Shake\Controller
+	 * @var \Solver\Lab\Controller
 	 */
 	protected $controller;
 	
 	/**
 	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
 	 * 
-	 * @var \Solver\Shake\DataBox
+	 * @var \Solver\Lab\DataBox
 	 */
 	protected $data;
 	
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
 	 * 
-	 * @var \Solver\Shake\ControlledLog
+	 * @var \Solver\Lab\ControlledLog
 	 */
 	protected $log;
 	

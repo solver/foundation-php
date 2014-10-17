@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * TODO: PHPDoc.
@@ -45,7 +45,7 @@ class ListFormat extends AbstractFormat implements Format {
 	}
 	
 	/**
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * 
 	 * @return self
 	 */

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Supports infrastructure for extensible, searchable application level events.
@@ -8,7 +8,7 @@ namespace Solver\Shake;
  */
 class EventService {
 	/**
-	 * @var \Solver\Shake\SqlConnection
+	 * @var \Solver\Lab\SqlConnection
 	 */
 	protected $sqlConnection;
 	

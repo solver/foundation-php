@@ -1,11 +1,11 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 use PDO;
 use PDOStatement;
 
 /**
- * This is a forward compatible subset of the full Solver\Shake\SqlStatement class, supports only MySQL.
+ * This is a forward compatible subset of the full Solver\Lab\SqlStatement class, supports only MySQL.
  * 
  * Contains and executes a single SQL query, returns results.
  * 

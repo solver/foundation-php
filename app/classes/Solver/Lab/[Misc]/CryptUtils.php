@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Assists in creating and checking properly salted blowfish password hashes (using crypt()).

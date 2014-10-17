@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * TODO: PHPDoc.
@@ -61,7 +61,7 @@ class DictFormat extends AbstractFormat {
 	
 	/**
 	 * @param string $name
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * @return self
 	 */
 	public function required($name, Format $format = null) {
@@ -74,7 +74,7 @@ class DictFormat extends AbstractFormat {
 	
 	/**
 	 * @param string $name
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * @return self
 	 */
 	public function optional($name, Format $format = null) {

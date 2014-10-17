@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Utilities for working with & processing PHP arrays representing a dictionary (i.e. associative arrays).

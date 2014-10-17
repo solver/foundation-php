@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Returns a PHP boolean value if the input can be interpreted as boolean.

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Logs messages, warnings, errors at the controller level, which are passed to the view for display.

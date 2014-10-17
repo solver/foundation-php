@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Provides call() and callOneOf(), which directly bind an input value to a call of a public method by the same name.

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Non-fatal Controller exception, results in conditions handled by the base Controller class or the router invoking

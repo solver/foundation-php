@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Base class for controllers.
@@ -10,17 +10,17 @@ namespace Solver\Shake;
  */
 abstract class Controller {
 	/**
-	 * A dict of inputs as passed by the router (for details, see \Solver\Shake\Router::dispatch()), wrapped in a 
+	 * A dict of inputs as passed by the router (for details, see \Solver\Lab\Router::dispatch()), wrapped in a 
 	 * DataBox instance for convenient data access.
 	 *
-	 * @var \Solver\Shake\DataBox
+	 * @var \Solver\Lab\DataBox
 	 */
 	protected $input;
 
 	/**
 	 * The router which invoked this controller instance.
 	 *
-	 * @var \Solver\Shake\Router
+	 * @var \Solver\Lab\Router
 	 */
 	protected $router;
 
@@ -38,11 +38,11 @@ abstract class Controller {
 	 *
 	 * This is part of the "viewmodel" in the framework. The other part is property $data.
 	 *
-	 * @var \Solver\Shake\ControllerLog
+	 * @var \Solver\Lab\ControllerLog
 	 */
 	protected $log = [];
 
-	final public function __construct(array $input, \Solver\Shake\Router $router) {
+	final public function __construct(array $input, \Solver\Lab\Router $router) {
 		try {
 			$this->input = new DataBox($input);
 			$this->router = $router;

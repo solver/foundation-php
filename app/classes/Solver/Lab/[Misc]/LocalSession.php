@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Creates a session-bound array under a random unique key, which can be sent to the client side to identify the piece

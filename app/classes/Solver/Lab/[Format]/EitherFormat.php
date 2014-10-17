@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Tests the given formats in sequence, until one of them successfully validates the value. Each format will get the 
@@ -15,7 +15,7 @@ class EitherFormat extends AbstractFormat implements Format {
 	protected $formats;
 			
 	/**
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * 
 	 * @return self
 	 */
@@ -30,7 +30,7 @@ class EitherFormat extends AbstractFormat implements Format {
 	/**
 	 * TODO: Old name for add(). Remove when no longer used.
 	 *
-	 * @param \Solver\Shake\Format $format
+	 * @param \Solver\Lab\Format $format
 	 * 
 	 * @return self
 	 */

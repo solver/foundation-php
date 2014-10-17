@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Helpers for rendering arrays to several types of SQL expressions. Throws a generic exception on bad input formatting.

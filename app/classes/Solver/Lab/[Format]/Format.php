@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * TODO: PHPDoc.
@@ -24,7 +24,7 @@ interface Format {
 	 * @param mixed $value
 	 * Value to filter and validate.
 	 * 
-	 * @param \Solver\Shake\ErrorLog $log
+	 * @param \Solver\Lab\ErrorLog $log
 	 * Any errors will be logged here (valid values never log errors, invalid values always log 1 or more errors).
 	 * 
 	 * @param string $path

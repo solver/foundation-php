@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Implements a log that can only have error events in it, plus the ability to throw a ServiceException when there

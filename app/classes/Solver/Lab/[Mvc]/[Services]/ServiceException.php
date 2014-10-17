@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * An exception containing one or more error events. This exception is thrown on domain & validation errors occuring in
@@ -15,7 +15,7 @@ namespace Solver\Shake;
  */
 class ServiceException extends \Exception implements EventProvider {
 	/**
-	 * @var \Solver\Shake\ServiceLog
+	 * @var \Solver\Lab\ServiceLog
 	 */
 	protected $log;
 	

@@ -2,7 +2,7 @@
 /*
  * Router configuration.
  * 
- * List routes from least to most specific (the last match gets dispatched). For details, see class Solver\Shake\Router.
+ * List routes from least to most specific (the last match gets dispatched). For details, see class Solver\Lab\Router.
  */
 return [
 	// Begin each route path with a "/". Unless you have a file ext. (".json", ".xml" etc.), end with a "/" as well.

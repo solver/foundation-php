@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A basic utility producing random keys using a predefined alphabet. Use this for producing random keys, tokens etc.

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A quick & simple facade hooking deeply into Swift Mailer, with two purposes:

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A blank string is a string which is empty or contains only whitespace. This class is simply a shortcu for the 

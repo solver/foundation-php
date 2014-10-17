@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * This format falls in the group of "convertors". Simple formats which just take one kind of format and output another,

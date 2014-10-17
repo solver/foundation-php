@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * Aids in implements an idea similar to Lisp-like lazy evaluation macro. Unlike Lisp macros, a lazy expression is

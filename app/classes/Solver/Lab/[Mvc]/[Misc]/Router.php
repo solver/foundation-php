@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Shake;
+namespace Solver\Lab;
 
 /**
  * A barebones router.
@@ -179,7 +179,7 @@ class Router {
 				} else {
 					$class = $handler['call'];
 					$controller = new $class($input, $this);
-					if (!($controller instanceof Controller)) throw new Exception('Class "' . $class  . '" should be an instance of Solver\Shake\Controller.');
+					if (!($controller instanceof Controller)) throw new Exception('Class "' . $class  . '" should be an instance of Solver\Lab\Controller.');
 				}
 			} catch (ControllerException $e) {
 				$code = $e->getCode();
