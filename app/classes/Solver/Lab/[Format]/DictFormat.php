@@ -24,7 +24,7 @@ class DictFormat extends AbstractFormat {
 			list($name, $format, $required) = $field;
 			
 			if (\key_exists($name, $value)) {
-				$filtered[$name] = $format ? $format->extract($value[$name], $log, $path === null ? $name : $path . '.' . $name) : $name;
+				$filtered[$name] = $format ? $format->extract($value[$name], $log, $path === null ? $name : $path . '.' . $name) : $value[$name];
 			} 
 			
 			else if ($required) {
