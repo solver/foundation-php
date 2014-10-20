@@ -175,10 +175,10 @@ class Router {
 			
 			try {
 				if ($handler['call'] instanceof \Closure) {
-					$handler['call']($input, $this);
+					$handler['call']($input);
 				} else {
 					$class = $handler['call'];
-					$controller = new $class($input, $this);
+					$controller = new $class($input);
 					if (!($controller instanceof Controller)) throw new Exception('Class "' . $class  . '" should be an instance of Solver\Lab\Controller.');
 				}
 			} catch (ControllerException $e) {

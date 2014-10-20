@@ -9,16 +9,11 @@ namespace Solver\Lab;
  * @copyright © 2014 Solver Ltd. (http://www.solver.bg)
  * @license Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
  */
-abstract class AbstractView {
-	/**
-	 * The router which invoked the active controller instance.
-	 * 
-	 * @var \Solver\Lab\Router
-	 */
-	protected $router;
-		
+abstract class AbstractView {		
 	/**
 	 * The controller which invoked this view instance.
+	 * 
+	 * TODO: Decide if we really need the controller to pass reference to itself and for us to store it (maybe not).
 	 * 
 	 * @var \Solver\Lab\Controller
 	 */
@@ -102,8 +97,7 @@ abstract class AbstractView {
 	 */
 	private $renderedTemplateIds = [];
 	
-	public function __construct(Router $router, Controller $controller, array $data, ControllerLog $log) {
-		$this->router = $router;
+	public function __construct(Controller $controller, array $data, ControllerLog $log) {
 		$this->controller = $controller;
 		$this->data = new DataBox($data);
 		$this->log = $log;

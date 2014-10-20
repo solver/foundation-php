@@ -18,13 +18,6 @@ abstract class Controller {
 	protected $input;
 
 	/**
-	 * The router which invoked this controller instance.
-	 *
-	 * @var \Solver\Lab\Router
-	 */
-	protected $router;
-
-	/**
 	 * A dict of parameters, which the controller accumulates, and passes to the view(s).
 	 *
 	 * This is part of the "viewmodel" in the framework. The other part is property $log.
@@ -42,10 +35,9 @@ abstract class Controller {
 	 */
 	protected $log = [];
 
-	final public function __construct(array $input, \Solver\Lab\Router $router) {
+	final public function __construct(array $input) {
 		try {
 			$this->input = new DataBox($input);
-			$this->router = $router;
 			$this->log = new ControllerLog();
 			$this->main();
 		} catch (\Exception $e) {
@@ -88,7 +80,6 @@ abstract class Controller {
 	 */
 	final protected function renderView($templateId = null) {
 		$view = new View(
-			$this->router,
 			$this,
 			$this->data,
 			$this->log
