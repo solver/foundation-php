@@ -65,8 +65,32 @@ class ImageUtils {
 		];
 		
 		if ($options === null) $options = $defaults; else $options += $defaults;
+		
+		if (\preg_match('/\.(\w+)$/Di', $sourceFilepath, $matches)) {
+			$extension = $matches[1];
+		} else {
+			$extension = null;
+		}
+		
+		switch ($extension) {
+			case 'jpeg':
+			case 'jpe':
+			case 'jpg':
+				$source = \imagecreatefromjpeg($sourceFilepath);
+				break;
 				
-		$source = \imagecreatefromjpeg($sourceFilepath);
+			case 'png':
+				$source = \imagecreatefrompng($sourceFilepath);
+				break;
+				
+			case 'png':
+				$source = \imagecreatefrompng($sourceFilepath);
+				break;
+			
+			default:
+				throw new \Exception('Unknown or unsupported file extension for file: "' . $sourceFilepath . '".');
+		}
+		
 				
 		$sourceWidth = \imagesx($source);
 		$sourceHeight = \imagesy($source);
