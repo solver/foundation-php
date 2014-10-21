@@ -112,7 +112,7 @@ class ParamValidator {
 	 * 
 	 * @throws \Exception
 	 */
-	public static function validate($name = null, $value, $schema) {
+	public static function validate($name, $value, $schema) {
 		if (\is_string($schema)) $schema = [$schema];
 
 		switch ($schema[0]) {
