@@ -47,7 +47,10 @@ abstract class Controller {
 		try {
 			$this->input = new DataBox($input);
 			$this->log = new ControllerLog();
-			$this->main();
+			
+			// REVISE: Calling main() automatically prevents a controller from being instantiated and configured in one
+			// place, and passed to another place to be called. Consider removing this call from here.
+			$this->main(); 
 		} catch (\Exception $e) {
 			if ($e instanceof ControllerException) {
 				if ($e->getCode() != 0) throw $e;
