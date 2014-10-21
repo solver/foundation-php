@@ -1,14 +1,22 @@
 <?php
+/*
+ * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at:
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 namespace Solver\Lab;
 
 /**
  * Helpers for rendering arrays to several types of SQL expressions. Throws a generic exception on bad input formatting.
  * 
  * TODO: The code is fine, but it could use a few more checks for format strictness in places. Audit validation rules.
- * 
- * @author Stan Vass
- * @copyright © 2008-2014 Solver Ltd. (http://www.solver.bg)
- * @license Apache License, Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0)
  */
 class SqlExpression {
 	/**
