@@ -47,10 +47,10 @@ class Session {
 	 * echo $count; // Will output 1, 2, 3, 4 as you refresh the page.
 	 * </code>
 	 * 
-	 * IMPORTANT: If you need to pass a session-bound variable, always pass by reference (i.e. "&"), otherwise you're
-	 * passing only the current value (i.e. so then changing the value on the other side won't update the session). One
-	 * exception to this rule is if the value in your variable is an object (ex. stdClass), which is always passed by 
-	 * reference.
+	 * IMPORTANT: If you need to pass a session-bound variable, and you'd like the session binding semantics to be
+	 * preserved with the receiver, always pass by reference (i.e. "&"), otherwise you're passing only the current value
+	 * (i.e. so then changing the value on the other side won't update the session). One exception to this rule is if
+	 * the value in your variable is an object (ex. stdClass), which is always passed by reference.
 	 * 
 	 * @param string $name
 	 * A unique name used to store the data in the session. It can be convenient to use __CLASS__ and __METHOD__ (for
