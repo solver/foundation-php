@@ -89,38 +89,45 @@ class Core {
 	 * @return string|false
 	 * Full path to the resolved file. False if the file was not found.
 	 */
-	public static function resolve($symbolId) {
+	public static function resolve($symbolId) {		
 		/*
-		 * Try Composer's map.
+		 * Try the maps.
+		 * 
+		 * Note: Composer has no automatic rescan on stale map, we do, so always query native 1st (above), Composer 2nd.
+		 * We also no longer trust Composer's map to be up-to-date (it isn't when a module in the vendor dir is being
+		 * worked on) hence the file check applies to Composer too.
 		 */
 		
-		$map = self::$composerMap;
-		
-		if (isset($map[$symbolId])) {
-			return $map[$symbolId];
-		}
-		
-		/*
-		 * Try the native map.
-		 */
-		
-		$map = self::$nativeMap;
-		
-		if (isset($map[$symbolId])) {
-			$path = \APP_ROOT . '/' . $map[$symbolId];
-							
+		$getVerified = function ($path) use ($symbolId) {
 			// TODO: This file_exists() check can go once the error-to-exception mapper is ported.
 			if (!\file_exists($path)) { 
 				// The file was moved/renamed/deleted/etc. Stale cache. Remap.
-				$map = self::$nativeMap = self::map();
-				if (isset($map[$symbolId])) {
-					return $map[$symbolId];
+				// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
+				// can have the native map overlap Composer by adding to it select /vendor components under development.
+				self::$nativeMap = self::map();
+				
+				if (isset(self::$nativeMap[$symbolId])) {
+					return self::$nativeMap[$symbolId];
 				} else {
 					return false;
 				}
 			} else {
 				return $path;
 			}
+		};
+		
+		$map = self::$nativeMap;
+				
+		if (isset($map[$symbolId])) {
+			$path = $getVerified(\APP_ROOT . '/' . $map[$symbolId]);			
+			if ($path !== false) return $path;
+		}
+		
+		$map = self::$composerMap;
+		
+		if (isset($map[$symbolId])) {
+			$path = $getVerified($map[$symbolId]);			
+			if ($path !== false) return $path;
 		}
 		
 		/*
