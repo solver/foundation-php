@@ -20,7 +20,7 @@ namespace Solver\Lab;
  */
 trait ImportEventsTrait {
 	/**
-	 * Imports a all events from an ErrorProvider into the log with an optional path (re)map.
+	 * Imports all events from an ErrorProvider into the log with an optional path (re)map.
 	 *  
 	 * Examples of EventProvider are this ControllerLog, Processor and ModelException.
 	 * 
@@ -30,8 +30,14 @@ trait ImportEventsTrait {
 	 * @param array $map
 	 * A dict of "old base" => "new base" rules, which will be used to alter the paths of the imported events.
 	 * 
-	 * Set the map from less to more specific mappings (it's processed in reverse). The base of the event paths is 
-	 * replaced. Events with path set to null (default) are not affected, as null is treated as "no path".
+	 * Be aware that for every event path, ONLY ONE rule will be matched and applied, and this is the LAST RULE that
+	 * matches the path base in your event (rules are processed in reverse). The reverse processing is designed, so you
+	 * can lay out your map naturally from least to most specific rules (the most specific rule will apply to your 
+	 * path).
+	 * 
+	 * Note that events with path set to null or empty string (both semantically identical, meaning "no path") can have
+	 * a path assigned to them by passing [null => 'foo.bar']. The result for path '' will be 'foo.bar', non-empty paths
+	 * won't be affected.
 	 * 
 	 * TODO: This certainly needs to be explained better.
 	 */
@@ -47,12 +53,17 @@ trait ImportEventsTrait {
 			foreach ($eventProvider->getAllEvents() as $event) {				
 				$path = $event['path'];
 				
-				if ($path !== null && \preg_match($regex, $path, $matches)) {
+				// Semantically equivalent (null is the canonical value for it).
+				if ($path === null) $path = '';
+					
+				if (\preg_match($regex, $path, $matches)) {
 					$replacement = $map[$matches[1]];
 					if ($replacement === '') $path = $matches[3];
 					else $path = $replacement . ($matches[3] === '' ? '' : '.') . $matches[3];
 				}
 
+				if ($path === '') $path = null;
+				
 				$this->addError($path, $event['message'], $event['code'], $event['details']);
 			}
 		} else {
