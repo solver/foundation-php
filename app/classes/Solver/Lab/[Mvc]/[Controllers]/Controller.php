@@ -91,7 +91,6 @@ abstract class Controller {
 	 */
 	final protected function renderView($templateId = null) {
 		$view = new View(
-			$this,
 			$this->data,
 			$this->log
 		);

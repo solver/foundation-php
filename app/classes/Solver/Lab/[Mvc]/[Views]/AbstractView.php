@@ -17,16 +17,7 @@ namespace Solver\Lab;
  * A simple host for rendering templates. The reason there are separate AbstractView & View classes is to hide the  
  * private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
-abstract class AbstractView {		
-	/**
-	 * The controller which invoked this view instance.
-	 * 
-	 * TODO: Decide if we really need the controller to pass reference to itself and for us to store it (maybe not).
-	 * 
-	 * @var \Solver\Lab\Controller
-	 */
-	protected $controller;
-	
+abstract class AbstractView {	
 	/**
 	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
 	 * 
@@ -105,8 +96,7 @@ abstract class AbstractView {
 	 */
 	private $renderedTemplateIds = [];
 	
-	public function __construct(Controller $controller, array $data, ControllerLog $log) {
-		$this->controller = $controller;
+	public function __construct(array $data, ControllerLog $log) {
 		$this->data = new DataBox($data);
 		$this->log = $log;
 	}
