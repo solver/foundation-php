@@ -17,6 +17,18 @@ namespace Solver\Lab;
  * A log capable of holding error events.
  */
 interface ErrorLog {
+	/**
+	 * @param string $path
+	 * Error path. The recommended practice is to use "input.{fieldname}" for validation, and dots for deep input paths,
+	 * for example: "input.user.name". Path semantics for other error types is undefined and can be chosen depending on
+	 * your needs. 
+	 * 
+	 * If you need no path in your error, set it to null or empty string (null is canonical, but both mean "no path").
+	 * 
+	 * @param string $message
+	 * @param string $code
+	 * @param string $details
+	 */
 	public function addError($path = null, $message = null, $code = null, $details = null);
 	
 	// TODO: Maybe this shouldn't be here.

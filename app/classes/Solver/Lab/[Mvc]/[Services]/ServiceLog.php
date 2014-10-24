@@ -30,7 +30,8 @@ class ServiceLog implements ErrorLog, EventProvider {
 	public function addError($path = null, $message = null, $code = null, $details = null) {
 		$e = [];
 		$e['type'] = 'error';
-		$e['path'] = $path;
+		// Null and empty string both mean "no path", but null is the canonical value for it.
+		$e['path'] = $path === '' ? null : $path;
 		$e['message'] = $message;
 		$e['code'] = $code;
 		$e['details'] = $details;
