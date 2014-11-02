@@ -28,7 +28,7 @@ abstract class AbstractView {
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
 	 * 
-	 * @var \Solver\Lab\ControlledLog
+	 * @var \Solver\Lab\ControllerLog
 	 */
 	protected $log;
 	

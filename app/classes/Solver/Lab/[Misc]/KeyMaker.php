@@ -30,7 +30,7 @@ class KeyMaker {
 	 * Optional (default = null). A string of characters to use for creating the key. If you pass null (or nothing),
 	 * the default alphabet used will be all lowercase and uppercase latin letters plus all digits (total of 62
 	 * characters). The keys produced with the default alphabet can then be included verbatim without processing and
-	 * escaping in a wide range of mediums and encodings (ASCII, UTF-8, 7-bit encoding, URLs etc.).
+	 * escaping in a wide range of mediums and encodings (ASCII, UTF-8, 7-bit encoding, URLs, JSON etc.).
 	 * 
 	 * @return string
 	 * Random key string.

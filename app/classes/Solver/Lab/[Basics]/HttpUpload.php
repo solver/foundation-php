@@ -39,4 +39,17 @@ class HttpUpload {
 	public function getClientName() {
 		return $this->clientName;
 	}
+	
+	public function hasError() {
+		return $this->getErrorCode() === null;
+	}
+	
+	// Returns null if there's no error.
+	public function getErrorCode() {
+		if ($this->errorCode == 0) {
+			return null;
+		} else {
+			return (int) $this->errorCode;
+		}
+	}
 }
