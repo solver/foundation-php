@@ -63,6 +63,21 @@ class ParamValidator {
 	 * ]
 	 * 
 	 * [
+	 * 		// The value should be a boolean (PHP's is_bool()).
+	 * 		'bool', 
+	 * ]
+	 * 
+	 * [
+	 * 		// The value should be a string (PHP's is_string()).
+	 * 		'string', 
+	 * ]
+	 * 
+	 * [
+	 * 		// The value should be a number (PHP's is_integer() || is_float()).
+	 * 		'number', 
+	 * ]
+	 * 
+	 * [
 	 * 		// The value should be a scalar (PHP's is_scalar()).
 	 * 		'scalar', 
 	 * ]
@@ -114,7 +129,7 @@ class ParamValidator {
 	 */
 	public static function validate($name, $value, $schema) {
 		if (\is_string($schema)) $schema = [$schema];
-
+		
 		switch ($schema[0]) {
 			case "any":
 				return;
@@ -123,8 +138,16 @@ class ParamValidator {
 				if ($value !== null) self::errorMustBeType($name, 'null');
 				break;
 				
-			case "scalar":
-				if (!\is_scalar($value)) self::errorMustBeType($name, 'scalar');
+			case "bool":
+				if (!\is_bool($value)) self::errorMustBeType($name, 'bool');
+				break;
+				
+			case "string":
+				if (!\is_string($value)) self::errorMustBeType($name, 'string');
+				break;
+				
+			case "number":
+				if (!\is_integer($value) && !\is_float($value)) self::errorMustBeType($name, 'number');
 				break;
 				
 			case "array":
