@@ -76,7 +76,8 @@ class ListFormat extends AbstractFormat implements Format {
 			$count = \count($value);
 			
 			if ($count < $min) {
-				$log->addError($path, "Please provide a list with at least $min items.");
+				$noun = $min == 1 ? 'item' : 'items';
+				$log->addError($path, "Please provide a list with at least $min $noun.");
 				return false;
 			} else {
 				return true;
@@ -96,7 +97,8 @@ class ListFormat extends AbstractFormat implements Format {
 			$count = \count($value);
 			
 			if ($count > $max) {
-				$log->addError($path, "Please provide a list with at most $count items.");
+				$noun = $min == 1 ? 'item' : 'items';
+				$log->addError($path, "Please provide a list with at most $max $noun.");
 				return false;
 			} else {
 				return true;
@@ -110,7 +112,7 @@ class ListFormat extends AbstractFormat implements Format {
 	 * @return self
 	 */
 	public function testNotEmpty() {
-		$this->rules[] = ['test', function ($value, ErrorLog $log, $path) use ($max) {
+		$this->rules[] = ['test', function ($value, ErrorLog $log, $path) {
 			$count = \count($value);
 			
 			if ($count == 0) {

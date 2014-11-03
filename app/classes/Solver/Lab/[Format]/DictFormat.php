@@ -88,7 +88,7 @@ class DictFormat extends AbstractFormat {
 	public function optional($name, Format $format = null) {
 		if ($this->rules) throw new \Exception('You should call method optional() before any test*() or filter*() calls.');
 		
-		$this->fields[] = [$name, $format, true]; 
+		$this->fields[] = [$name, $format, false]; 
 		
 		return $this;
 	}
