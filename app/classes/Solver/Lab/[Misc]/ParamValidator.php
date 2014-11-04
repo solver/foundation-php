@@ -153,7 +153,10 @@ class ParamValidator {
 			case "array":
 				if (!\is_array($value)) self::errorMustBeType($name, 'array');
 				break;
-				
+								
+			case "scalar":
+				if (!\is_scalar($value)) self::errorMustBeType($name, 'scalar');
+				break;
 				
 			case "list":
 				if (!\is_array($value)) self::errorMustBeType($name, 'list');
@@ -247,7 +250,7 @@ class ParamValidator {
 				break;
 						
 			default:
-				throw new \Exception('Bad schema type "'. $schema['type'] . '".');
+				throw new \Exception('Bad schema type "'. $schema[0] . '".');
 		}
 	}
 	
