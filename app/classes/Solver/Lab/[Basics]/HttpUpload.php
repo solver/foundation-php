@@ -32,6 +32,19 @@ class HttpUpload {
 		$this->clientType = $clientType;
 	}
 	
+	// Returns null if there's no error.
+	public function getErrorCode() {
+		if ($this->errorCode == 0) {
+			return null;
+		} else {
+			return (int) $this->errorCode;
+		}
+	}
+	
+	public function hasError() {
+		return $this->getErrorCode() !== null;
+	}
+	
 	public function getTempName() {
 		return $this->tempName;
 	}
@@ -40,16 +53,11 @@ class HttpUpload {
 		return $this->clientName;
 	}
 	
-	public function hasError() {
-		return $this->getErrorCode() === null;
+	public function getClientType() {
+		return $this->clientType;
 	}
 	
-	// Returns null if there's no error.
-	public function getErrorCode() {
-		if ($this->errorCode == 0) {
-			return null;
-		} else {
-			return (int) $this->errorCode;
-		}
+	public function getSize() {
+		return $this->size;
 	}
 }
