@@ -17,6 +17,31 @@ namespace Solver\Lab;
  * Quick image processing utilities.
  */
 class ImageUtils {
+	protected static $cacheSourceImage = false;
+	protected static $cache = [];
+	
+	/**
+	 * Call this to enable source image caching in RAM. If you're producing multiple targets from one source
+	 * sequentially, this will speed up operation. Otherwise it'll just waste memory.
+	 * 
+	 * Caching is disabled by default.
+	 * 
+	 * TODO: This is hacky, but it'll do for now. Long term, we should decouple image loading and target generation.
+	 */
+	public static function enableSourceImageCache() {
+		self::$cacheSourceImage = true;
+	}
+	
+	/**
+	 * Disables the effect of enableSourceImageCache().
+	 * 
+	 * Caching is disabled by default.
+	 */
+	public static function disableSourceImageCache() {
+		self::$cacheSourceImage = false;
+		self::$cache = [];
+	}
+	
 	/**
 	 * Processes images (intended for photos) to a variety of sizes, for thumbnail generation and different devices.
 	 * 
@@ -28,14 +53,22 @@ class ImageUtils {
 	 * @param string $targetFilepath
 	 * Absolute filepath from where to write the image.
 	 * 
-	 * @param int $targetWidth
-	 * Desired target width.
+	 * @param int|null $targetWidth
+	 * Desired target width. Pass null to use the source width.
 	 * 
-	 * @param int $targetHeight
-	 * Desired target height.
+	 * @param int|null $targetHeight
+	 * Desired target height. Pass null to use the source height.
 	 *
 	 * @param array $options
 	 * Optional (default = null). This is a dict of options, with the following supported keys:
+	 * 
+	 * # bool "sourceFilepathForType"
+	 * Default null. Supply a filepath to be used for type detection (from its extension). The default behavior is
+	 * to use the extension from $sourceFilepath.
+	 * 
+	 * # bool "sourceMimeType"
+	 * Default null. Supply a MIME type that overrides the file extension of the $sourceFilepath. The default behavior
+	 * is to guess the MIME from the $sourceFilepath file extension.
 	 * 
 	 * # bool "cover"
 	 * Default false. If false, the image is resized to be "contained" within the target width and height (preserving
@@ -55,16 +88,26 @@ class ImageUtils {
 	 * files have an internal resolution of 8x8 pixel blocks, so when multiple images are combined in a single sprite
 	 * sheet (or other similar operations), it's helpful to snap the size to 8px to match the blocks for best quality.
 	 * 
-	 * Anapping may produce slight ratio distortion, but it's not perceptible for small snap values. 
+	 * Snapping may produce slight ratio distortion, but it's not perceptible for small snap values. 
 	 * 
 	 * # bool "upsample"
 	 * Default true. Set to false to avoid small images being blown up in size. This is typically unwanted. If
 	 * upsampling is disabled, the image will be just recompressed with the given quality option without modification.
 	 * 
 	 * The "snap" setting doesn't apply in this case (as width/height won't be modified).
+	 * 
+	 * @return array
+	 * Returns meta information about the source and target image.
+	 * 
+	 * A dict with keys:
+	 * 
+	 * - dict $source: With int keys $width and $height. 
+	 * - dict $target: Widht int keys $width and $height.
 	 */
 	public static function resize($sourceFilepath, $targetFilepath, $targetWidth, $targetHeight, array $options = null) {
 		static $defaults = [
+			'sourceFilepathForType' => null,
+			'sourceMimeType' => null,
 			'upsample' => true,
 			'cover' => false,
 			'crop' => false,
@@ -74,35 +117,49 @@ class ImageUtils {
 		
 		if ($options === null) $options = $defaults; else $options += $defaults;
 		
-		if (\preg_match('/\.(\w+)$/Di', $sourceFilepath, $matches)) {
-			$extension = $matches[1];
+		$sourceFilepathForType = isset($options['sourceFilepathForType']) ? $options['sourceFilepathForType'] : $sourceFilepath;
+		
+		if ($options['sourceMimeType']) {
+			$sourceMimeType = $options['sourceMimeType'];
 		} else {
-			$extension = null;
+			$sourceMimeType = self::getMimeTypeFromExtension($sourceFilepathForType);
 		}
 		
-		switch ($extension) {
-			case 'jpeg':
-			case 'jpe':
-			case 'jpg':
-				$source = \imagecreatefromjpeg($sourceFilepath);
-				break;
-				
-			case 'png':
-				$source = \imagecreatefrompng($sourceFilepath);
-				break;
-				
-			case 'png':
-				$source = \imagecreatefrompng($sourceFilepath);
-				break;
+		if (isset(self::$cache[$sourceFilepath])) {
+			list($source, $sourceWidth, $sourceHeight) = self::$cache[$sourceFilepath];
+		} else {
+			// We keep one item in cache, if it doesn't match, we reset.
+			self::$cache = [];
 			
-			default:
-				throw new \Exception('Unknown or unsupported file extension for file: "' . $sourceFilepath . '".');
+			switch ($sourceMimeType) {
+				case 'image/jpeg':
+					$source = \imagecreatefromjpeg($sourceFilepath);
+					break;
+					
+				case 'image/png':
+					$source = \imagecreatefrompng($sourceFilepath);
+					break;
+					
+				case 'image/gif':
+					$source = \imagecreatefromgif($sourceFilepath);
+					break;
+				
+				default:
+					throw new \Exception('Unknown or unsupported source file type: "' . $sourceFilepathForType . '".');
+			}
+					
+			$sourceWidth = \imagesx($source);
+			$sourceHeight = \imagesy($source);
+			
+			if (self::$cacheSourceImage) {
+				self::$cache[$sourceFilepath] = [$source, $sourceWidth, $sourceHeight];
+			}
 		}
 		
-				
-		$sourceWidth = \imagesx($source);
-		$sourceHeight = \imagesy($source);
+		if ($targetWidth === null) $targetWidth = $sourceWidth;
+		if ($targetHeight === null) $targetHeight = $sourceHeight;
 		
+		// FIXME: Not sure what this if (false) block is, but we have to look at it and fix it / remove it.
 		if (false) {
 			// DEPR:
 			if ($targetWidth !== $targetHeight) throw new \Exception('Target width and height must be the same for now in mode "cover" (square).');
@@ -168,7 +225,60 @@ class ImageUtils {
 			\imagecopyresampled($target, $source, 0, 0, $sourceCopyX, $sourceCopyY, $targetWidth, $targetHeight, $sourceCopyWidth, $sourceCopyHeight);
 		}
 		
+		$targetMimeType = self::getMimeTypeFromExtension($targetFilepath);
 		
-		\imagejpeg($target, $targetFilepath, (int) (100 * $options['quality']));
+		switch ($targetMimeType) {
+			case 'image/jpeg':
+				\imagejpeg($target, $targetFilepath, (int) (100 * $options['quality']));
+				break;
+			
+			case 'image/png':
+				// FIXME: The parameter "quality" should become "compression" and invserse of what it is (with smart
+				// defaults for every output file type). For now we pick 0 for speed.
+				\imagepng($target, $targetFilepath, 0);
+				break;
+			
+			default:
+				throw new \Exception('Unknown or unsupported target file type: "' . $targetFilepath . '".');
+		}
+					
+		
+		return [
+			'source' => [
+				'width' => $sourceWidth,
+				'height' => $sourceHeight,
+			],
+			'target' => [
+				'width' => $targetWidth,
+				'height' => $targetHeight,
+			],	
+		];
+	}
+	
+	protected static function getMimeTypeFromExtension($filepath) {
+		if (\preg_match('/\.(\w+)$/Di', $filepath, $matches)) {
+			$extension = $matches[1];
+		} else {
+			$extension = null;
+		}
+		
+		switch ($extension) {
+			case 'jpeg':
+			case 'jpe':
+			case 'jpg':
+				return 'image/jpeg';
+				break;
+				
+			case 'png':
+				return 'image/png';
+				break;
+				
+			case 'gif':
+				return 'image/gif';
+				break;
+			
+			default:
+				return 'unsupported';
+		}
 	}
 }
