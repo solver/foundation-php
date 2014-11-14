@@ -87,7 +87,7 @@ class SqlConnection {
 			else {
 				$this->handle = new PDO('mysql:host=' . $config['host'].
 					(isset($config['port'])?':' . $config['port']:'').
-					';dbname=' . $config['database'], 
+					';dbname=' . $config['database'] . ';charset=utf8', 
 					$config['user'], 
 					$config['password']
 				);
