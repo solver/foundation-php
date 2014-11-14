@@ -70,6 +70,9 @@ class ParamValidator {
 	 * [
 	 * 		// The value should be a string (PHP's is_string()).
 	 * 		'string', 
+	 * 
+	 * 		// Optional. Should be one of the string values supplied. The check is case-sensitive.
+	 * 		'oneOf' => ['a', 'b', 'c', ...]
 	 * ]
 	 * 
 	 * [
@@ -144,6 +147,11 @@ class ParamValidator {
 				
 			case "string":
 				if (!\is_string($value)) self::errorMustBeType($name, 'string');
+				
+				if (isset($schema['oneOf']) && !in_array($value, $schema['oneOf'], true)) {
+					self::error($name, 'must be one of these values: "' . implode('", "', $schema['oneOf']) . '".');	
+				}
+				
 				break;
 				
 			case "number":
@@ -186,6 +194,12 @@ class ParamValidator {
 			case "dict":
 				if (!\is_array($value)) self::errorMustBeType($name, 'dict');
 				
+				// If neither of those sections are present, we don't check for "unexpected" keys as we have no info
+				// to judge what's expected or unexpected.
+				if (!isset($schema['req'], $schema['opt'])) {
+					break;
+				}
+						
 				$required = isset($schema['req']) ? $schema['req'] : [];
 				$optional = isset($schema['opt']) ? $schema['opt'] : [];
 				$prefix = $name === null ? '' : $name . '.';
@@ -194,7 +208,7 @@ class ParamValidator {
 					if (isset($required[$subname])) {
 						$subschema = $required[$subname];
 						
-						// Shortcircuit the common "any"-as-string scheme, not to waste CPU.
+						// Short-circuit the common "any"-as-string scheme, not to waste CPU.
 						if ($subschema !== 'any') {
 							self::validate($prefix . $subname, $subvalue, $subschema);
 						}
@@ -241,7 +255,6 @@ class ParamValidator {
 					if (\is_string($instList)) $instList = [$instList];
 					
 					foreach ($instList as $inst) {
-						var_dump($value, $inst);
 						if (!($value instanceof $inst)) {
 							self::error($name, 'must be an instance of "' . $inst . '"');
 						}
