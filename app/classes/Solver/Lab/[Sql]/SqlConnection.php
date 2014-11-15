@@ -96,7 +96,10 @@ class SqlConnection {
 				
 				$this->type = 'mysql';
 			}
+			
 			$this->handle->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+			
+			$this->open = true;
 		} catch (PDOException $e) {
 			throw new SqlConnectionException($e->getMessage(), $e->getCode(), $e);
 		}
@@ -207,9 +210,7 @@ class SqlConnection {
 			if ($value === null) return 'NULL';
 			if (\filter_var($value, \FILTER_VALIDATE_FLOAT)) return (string) $value;
 			return $this->handle->quote($value);
-		} else {
-			$handle = $this->handle;
-			
+		} else {			
 			foreach ($value as & $v) {
 				$v = $this->quoteValue($v);
 			}
@@ -413,7 +414,8 @@ class SqlConnection {
 		
 		$tblQ = $this->quoteIdentifier($table);
 		
-		if (!$extended) {			
+		if (!$extended) {		
+			// TODO: Wrap in a transaction if count($rows) > 1 (once we have nested transactions again).	
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {				
 				$row = $this->quoteRow($rows[$i]);	
 				$sql = 'INSERT INTO ' . $tblQ . ' (' . \implode(',', \array_keys($row)).') VALUES (' . \implode(',', $row) . ')';
@@ -430,15 +432,14 @@ class SqlConnection {
 			$valSeq = array();
 			
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
-				$row = $rows[$i];
+				$row = $this->quoteValue($rows[$i]);
 				
 				$vals = array();
 				
 				// TRICKY: we're looping the column names from the first row, and retrieving the values in that order,
 				// as even if all rows have the same columns specified, they may not necessarily be written in the same
 				// order in the PHP array.
-				foreach($cols as $col) {	
-					$row = $this->quoteValue($row);				
+				foreach($cols as $col) {			
 					if (\array_key_exists($col, $row)) {
 						$vals[] = $row[$col];
 					} else {
