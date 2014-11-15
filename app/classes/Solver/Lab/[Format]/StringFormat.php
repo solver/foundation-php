@@ -180,4 +180,43 @@ class StringFormat extends AbstractFormat implements Format {
 		
 		return $this;
 	}
+	
+	/**
+	 * Tests if the value matches the given regex pattern (the regex pattern uses PCRE in UTF8 mode).
+	 * 
+	 * @param $regexPattern
+	 * A string PCRE pattern (with delimiters, as expected in PHP).
+	 * 
+	 * @param $customError
+	 * Optional (default = null). You can pass a dict with one or more of these fields:
+	 * 
+	 * - $path
+	 * - $message
+	 * - $code
+	 * - $details
+	 * 
+	 * Doing so will replace the built-in generic "Please fill in a valid value." message in case the match fails.
+	 * 
+	 * @return self
+	 */
+	public function testMatchRegex($regexPattern, $customError = null) {
+		$this->rules[] = ['test', function ($value, ErrorLog $log, $path) use ($regexPattern, $customError) {
+			if (!RegexUtils::match($value, $regexPattern)) {
+				if ($customError === null) $customError = ['message' => 'Please fill in a valid value.'];
+				
+				$log->addError(
+					isset($customError['path']) ? $customError['path'] : null, 
+					isset($customError['message']) ? $customError['message'] : null,
+					isset($customError['code']) ? $customError['path'] : null,
+					isset($customError['details']) ? $customError['details'] : null
+				);
+				
+				return false;
+			} else {
+				return true;
+			}
+		}];
+		
+		return $this;
+	}
 }
