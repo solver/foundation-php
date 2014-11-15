@@ -192,8 +192,9 @@ class SqlConnection {
 	 * other layers:
 	 * 
 	 * - PHP null will convert to SQL NULL.
-	 * - Numbers and strings which represent valid numbers won't be quoted, so they can be used, for ex. with LIMIT and
-	 * OFFSET.
+	 * - Non-negative integers and strings which represent valid non-negative integers (unsigned 64-bit range) won't be
+	 * quoted, so they can be used, for ex. with LIMIT and OFFSET. Note that a string with leading zeroes is not 
+	 * considered a valid integer in this context.
 	 * - Passing an array will return the array with every value in it quoted.
 	 * 
 	 * @param array|string|float|int|null $value
@@ -203,12 +204,30 @@ class SqlConnection {
 	 * @return string
 	 * Quoted value.
 	 */
-	public function quoteValue($value) {		
+	public function quoteValue($value) {
 		if (!$this->open) $this->open();
 		
 		if (!\is_array($value)) {
 			if ($value === null) return 'NULL';
-			if (\filter_var($value, \FILTER_VALIDATE_FLOAT)) return (string) $value;
+			
+			// We check the value of a large number using string comparison as PHP has no uint64 support.
+			// Comparing number values as strings is valid as long as they have the same number of digits / chars.
+			static $uint64Max = '18446744073709551615';
+			static $uint64MaxLen = 20;
+		
+			if (is_int($value) && $value >= 0) return (string) $value;
+			
+			if ((is_float($value) && floor($value) === $value && $value >= 0) ||
+				(is_string($value) && ctype_digit($value) && $value[0] !== '0')) {
+				
+				$value = (string) $value;
+				$len = strlen($value);
+				
+				if ($len < $uint64MaxLen || ($len == $uint64MaxLen && $value <= $uint64Max)) {
+					return $value;
+				}
+			}
+			
 			return $this->handle->quote($value);
 		} else {			
 			foreach ($value as & $v) {
