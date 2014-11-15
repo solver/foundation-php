@@ -22,12 +22,12 @@ namespace Solver\Lab;
  * style for the framework. You need to normalize strings that come from unknown sources (user input etc.).
  */
 class RegexUtils {
-	public static function match($subject, $pattern, array & $matches = null) {
-		return \preg_match_all(self::utf8($pattern), $string, $matches, \PREG_SET_ORDER);
+	public static function match($string, $pattern, array & $matches = null) {
+		return \preg_match(self::utf8($pattern), $string, $matches);
 	}
 	
 	public static function matchAll($string, $pattern, array & $matches = null) {
-		return \preg_match(self::utf8($pattern), $string, $matches);
+		return \preg_match_all(self::utf8($pattern), $string, $matches, \PREG_SET_ORDER);
 	}
 	
 	public static function escape($string, $delimiter = null) {
