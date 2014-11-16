@@ -58,6 +58,40 @@ class StringFormat extends AbstractFormat implements Format {
 	}
 	
 	/**
+	 * @return self
+	 */
+	public function filterUpperCase() {
+		$this->rules[] = ['filter', function ($value, ErrorLog $log, $path) {
+			return StringUtils::toUpperCase($value);
+		}];
+		
+		return $this;
+	}
+	
+	/**
+	 * @return self
+	 */
+	public function filterLowerCase() {
+		$this->rules[] = ['filter', function ($value, ErrorLog $log, $path) {
+			return StringUtils::toLowerCase($value);
+		}];
+		
+		return $this;
+	}
+	
+	/**
+	 * @return self
+	 */
+	public function filterReplaceRegex($regexPattern, $replacementString) {
+		$this->rules[] = ['filter', function ($value, ErrorLog $log, $path) use ($regexPattern, $replacementString) {
+			// Deliberately disallow callback replacements for now, until we see how to support it cross-platform.
+			return RegexUtils::replace($value, $regexPattern, (string) $replacementString);
+		}];
+		
+		return $this;
+	}
+	
+	/**
 	 * @param int $min
 	 * 
 	 * @return self
@@ -205,7 +239,7 @@ class StringFormat extends AbstractFormat implements Format {
 				if ($customError === null) $customError = ['message' => 'Please fill in a valid value.'];
 				
 				$log->addError(
-					isset($customError['path']) ? $customError['path'] : null, 
+					isset($customError['path']) ? $customError['path'] : $path, 
 					isset($customError['message']) ? $customError['message'] : null,
 					isset($customError['code']) ? $customError['path'] : null,
 					isset($customError['details']) ? $customError['details'] : null
