@@ -92,6 +92,25 @@ class StringFormat extends AbstractFormat implements Format {
 	}
 	
 	/**
+	 * @param $map
+	 * A dictionary of string keys and string values (a value matching a key is mapped to its value). On no match, the
+	 * value remains unmodified.
+	 * 
+	 * @return self
+	 */
+	public function filterMap(array $map) {
+		$this->rules[] = ['filter', function ($value, ErrorLog $log, $path) use ($map) {
+			if (isset($map[$value])) {
+				$value = $map[$value];
+			}
+			
+			return $value;
+		}];
+		
+		return $this;
+	}
+	
+	/**
 	 * @param int $min
 	 * 
 	 * @return self
