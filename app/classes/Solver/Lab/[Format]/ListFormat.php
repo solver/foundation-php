@@ -97,7 +97,7 @@ class ListFormat extends AbstractFormat implements Format {
 			$count = \count($value);
 			
 			if ($count > $max) {
-				$noun = $min == 1 ? 'item' : 'items';
+				$noun = $max == 1 ? 'item' : 'items';
 				$log->addError($path, "Please provide a list with at most $max $noun.");
 				return false;
 			} else {
