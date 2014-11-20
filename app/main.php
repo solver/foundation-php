@@ -29,7 +29,7 @@ use Solver\Lab\InputFromGlobals;
 define('DOC_ROOT', rtrim(dirname(__DIR__), '\\/'));
 
 // All code looks here for classes, config, cache and so on.
-define('APP_ROOT', DOC_ROOT . '/app'); 
+define('APP_ROOT', DOC_ROOT . '/app');
 
 // Allows developer pages, displays errors & uncaught exceptions etc. DO NOT ENABLE ON PRODUCTION.
 define('DEBUG', true); 
@@ -50,6 +50,11 @@ require __DIR__ . '/core.php';
 Solver\Lab\Core::init([
 	'classes' => '',
 	'templates' => '',
+	
+	// Composer has a class map for the classes, but it ignores the templates, and it doesn't automatically update the
+	// classmap as we apply patches to Foundation (and commit them back to the package), so we'll need Foundation to
+	// scan itself (and Composer's map is used only to bootstrap it).
+	'vendor/solver/foundation/app/classes' => '',
 ]);
 
 /*
