@@ -109,7 +109,7 @@ class Router {
 		// - Aesthetics: people prefer slashes in the end (me included - S.V.), reasons unclear.
 		// - Semantics: all user-facing pages are semantically directories as noted, because either they have sub-pages
 		// or can gain a sub-page at any time (which will be hosted under the page URL as if it was a directory). Files
-		// can't have sub-files.
+		// can't have sub-files. And a file can't both be not a directory (no slash) and a directory (with slash).
 		// - Practical: you can use relative URLs to link to child ("child/") and parent ("..") pages with trailing
 		// slashes, but you can't do that without trailing slashes ("./child" works, however "." would yield the parent  
 		// page with a trailing slash, causing a pointless redirect to the no-slash version).
