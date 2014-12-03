@@ -91,7 +91,7 @@ class ParamValidator {
 	 * ]
 	 * 
 	 * [
-	 * 		// The array should be 'indexed array', i.e. zero-based monotonously incrementing integer keys (no "holes").
+	 * 		// The array should be an indexed array, i.e. zero-based monotonously incrementing integer keys (no holes).
 	 * 		'list', 
 	 * 
 	 * 		// Optional. Supply a schema (same format as this root schema) to check every list item (i.e. "list of").
@@ -100,7 +100,7 @@ class ParamValidator {
 	 * 
 	 * [
 	 * 		// Any array is also a "dict", but there are extra options, see below.
-	 * 		'dict', 
+	 * 		'dict',
 	 * 
 	 * 		// A list of keys that must be present in the dict.
 	 * 		'req' => [ 
@@ -196,10 +196,10 @@ class ParamValidator {
 				
 				// If neither of those sections are present, we don't check for "unexpected" keys as we have no info
 				// to judge what's expected or unexpected.
-				if (!isset($schema['req'], $schema['opt'])) {
+				if (!isset($schema['req']) && !isset($schema['opt'])) {
 					break;
 				}
-						
+					
 				$required = isset($schema['req']) ? $schema['req'] : [];
 				$optional = isset($schema['opt']) ? $schema['opt'] : [];
 				$prefix = $name === null ? '' : $name . '.';
