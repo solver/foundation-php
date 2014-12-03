@@ -263,6 +263,8 @@ abstract class AbstractView {
 	 * </code>
 	 */ 
 	protected function tag($name, $params = null) {
+		// TODO: Detect a tag left unclosed at the end of the document (currently silently does nothing).
+		
 		$tagParamCount = \func_num_args();
 		// TODO: Make this scoped (like say Java/C# imports) to the file calling $import(), allow up-scope imports if explicitly specified (i.e. "get the imports this import is including").
 		$funcStack = & $this->tagFuncStack;
