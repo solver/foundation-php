@@ -55,6 +55,7 @@ class SqlConnection {
 	 * Supported $config keys:
 	 * 
 	 * For MySQL:
+	 * 
 	 * - String "host", required.
 	 * - Int "port", optional.
 	 * - String "user", required.
@@ -85,6 +86,11 @@ class SqlConnection {
 			
 			// MySQL.
 			else {
+				// TODO: Once we require MySQL 5.5.3+, we should set the connection by default to utf8mb4, see:
+				// http://dev.mysql.com/doc/refman/5.5/en/charset-unicode-utf8mb4.html (test if it works fine with both
+				// latin1, utf8 and utf8mb4 columns and tables).
+				
+				// TODO: We should expose the charset parameter in $config.
 				$this->handle = new PDO('mysql:host=' . $config['host'].
 					(isset($config['port'])?':' . $config['port']:'').
 					';dbname=' . $config['database'] . ';charset=utf8', 
