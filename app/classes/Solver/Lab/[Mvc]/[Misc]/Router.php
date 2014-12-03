@@ -105,6 +105,14 @@ class Router {
 	 * - vars			= "Vars" added from the route (if key "vars" is specified in the route configuration).
 	 */
 	public function dispatch(array $input) {
+		// As a reminder, here are some reasons why trailing slashes are preferable for user-facing URLs.
+		// - Aesthetics: people prefer slashes in the end (me included - S.V.), reasons unclear.
+		// - Semantics: all user-facing pages are semantically directories as noted, because either they have sub-pages
+		// or can gain a sub-page at any time (which will be hosted under the page URL as if it was a directory). Files
+		// can't have sub-files.
+		// - Practical: you can use relative URLs to link to child ("child/") and parent ("..") pages with trailing
+		// slashes, but you can't do that without trailing slashes ("./child" works, however "." would yield the parent  
+		// page with a trailing slash, causing a pointless redirect to the no-slash version).
 		$preferTrailingSlash = $this->config['preferTrailingSlash'];
 		
 		/*
