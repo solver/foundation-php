@@ -24,9 +24,14 @@ class Router {
 	
 	/**
 	 * @param array $config
-	 * A map with the following keys:
+	 * A dict with keys:
 	 * 
-	 * # Key "routes"
+	 * # bool preferTrailingSlash
+	 * True if you want to append slashes to URLs, unless they appear to have a file extension. False if you want to 
+	 * remove a trailing slash. In both cases there's one canonical version for every URL with and without a slash.
+	 * 
+	 * # list $routes
+	 * 
 	 * A list of routes (from least to most specific, last match is used). Each route is a dict with the following
 	 * properties:
 	 * 
@@ -51,7 +56,7 @@ class Router {
 	 * - "vars" (mixed). Typically, but necessarily a dict. If present, it'll be added to $input under key "v". You can
 	 * use this feature to pass custom data to controllers.
 	 * 
-	 * # Key "errors"
+	 * # list $errors
 	 * A list of HTTP status handlers (401, 404, 500 etc.). Operate similar to routes, but instead of a key "path" they
 	 * have a key "status":
 	 * 
@@ -61,10 +66,19 @@ class Router {
 	 * 
 	 * Like routes, you can specify "vars" for the handler, but key "tail" is not applicable here.
 	 * 
-	 * # Key "head"
-	 * Reserved for future use (for use with multi-lingual sites ex. foo.com/en-us/page/).
+	 * # list $head
+	 * Reserved for future use (for use with multi-lingual sites ex. foo.com/en-us/page). Don't pass this yet.
 	 */
-	public function __construct($config) {
+	public function __construct(array $config) {
+		ParamValidator::validate('config', $config, [
+			'dict',
+			'req' => [
+				'preferTrailingSlash' => 'bool',
+				'routes' => 'list',
+				'errors' => 'list',
+			]
+		]);
+		
 		$this->config =  $config;
 	}
 	
@@ -91,6 +105,8 @@ class Router {
 	 * - vars			= "Vars" added from the route (if key "vars" is specified in the route configuration).
 	 */
 	public function dispatch(array $input) {
+		$preferTrailingSlash = $this->config['preferTrailingSlash'];
+		
 		/*
 		 * Index error handlers.
 		 */
@@ -110,10 +126,22 @@ class Router {
 		// TRICKY: Appending "?" ensures there's array index 1 for $query, even if it's empty.
 		list($path, $query) = \explode('?', $input['server']['REQUEST_URI'] . '?');
 				
-		// To us, this is the same path: "/foo" & "/foo/", but only one of them is canonical. For paths with a file
-		// extension (ex. "/foo.json") it's the former, for paths without - it's the latter.
-		$canonicalPath = \rtrim($path, '/') . (\pathinfo($path, \PATHINFO_EXTENSION) === '' ? '/' : '');
+		// To us, this is the same path: "/foo" & "/foo/", but only one of them is canonical. 
+		if ($preferTrailingSlash) {
+			// In this mode, for paths with a file extension (ex. "/foo.json") we use no slash, for paths without - we
+			// prefer slash. An "extension" is an all lower-case ASCII letter string (no digits). We do this because we
+			// want to avoid mis-detecting other uses of dots in an URL segment as an extension.
+			$canonicalPath = \rtrim($path, '/') . (!preg_match('@\.[a-z]+/?$@D', $path) ? '/' : '');
 			
+			// The root path slash shouldn't be removed.
+			if ($canonicalPath === '') $canonicalPath = '/'; 
+		} else {
+			$canonicalPath = \rtrim($path, '/');
+			
+			// The root path slash shouldn't be removed.
+			if ($canonicalPath === '') $canonicalPath = '/'; 
+		}
+		
 		// Enforce the canonical path format, if needed, and halt execution (the app will reload after the redirect).
 		if ($path !== $canonicalPath) {
 			\header('HTTP/1.1 301 Moved Permanently');

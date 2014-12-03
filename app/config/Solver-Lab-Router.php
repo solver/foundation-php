@@ -5,7 +5,10 @@
  * List routes from least to most specific (the last match gets dispatched). For details, see class Solver\Lab\Router.
  */
 return [
-	// Begin each route path with a "/". Unless you have a file ext. (".json", ".xml" etc.), end with a "/" as well.
+	'preferTrailingSlash' => true,
+		
+	// Begin each route path with a "/". Use the correct URL style for your path, depending on your preferTrailingSlash
+	// setting.
 	'routes' => [
 		['path' => '/example/',					'call' => 'Blitz\ExampleController', 'tail' => true /* Optional */, 'tailLength' => 1 /* Optional */],
 	],
