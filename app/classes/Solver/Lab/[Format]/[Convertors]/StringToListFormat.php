@@ -25,11 +25,11 @@ class StringToListFormat implements Format {
 	
 	/**
 	 * @param string $delimiters
-	 * Optional (default = ',;\r\n\t'). One or more characters, either of which will act on its own as a delimiter, hence a
-	 * splitting point for creating the list. A sequence of multiple delimiter characters will not create empty 
-	 * element, neither will leading or trailing delimiter chars in the string.
+	 * Optional (default = ',;\r\n'). One or more characters, either of which will act on its own as a delimiter, hence 
+	 * a splitting point for creating items in a list. A sequence of multiple delimiter characters will not create an  
+	 * empty element, neither will leading or trailing delimiter chars in the string.
 	 */
-	public function __construct($delimiters = ",;\r\n\t ") {
+	public function __construct($delimiters = ",;\r\n") {
 		// Pre-escape for inclusion in regex.
 		$this->delimiters = \preg_quote($delimiters, '@');
 	}
@@ -39,7 +39,14 @@ class StringToListFormat implements Format {
 			$log->addError($path, 'Please supply a string.');
 			return null;
 		} else {
-			return \preg_split('@[ ' . $this->delimiters . ']+@', $value, 0, \PREG_SPLIT_NO_EMPTY);
+			$list = \preg_split('@[' . $this->delimiters . ']+@', $value, 0, \PREG_SPLIT_NO_EMPTY);
+			
+			foreach ($list as & $item) {
+				$item = trim($item);
+			}
+			unset($item);
+			
+			return $list;
 		}
 	}
 }
