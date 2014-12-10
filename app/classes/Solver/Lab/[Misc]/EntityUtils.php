@@ -30,13 +30,17 @@ class EntityUtils {
 	 * @param array $containerStaticFields
 	 * Optional (default = null). A list of static fields in the entity whose value is a container (list, dict), and
 	 * need to be encoded as JSON (you don't need to specify this for dynamic fields as they're always encoded).
+	 * 
+	 * If you specify a field here, you MUST also specify it in $staticFields, or you'll get unexpected results.
+	 * 
+	 * TODO: Specifying things twice is nasty. Solution?
 	 *  
 	 * @return array
 	 */
-	public static function encodeDynamicEntity(array $entity, $staticFields = null, $containerStaticFields = null) {		
+	public static function encodeDynamicEntity(array $entity, $staticFields = null, $containerStaticFields = null) {
 		if ($containerStaticFields) foreach ($containerStaticFields as $field) if (\key_exists($field, $entity)) {
 			$entity[$field] = \json_encode($entity[$field], \JSON_UNESCAPED_UNICODE);
-		}		
+		}
 		
 		$static = [];
 		
