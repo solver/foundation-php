@@ -84,6 +84,15 @@ class Core {
 		 */
 		self::$locations = $autoloadLocations;
 		
+		// Some packages still use this feature (odd), and since we replace Composer's autoloader, we should support it.
+//		UNDER CONSIDERATION. The always-loaded files (like from Swift) are horribly slow and it's such a bad idea to 
+//		always load them.
+//		
+// 		$autoloadFiles = \APP_ROOT . '/vendor/composer/autoload_files.php';
+// 		if (file_exists($autoloadFiles)) foreach (require $autoloadFiles as $file) {
+// 			require $file;
+// 		}
+		 
 		self::$composerMap = require \APP_ROOT . '/vendor/composer/autoload_classmap.php';
 		
 		// TRICKY: We need the mute operator to avoid a file_exists check just for first time map cache generation.
@@ -111,7 +120,8 @@ class Core {
 		 */
 		
 		$getVerified = function ($path) use ($symbolId) {
-			// TODO: This file_exists() check can go once the error-to-exception mapper is ported.
+			// TODO: This file_exists() check can go once the error-to-exception mapper is ported. That'll speed things
+			// up a notch.
 			if (!\file_exists($path)) { 
 				// The file was moved/renamed/deleted/etc. Stale cache. Remap.
 				// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
@@ -129,7 +139,7 @@ class Core {
 		};
 		
 		$map = self::$nativeMap;
-				
+		
 		if (isset($map[$symbolId])) {
 			$path = $getVerified(\APP_ROOT . '/' . $map[$symbolId]);			
 			if ($path !== false) return $path;
@@ -146,13 +156,27 @@ class Core {
 		 * No match in either map, try a re-map.
 		 */
 		
-		$map = self::$nativeMap = self::map();
+		$newMap = self::map();
 		
-		if (isset($map[$symbolId])) {
-			return \APP_ROOT . '/' . $map[$symbolId];
+		// TRICKY: Some (not very well written) third party code probes for class existence by invoking the autoloader
+		// on a non-existing class. This causes a remap, but doesn't mean the script will end with a fatal error at this
+		// point. So we should take care not to overwrite the native map (with false) if map() is running for the second
+		// time in this script. To work around the performance implications of rescanning on every run, production code
+		// should not use automatic remapping, but be deployed with a stable pre-generated map. Alternatively, code 
+		// shouldn't call class_exists without disabling autoloader look-ups, if the class is expected not to exist 
+		// during normal script operation (the saner alternative).
+		if ($newMap !== false) {
+			$map = self::$nativeMap = $newMap;
+			
+			if (isset($map[$symbolId])) {
+				return \APP_ROOT . '/' . $map[$symbolId];
+			} else {
+				return false;
+			}
 		} else {
 			return false;
 		}
+		
 	}
 	
 	protected static function map() {
