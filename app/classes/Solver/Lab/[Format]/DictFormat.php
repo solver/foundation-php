@@ -17,6 +17,8 @@ namespace Solver\Lab;
  * TODO: PHPDoc.
  */
 class DictFormat extends AbstractFormat {
+	protected $allowDynamic = false;
+	
 	protected $fields = [];
 	
 	public function extract($value, ErrorLog $log, $path = null) {
@@ -41,7 +43,7 @@ class DictFormat extends AbstractFormat {
 				// TODO: This behavior should be optional.
 				if ($format instanceof BoolFormat) {
 					$filtered[$name] = $format->extract(false, $log, $path === null ? $name : $path . '.' . $name);
-				} 
+				}
 				
 				// Dict/list auto-promotion: for the same reasons as above, the PHP way of encoding dicts/lists for HTTP
 				// fields provide no way of passing an empty array, so if a required dict/list field is missing, we 
@@ -58,7 +60,11 @@ class DictFormat extends AbstractFormat {
 			}
 		}
 		
-		$value = $filtered; 
+		if ($this->allowDynamic) {
+			$value = $filtered + $value;
+		} else {
+			$value = $filtered;
+		}
 		
 		if ($log->getErrorCount() > $errorCount) {
 			return null;
@@ -89,6 +95,21 @@ class DictFormat extends AbstractFormat {
 		if ($this->rules) throw new \Exception('You should call method optional() before any test*() or filter*() calls.');
 		
 		$this->fields[] = [$name, $format, false]; 
+		
+		return $this;
+	}
+	
+	/**
+	 * Allows keys which are specified neither as required nor optional to be extracted. Be careful with this option,
+	 * this means you have no control over which keys end up in your filtered data (nor their type at the moment).
+	 * 
+	 * By default dicts are NOT dynamic.
+	 * 
+	 * @param bool $allowDynamic
+	 * Optional (default = true). Pass true or false to enable or disable dynamic dictionary keys.
+	 */
+	public function allowDynamic($allowDynamic = true) {
+		$this->allowDynamic = $allowDynamic;
 		
 		return $this;
 	}
