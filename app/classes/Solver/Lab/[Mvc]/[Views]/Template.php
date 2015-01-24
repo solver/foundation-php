@@ -14,10 +14,8 @@
 namespace Solver\Lab;
 
 /**
- * Non-fatal Controller exception, results in conditions handled by the base Controller class or the router invoking
- * the controller.
+ * This class existing to hide the private properties of the parent from templates.
  * 
- * Do not throw directly, instead use the stop() method of your controller.
+ * See the parent class for description.
  */
-class ControllerException extends Exception {}
-?>
+class Template extends AbstractTemplate {}

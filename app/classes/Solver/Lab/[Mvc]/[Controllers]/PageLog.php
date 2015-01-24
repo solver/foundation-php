@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -16,12 +16,12 @@ namespace Solver\Lab;
 /**
  * Logs messages, warnings, errors at the controller level, which are passed to the view for display.
  * 
- * Every controller has an automatically designated ControllerLog as member $log.
+ * Every controller has an automatically designated PageLog as member $log.
  * 
  * When the log fails itself due to bad API usage or fatal error, it will throw a generic Exception, not a
- * ControllerException.
+ * PageException.
  */
-class ControllerLog implements EventProvider, ErrorLog {
+class PageLog implements EventProvider, ErrorLog {
 	use ImportEventsTrait;
 	
 	const TYPE_SUCCESS = 'success';

@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -26,7 +26,7 @@ class Router {
 	 * @param array $config
 	 * A dict with keys:
 	 * 
-	 * # bool preferTrailingSlash
+	 * # bool $preferTrailingSlash
 	 * True if you want to append slashes to URLs, unless they appear to have a file extension. False if you want to 
 	 * remove a trailing slash. In both cases there's one canonical version for every URL with and without a slash.
 	 * 
@@ -56,16 +56,6 @@ class Router {
 	 * - "vars" (mixed). Typically, but necessarily a dict. If present, it'll be added to $input under key "v". You can
 	 * use this feature to pass custom data to controllers.
 	 * 
-	 * # list $errors
-	 * A list of HTTP status handlers (401, 404, 500 etc.). Operate similar to routes, but instead of a key "path" they
-	 * have a key "status":
-	 * 
-	 * <code>
-	 * ['status' => 123, 'call' => 'Controller\Class' or function ($input, $router) {...} ]
-	 * </code>
-	 * 
-	 * Like routes, you can specify "vars" for the handler, but key "tail" is not applicable here.
-	 * 
 	 * # list $head
 	 * Reserved for future use (for use with multi-lingual sites ex. foo.com/en-us/page). Don't pass this yet.
 	 */
@@ -75,7 +65,6 @@ class Router {
 			'req' => [
 				'preferTrailingSlash' => 'bool',
 				'routes' => 'list',
-				'errors' => 'list',
 			]
 		]);
 		
@@ -104,7 +93,7 @@ class Router {
 	 * - tail			= "Tail" path parameters as a list of strings, if any.
 	 * - vars			= "Vars" added from the route (if key "vars" is specified in the route configuration).
 	 */
-	public function dispatch(array $input) {
+	public function __invoke(array $input) {
 		// As a reminder, here are some reasons why trailing slashes are preferable for user-facing URLs.
 		// - Aesthetics: people prefer slashes in the end (me included - S.V.), reasons unclear.
 		// - Semantics: all user-facing pages are semantically directories as noted, because either they have sub-pages
@@ -114,16 +103,6 @@ class Router {
 		// slashes, but you can't do that without trailing slashes ("./child" works, however "." would yield the parent  
 		// page with a trailing slash, causing a pointless redirect to the no-slash version).
 		$preferTrailingSlash = $this->config['preferTrailingSlash'];
-		
-		/*
-		 * Index error handlers.
-		 */
-		
-		$errorHandlers = [];
-		
-		foreach ($this->config['errors'] as $errorHandler) {
-			$errorHandlers[$errorHandler['status']] = $errorHandler;
-		}
 		
 		/*
 		 * Try to match a route handler.
@@ -151,15 +130,10 @@ class Router {
 		}
 		
 		// Enforce the canonical path format, if needed, and halt execution (the app will reload after the redirect).
-		if ($path !== $canonicalPath) {
-			\header('HTTP/1.1 301 Moved Permanently');
-			\header('Location: ' . $canonicalPath . ($query !== '' ? '?' . $query : ''));
-			exit;
-		}
+		if ($path !== $canonicalPath) return [301, $canonicalPath . ($query !== '' ? '?' . $query : '')];
 		
 		$input['request'] = [];
 		$input['request']['path'] = $path;
-		
 		
 		$handler = null;
 		
@@ -190,50 +164,11 @@ class Router {
 			}
 		}
 
-		if ($handler === null) {
-			if (!isset($errorHandlers[404])) throw new \Exception('There is no defined error handler for HTTP status 404.');
-			$handler = $errorHandlers[404];
-		}
-				
-		/*
-		 * Invoke selected handler (route or error).
-		 */
+		if ($handler === null) return [404];
 		
-		$attempts = 1; 
-		
-		$invokeHandler = function () use (& $attempts, & $handler, & $errorHandlers, & $input, & $invokeHandler) {
-			if ($attempts++ > 3) {
-				throw new \Exception('Gave up after 3 attempts to execute a handler without a ControllerException (endless recursion hazard).');
-			}
+		if (isset($handler['vars'])) $input['vars'] = $handler['vars'];		
+		if (is_string($handler['call'])) $handler['call'] = new $handler['call']();
 			
-			if (isset($handler['vars'])) {
-				$input['vars'] = $handler['vars'];
-			} else {
-				if (isset($input['vars'])) {
-					unset($input['vars']);
-					
-					// FIXME: This alias is left for compatibility. Remove when not needed.
-					unset($input['v']);
-				}
-			}
-			
-			try {
-				if ($handler['call'] instanceof \Closure) {
-					$handler['call']($input);
-				} else {
-					$class = $handler['call'];
-					$controller = new $class($input);
-					if (!($controller instanceof Controller)) throw new Exception('Class "' . $class  . '" should be an instance of Solver\Lab\Controller.');
-				}
-			} catch (ControllerException $e) {
-				$code = $e->getCode();
-				if (!isset($errorHandlers[$code])) throw new \Exception('There is no defined error handler for HTTP status ' . $code . '.');
-				$handler = $errorHandlers[$code];
-				
-				$invokeHandler();
-			}
-		};
-		
-		$invokeHandler();
+		return [200, $handler['call'], $input];
 	}
 }

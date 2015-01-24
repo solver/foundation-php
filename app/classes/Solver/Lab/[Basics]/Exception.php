@@ -15,10 +15,19 @@ namespace Solver\Lab;
 
 /**
  * The purpose of this class is to allow $code to be a string (the native \Exception class only allows integers).
+ * 
+ * It also adds the ability to pass an arbitrary array for machine readable exception details, as necessary.
  */
 class Exception extends \Exception {
-	public function __construct($message = '', $code = 0, $previous = null) {
+	protected $details;
+	
+	public function __construct($message = '', $code = 0, $previous = null, $details = null) {
 		parent::__construct($message, (int) $code, $previous);
 		$this->code = $code;
+		$this->details = $details;
+	}
+	
+	public function getDetails() {
+		return $this->details;
 	}
 }

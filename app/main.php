@@ -68,8 +68,20 @@ Solver\Lab\Core::init([
 // Output has to be buffered so we can send proper headers to close the connection early (see below).
 ob_start();
 
-$router = new Router(require __DIR__ . '/config/Solver-Lab-Router.php');
-$router->dispatch(InputFromGlobals::get());
+// Routes are listed from least to most specific (the last match gets dispatched). Begin each route path with a "/". 
+// Unless you have a file ext. (".json", ".xml" etc.), end with a "/" (or not) if using a preferTrailingSlash mode (or 
+// not). For more info: see Solver\Lab\Router.
+$routes = [
+	['path' => '/example/', 'call' => 'Example\ExamplePage', 'tail' => true /* Optional */, 'tailLength' => 1 /* Optional */],
+];
+
+$router = new Router([
+	'preferTrailingSlash' => true,
+	'routes' => $routes,
+]);
+
+$dispatcher = new Dispatcher($router, 'Example\ErrorPage');
+$dispatcher->dispatch(InputFromGlobals::get());
 
 if (!\DEBUG) { // We don't run the following headers in debug mode so we can see all errors.
 	header('Content-Length: ' . ob_get_length());

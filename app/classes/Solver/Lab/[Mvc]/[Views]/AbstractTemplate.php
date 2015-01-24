@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,10 +14,10 @@
 namespace Solver\Lab;
 
 /**
- * A simple host for rendering templates. The reason there are separate AbstractView & View classes is to hide the  
- * private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
+ * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
+ * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
-abstract class AbstractView {	
+abstract class AbstractTemplate {	
 	/**
 	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
 	 * 
@@ -28,7 +28,7 @@ abstract class AbstractView {
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
 	 * 
-	 * @var \Solver\Lab\ControllerLog
+	 * @var \Solver\Lab\PageLog
 	 */
 	protected $log;
 	
@@ -48,6 +48,16 @@ abstract class AbstractView {
 	 * @var array
 	 */
 	protected $shared = [];
+		
+	/**
+	 * @var \Closure
+	 */
+	private $context;
+	
+	/**
+	 * @var string
+	 */
+	private $templateId;
 		
 	/**
 	 * See method getShortcuts().
@@ -96,16 +106,7 @@ abstract class AbstractView {
 	 */
 	private $renderedTemplateIds = [];
 	
-	public function __construct(array $data, ControllerLog $log) {
-		$this->data = new DataBox($data);
-		$this->log = $log;
-	}
-	
 	/**
-	 * Includes and renders a template. The template has access to the public and protected members of this class, both
-	 * by using $this, and by using a local alias that's injected by the system. For example, $this->tag() and $tag()
-	 * are equivalent within a template.
-	 * 
 	 * @param string $templateId
 	 * A template identifier.
 	 * 
@@ -116,35 +117,75 @@ abstract class AbstractView {
 	 * 
 	 * Also, just like classes, you can use directory names wrapped in square brackets purely to group files together
 	 * without affecting the template id (see class autoloading).
+	 */
+	public function __construct($templateId) {
+		$this->templateId = $templateId;
+	}
+	
+	/**
+	 * Includes and renders a template. The template has access to the public and protected members of this class, both
+	 * by using $this, and by using a local alias that's injected by the system. For example, $this->tag() and $tag()
+	 * are equivalent within a template.
 	 * 
+	 * @param array $data
+	 * @param PageLog $log
 	 * @return mixed
 	 * Anything returned from the template file.
 	 */
-	public function render($templateId) {
+	public function __invoke(array $data, PageLog $log) {
+		/*
+		 * Setup calling context for this template (and embeded rendered/imported templates).
+		 */
+		
+		$data = new DataBox($data);
+		
+		// Mirror as properties for consistency (see next).
+		$this->data = & $data;
+		$this->log = & $log;
+				
+		// Any protected/public members (except __construct/__invoke) will be accessible without $this within a template.
+		$shared = & $this->shared;
+		$render = (new \ReflectionMethod($this, 'render'))->getClosure($this);
+		$import = (new \ReflectionMethod($this, 'import'))->getClosure($this);
+		$tag = (new \ReflectionMethod($this, 'tag'))->getClosure($this);
+		$esc = (new \ReflectionMethod($this, 'esc'))->getClosure($this);
+		
+		$context = function ($__path__) use (& $data, & $log, & $shared, $render, $import, $tag, $esc) {
+			return require $__path__;
+		};
+		
+		// Hide private properties from the context (this class is abstract and subclassed by Template, so Template is
+		// the topmost class possible to instantiate). If you extend Template and override the methods, don't forget
+		// to rebind the context to the your class.
+		$context = $context->bindTo($this, 'Solver\Lab\Template');
+		$this->context = $context;
+		
+		return $this->render($this->templateId);
+	}	
+	
+	/**
+	 * Renders another template inline within this template.
+	 * 
+	 * @param string $templateId
+	 * Id of the template to render. Same rules as a $templateId passed to the constructor (see the constructor for
+	 * details).
+	 */
+	protected function render($templateId) {
 		// A leading backslash is accepted as some people will write one, but template ids are always absolute anyway.
 		$templateId = \ltrim($templateId, '\\');
 		
 		if (($path = Core::resolve($templateId)) === false) {
-			throw new \Exception('View template ' . $templateId . ' not found.');
+			throw new \Exception('Template "' . $templateId . '" not found.');
 		}
 		
-		// We don't want any params to pollute or collide with the local var space of the template included here.
-		$this->temp = [
-			'path' => $path,
-			'templateId' => $templateId,
-		];
-		unset($templateId, $path);
+		$context = $this->context;
+		$result = $context($path);
 		
-		// Any protected/public members (except the constructor) will be accessible without $this within a template.
-		\extract($this->getShortcuts(), \EXTR_REFS);
-		
-		$result = require $this->temp['path'];
-		$this->renderedTemplateIds[$this->temp['templateId']] = $result; // Used if the same id is import()-ed a second time.
-		
-		$this->temp = null;
-		
+		// Used if the same id is import()-ed a second time.
+		$this->renderedTemplateIds[$this->temp['templateId']] = $result;
+
 		return $result;
-	}	
+	}
 	
 	/**
 	 * Same as render(), with these differences:
@@ -420,28 +461,5 @@ abstract class AbstractView {
 			default:
 				throw new \Exception('Unknown format "' . $format . '".');
 		}
-	}
-	
-	private function getShortcuts() {
-		if ($this->shortcuts === null) {
-			$class = new \ReflectionClass($this);
-			
-			$props = $class->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED); 
-			
-			foreach ($props as $prop) {
-				$name = $prop->getName();
-				$this->shortcuts[$name] = & $this->$name;
-			}
-			
-			$methods = $class->getMethods(\ReflectionMethod::IS_PUBLIC | \ReflectionMethod::IS_PROTECTED); 
-			
-			foreach ($methods as $method) {
-				$name = $method->getName();
-				if ($name === '__construct') continue; // That wouldn't make sense to have in the shortcuts.
-				$this->shortcuts[$name] = $method->getClosure($this);
-			}
-		}
-		
-		return $this->shortcuts;
 	}
 }

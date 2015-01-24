@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,15 +14,13 @@
 namespace Solver\Lab;
 
 /**
- * Used by ControllerLog and ServiceLog.
+ * Used by PageLog and ServiceLog.
  * 
  * This trait will probably be refactoring as a part of a base Log class, so don't grow "attached" to it.
  */
 trait ImportEventsTrait {
 	/**
 	 * Imports all events from an ErrorProvider into the log with an optional path (re)map.
-	 *  
-	 * Examples of EventProvider are this ControllerLog, Processor and ModelException.
 	 * 
 	 * @param \Solver\Sloppy\EventProvider $eventProvider
 	 * An event provider.
