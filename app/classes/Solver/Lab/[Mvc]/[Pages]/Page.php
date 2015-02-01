@@ -85,27 +85,37 @@ abstract class Page {
 	 * @param string $templateId
 	 * Optional (default = null).
 	 *
-	 * By default this method will automatically resolve the template name from the page class name. For example, for
-	 * controller "Foo\BarPage", the assumed template identifier will be "Foo\BarTemplate".
+	 * Special symbols:
 	 * 
-	 * For legacy reasons names ending with Controller will be resolved to names ending in View as well. For example,
-	 * for controller "Foo\BarController", the assumed template identifier will be "Foo\BarView".
+	 * - You can use "@" to refer to the page class name, so "@\ExampleTemplate", when executed for class "Foo\BarPage"
+	 * will resolve to template id "Foo\BarPage\ExampleTemplate".
+	 * - You can use '.' to refer to the page class namespace, so ".\ExampleTemplate", when when executed for class
+	 * "Foo\BarPage" will resolve to template id "Foo\ExampleTemplate".
+	 * 
+	 * Without a dot "." or at "@", names are considered absolute.
+	 * 
+	 * The default value if you pass null (or nothing) for template id is "@\Template".
+	 * 
+	 * LEGACY: Page class names ending in Controller will be resolved by default (if templateId is null or not passed)
+	 * to names ending in View. For example, for controller "Foo\BarController", the assumed template identifier will be
+	 * "Foo\BarView". This will be removed in the future.
 	 *
-	 * Or you can pass any string to render a custom template id
-	 *
-	 * For a detailed description of what a "template id" is, see AbstractView::render().
+	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
 	final protected function renderTemplate($templateId = null) {
-		if ($templateId === null) {
-			$class = get_class($this);
-			$templateId = $class;
-			$templateId = preg_replace('/Page$/', 'Template', $templateId);
-			$templateId = preg_replace('/Controller$/', 'View', $templateId);
+		$class = get_class($this);
+		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);
 			
-			if ($class === $templateId) {
-				throw new \Exception('The page class does not use a standard suffix, and a template name cannot be resolved automatically.');
+		if ($templateId === null) {
+			// Legacy resolution.
+			if (preg_replace('/^(.*)Controller$/', $class, $matches)) {
+				$templateId = $matches[1] . 'View';
+			} else {
+				$templateId = '@\Template';
 			}
 		}
+		
+		str_replace(['@', '.'], [$class, $namespace], $templateId);
 		
 		$template = new Template($templateId);
 		$template($this->data, $this->log);
