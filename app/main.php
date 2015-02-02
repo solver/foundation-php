@@ -20,6 +20,7 @@
  
 use Solver\Lab\Router;
 use Solver\Lab\InputFromGlobals;
+use Solver\Lab\Dispatcher;
 
 /*
  * Define global constants.
@@ -59,10 +60,6 @@ Solver\Lab\Core::init([
 
 /*
  * Run app.
- * 
- * The router includes & runs the relevant controller (which runs the view). On no match, routes to "404 Not Found".
- * 
- * Check folder /config for a list of routes.
  */
 
 // Output has to be buffered so we can send proper headers to close the connection early (see below).
