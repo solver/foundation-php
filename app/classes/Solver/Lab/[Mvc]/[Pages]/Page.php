@@ -108,7 +108,7 @@ abstract class Page {
 			
 		if ($templateId === null) {
 			// Legacy resolution.
-			if (preg_replace('/^(.*)Controller$/', $class, $matches)) {
+			if (preg_match('/^(.*)Controller$/', $class, $matches)) {
 				$templateId = $matches[1] . 'View';
 			} else {
 				$templateId = '@\Template';
