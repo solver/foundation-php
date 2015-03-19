@@ -14,12 +14,14 @@
 namespace Solver\Lab;
 
 /**
- * Logs messages, warnings, errors at the controller level, which are passed to the view for display.
+ * Logs messages, warnings, errors at the page controller level, which are passed to the view for display.
  * 
- * Every controller has an automatically designated PageLog as member $log.
+ * Every page controller has an automatically designated PageLog as member $log.
  * 
  * When the log fails itself due to bad API usage or fatal error, it will throw a generic Exception, not a
  * PageException.
+ * 
+ * TODO: Extract a generic SimpleEventLog from this class, similar to SimpleErrorLog.
  */
 class PageLog implements EventProvider, ErrorLog {
 	use ImportEventsTrait;
