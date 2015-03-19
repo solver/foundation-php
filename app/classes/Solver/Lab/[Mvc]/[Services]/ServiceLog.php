@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,45 +14,21 @@
 namespace Solver\Lab;
 
 /**
- * Implements a log that can only have error events in it, plus the ability to throw a ServiceException when there
- * are errors (see throwIfErrors()).
+ * A log that can contain error events, with an ability to throw a ServiceException (containing the log), when there
+ * errors in the log.
  * 
- * TODO: Refactor this as a separate generic error log class without the exception throwing part, so non-services don't
- * abuse this log for the purpose of holding and mapping events (via import()).
+ * Throwing a ServiceException with one or more errors by manipulating a ServiceLog is the standard way for a service
+ * endpoint to end with an error and communicate it to its clients.
  */
-class ServiceLog implements ErrorLog, EventProvider {
-	use ImportEventsTrait;
-	
-	private $events = [];
-	
-	public function __construct() {}
-	
-	public function addError($path = null, $message = null, $code = null, $details = null) {
-		$e = [];
-		$e['type'] = 'error';
-		// Null and empty string both mean "no path", but null is the canonical value for it.
-		$e['path'] = $path === '' ? null : $path;
-		$e['message'] = $message;
-		$e['code'] = $code;
-		$e['details'] = $details;
-		$this->events[] = $e;
-	}
-	
-	public function hasErrors() {
-		return (bool) $this->events;
-	}
-	
-	public function getErrorCount() {
-		return \count($this->events);
-	}
-	
+class ServiceLog extends SimpleErrorLog implements ErrorLog, EventProvider {
 	public function throwIfErrors() {
 		if ($this->events) {
 			throw new ServiceException($this);
 		}
 	}
-		
-	public function getAllEvents() {
-		return $this->events;
+	
+	public function throwError($path = null, $message = null, $code = null, $details = null) {
+		$this->addError($path, $message, $code, $details);
+		$this->throwIfErrors();
 	}
 }
