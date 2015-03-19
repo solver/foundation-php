@@ -15,5 +15,7 @@ namespace Solver\Lab;
 
 /**
  * Legacy class name. For new projects, use Page.
+ * 
+ * @deprecated
  */
 abstract class Controller extends Page {}

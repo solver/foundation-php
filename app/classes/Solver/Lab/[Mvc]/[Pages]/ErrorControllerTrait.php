@@ -15,6 +15,8 @@ namespace Solver\Lab;
 
 /**
  * Legacy class name. For new projects, use ErrorPageTrait.
+ * 
+ * @deprecated
  */
 trait ErrorControllerTrait {
 	use ErrorPageTrait;
