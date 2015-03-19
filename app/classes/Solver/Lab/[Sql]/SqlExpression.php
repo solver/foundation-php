@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -107,25 +107,27 @@ class SqlExpression {
 	/**
 	 * Converts an SQL datetime expression to a UNIX timestamp.
 	 * 
-	 * @param string $datetime
+	 * @param null|string $datetime
 	 * 
-	 * @return int
+	 * @return null|int
 	 * UNIX timestamp.
 	 */
 	static public function fromDatetime($datetime) {
-		return \strtotime($datetime);
+		if ($datetime === null) return null;
+		else return \strtotime($datetime);
 	}
 	
 	/**
 	 * Converts an SQL datetime expression to a UNIX timestamp.
 	 * 
-	 * @param string $datetime
+	 * @param null|string $datetime
 	 * 
-	 * @return int
+	 * @return null|int
 	 * UNIX timestamp.
 	 */
 	static public function toDatetime($timestamp) {
-		return \date('Y-m-d H:i:s', $timestamp);
+		if ($timestamp === null) return null;
+		else return \date('Y-m-d H:i:s', $timestamp);
 	}
 	
 	/**
