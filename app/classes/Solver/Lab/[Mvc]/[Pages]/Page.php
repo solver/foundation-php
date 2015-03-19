@@ -69,6 +69,7 @@ abstract class Page {
 					$e->getMessage(),
 					$e->getTraceAsString()
 				));
+				
 				throw new PageException(null, 500, $e);
 			}
 		}
@@ -115,7 +116,7 @@ abstract class Page {
 			}
 		}
 		
-		str_replace(['@', '.'], [$class, $namespace], $templateId);
+		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
 		
 		$template = new Template($templateId);
 		$template($this->data, $this->log);
@@ -123,6 +124,8 @@ abstract class Page {
 	
 	/**
 	 * Legacy alias. See renderTemplate().
+	 * 
+	 * @deprecated
 	 * 
 	 * @param string $templateId
 	 */
@@ -147,6 +150,8 @@ abstract class Page {
 	
 	/**
 	 * Legacy alias. See captureTemplate().
+	 * 
+	 * @deprecated
 	 * 
 	 * @param string $templateId
 	 */
