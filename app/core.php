@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -215,6 +215,9 @@ class Core {
 					
 					$symbolPath = $dir . '/' . $filename;
 					$symbolName = ($ns === '' ? '' : $ns . '\\') . $pathInfo['filename'];
+					
+					// Dashes are interpreted the same as directory separators: a namespace delimiter.
+					$symbolName = str_replace('-', '\\', $symbolName);
 					
 					// Strip out brackets and anything between them, normalize repeated backslashes, if any.
 					$symbolName = \preg_replace('/\s*\[.*?\]\s*/', '', $symbolName);
