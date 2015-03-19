@@ -52,7 +52,7 @@ abstract class AbstractTemplate {
 	/**
 	 * @var \Closure
 	 */
-	private $context;
+	private $scope;
 	
 	/**
 	 * @var string
@@ -134,31 +134,25 @@ abstract class AbstractTemplate {
 	 */
 	public function __invoke(array $data, PageLog $log) {
 		/*
-		 * Setup calling context for this template (and embeded rendered/imported templates).
+		 * Setup calling scope for this template (and embeded rendered/imported templates).
 		 */
 		
 		$data = new DataBox($data);
+		$this->data = $data;
+		$this->log = $log;
 		
-		// Mirror as properties for consistency (see next).
-		$this->data = & $data;
-		$this->log = & $log;
-				
-		// Any protected/public members (except __construct/__invoke) will be accessible without $this within a template.
-		$shared = & $this->shared;
-		$render = (new \ReflectionMethod($this, 'render'))->getClosure($this);
-		$import = (new \ReflectionMethod($this, 'import'))->getClosure($this);
-		$tag = (new \ReflectionMethod($this, 'tag'))->getClosure($this);
-		$esc = (new \ReflectionMethod($this, 'esc'))->getClosure($this);
+		$__localVars__ = $this->getLocalVars();
 		
-		$context = function ($__path__) use (& $data, & $log, & $shared, $render, $import, $tag, $esc) {
+		$scope = function ($__path__) use ($__localVars__) {
+			extract($__localVars__, EXTR_REFS);
 			return require $__path__;
 		};
 		
-		// Hide private properties from the context (this class is abstract and subclassed by Template, so Template is
+		// Hide private properties from the scope (this class is abstract and subclassed by Template, so Template is
 		// the topmost class possible to instantiate). If you extend Template and override the methods, don't forget
-		// to rebind the context to the your class.
-		$context = $context->bindTo($this, 'Solver\Lab\Template');
-		$this->context = $context;
+		// to rebind the scope to the your class.
+		$scope = $scope->bindTo($this, get_class($this));
+		$this->scope = $scope;
 		
 		return $this->render($this->templateId);
 	}	
@@ -178,8 +172,8 @@ abstract class AbstractTemplate {
 			throw new \Exception('Template "' . $templateId . '" not found.');
 		}
 		
-		$context = $this->context;
-		$result = $context($path);
+		$scope = $this->scope;
+		$result = $scope($path);
 		
 		// Used if the same id is import()-ed a second time.
 		$this->renderedTemplateIds[$this->temp['templateId']] = $result;
@@ -392,9 +386,6 @@ abstract class AbstractTemplate {
 					throw new \Exception('Template function end mismatch: closing "' . $name . '", expecting to close "' . $func[0] . '".');
 				}
 				
-				// TRICKY: The closures we get are effectively anonymous methods, as they're defined in the scope of 
-				// a method, so we need to use ReflectionMethod, not ReflectionFunction, or upon invocation the closures
-				// will be unaware of their $this context.
 				$reflFunc = new \ReflectionFunction($funcs[$func[0]]);
 				
 				$params = [];
@@ -410,7 +401,6 @@ abstract class AbstractTemplate {
 							throw new \Exception('Required parameter "' . $paramName . '" for template function "' . $func[0] . '" is missing.');
 						}
 					}
-						
 				}
 				
 				// Using ReflectionFunction::invokeArgs() would run the closure without object context (PHP issue).
@@ -461,5 +451,22 @@ abstract class AbstractTemplate {
 			default:
 				throw new \Exception('Unknown format "' . $format . '".');
 		}
+	}
+	
+	/**
+	 * Return a list of local variables to extracted into the scope of the template that'll run (by reference).
+	 * 
+	 * All protected/public members (except __construct/__invoke) will be accessible without $this within a template.
+	 */
+	protected function getLocalVars() {
+		return [		
+			'data' => & $this->data,
+			'log' => & $this->log,
+			'shared' => & $this->shared,
+			'render' => (new \ReflectionMethod($this, 'render'))->getClosure($this),
+			'import' => (new \ReflectionMethod($this, 'import'))->getClosure($this),
+			'tag' => (new \ReflectionMethod($this, 'tag'))->getClosure($this),
+			'esc' => (new \ReflectionMethod($this, 'esc'))->getClosure($this),
+		];
 	}
 }
