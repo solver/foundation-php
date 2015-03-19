@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,6 +14,8 @@
 namespace Solver\Lab;
 
 /**
+ * A format class for UTF8 encoded strings.
+ * 
  * TODO: PHPDoc.
  */
 class StringFormat extends AbstractFormat implements Format {
@@ -21,6 +23,7 @@ class StringFormat extends AbstractFormat implements Format {
 		if (!\is_string($value)) {
 			// We tolerate certain scalars by automatically converting them to strings.
 			if (\is_int($value) || \is_float($value) || \is_bool($value)) {
+				// REVISE: Should we explicitly convert booleans to strings "true" and "false"?
 				$value = (string) $value;
 			} else {
 				$log->addError($path, 'Please provide a string.');
@@ -51,7 +54,8 @@ class StringFormat extends AbstractFormat implements Format {
 	 */
 	public function filterTrimWhitespace() {
 		$this->rules[] = ['filter', function ($value, ErrorLog $log, $path) {
-			return StringUtils::trimWhitespace($value);
+			$value = StringUtils::trimWhitespace($value);
+			return $value;
 		}];
 		
 		return $this;
