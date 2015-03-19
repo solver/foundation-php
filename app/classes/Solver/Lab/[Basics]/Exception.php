@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -16,14 +16,15 @@ namespace Solver\Lab;
 /**
  * The purpose of this class is to allow $code to be a string (the native \Exception class only allows integers).
  * 
- * It also adds the ability to pass an arbitrary array for machine readable exception details, as necessary.
+ * It also adds the ability to pass  arbitrary data (typically assoc. array) for machine readable exception details, as
+ * necessary.
  */
 class Exception extends \Exception {
 	protected $details;
 	
 	public function __construct($message = '', $code = 0, $previous = null, $details = null) {
-		parent::__construct($message, (int) $code, $previous);
-		$this->code = $code;
+		parent::__construct($message, (int) $code, $previous); // The constructor want an int $code.
+		$this->code = $code; // But we still assign the (potentially) string $code (and it'll be returned by getCode()).
 		$this->details = $details;
 	}
 	
