@@ -31,7 +31,7 @@ class Session {
 			\session_start();			
 			$this->started = true;
 		} else {
-			throw new \Exception('Someone started the session elsewhere by directly invoking the native API.');
+			throw new \Exception('Someone started the session elsewhere by directly invoking the native PHP session API.');
 		}
 	}
 	
