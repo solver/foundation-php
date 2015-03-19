@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -63,6 +63,6 @@ class StringUtils {
 	
 	public static function trimWhitespace($string) {
 		// This covers all Unicode whitespace codepoints (vs. \trim() which covers only ASCII ones).
-		return RegexUtils::replace($string, '/^\pZ+|\pZ+$/D', '');
+		return RegexUtils::replace($string, '/^[\pZ\t\n\r]+|[\pZ\t\n\r]+$/D', '');
 	}
 }
