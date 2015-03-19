@@ -14,9 +14,9 @@
 namespace Solver\Lab;
 
 /**
- * Used by PageLog and ServiceLog.
+ * TODO: Importing should be separated as a concern from the log being imported (or imported into). Static call?
  * 
- * This trait will probably be refactoring as a part of a base Log class, so don't grow "attached" to it.
+ * DO NOT use this trait in your log classes, it'll be refactored eventually.
  */
 trait ImportEventsTrait {
 	/**
