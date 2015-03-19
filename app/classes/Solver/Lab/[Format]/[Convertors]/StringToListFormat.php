@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -19,6 +19,8 @@ namespace Solver\Lab;
  * 
  * Turns a string into a list based on a set of delimiter chars. The behavior of this particular class is optimized
  * for human-typed lists into a text field.
+ * 
+ * This format is idempotent. If fed a list array instead of a string, it returns it unmodified.
  */
 class StringToListFormat implements Format {
 	protected $delimiters;
@@ -35,14 +37,20 @@ class StringToListFormat implements Format {
 	}
 	
 	public function extract($value, ErrorLog $log, $path = null) {
-		if (!\is_string($value)) {
-			$log->addError($path, 'Please supply a string.');
+		if (\is_array($value)) {
+			return $value;
+		}
+		
+		elseif (!\is_string($value)) {
+			$log->addError($path, 'Please supply a string or a list.');
 			return null;
-		} else {
+		} 
+		
+		else {
 			$list = \preg_split('@[' . $this->delimiters . ']+@', $value, 0, \PREG_SPLIT_NO_EMPTY);
 			
 			foreach ($list as & $item) {
-				$item = trim($item);
+				$item = \trim($item);
 			}
 			unset($item);
 			
