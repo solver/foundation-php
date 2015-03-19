@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,7 +14,7 @@
 namespace Solver\Lab;
 
 /**
- * A blank string is a string which is empty or contains only whitespace. This class is simply a shortcu for the 
+ * A blank string is a string which is empty or contains only whitespace. This class is simply a shortcut for the 
  * following configuration:
  * 
  * <code>
@@ -23,12 +23,12 @@ namespace Solver\Lab;
  * 		->testEmpty();
  * </code>
  * 
- * This is useful when a field can either be left blank, or have a specific format, as used with EitherFormat:
+ * This is useful when a field can either be left blank, or have a specific format, as used with UnionFormat:
  * 
  * <code>
- * $blankOrEmailFormat = (new EitherFormat)
- * 		->attempt(new BlankStringFormat)
- * 		->attempt(new EmailAddressFormat);
+ * $blankOrEmailFormat = (new UnionFormat)
+ * 		->add(new BlankStringFormat)
+ * 		->add(new EmailAddressFormat);
  * </code>
  */
 class BlankStringFormat extends StringFormat implements Format {
