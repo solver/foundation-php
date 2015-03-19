@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -15,6 +15,9 @@ namespace Solver\Lab;
 
 /**
  * TODO: PHPDoc.
+ * TODO: Add subset($dictFormat, ...$fields), an ability to select and import a list of fields from another dict by 
+ * field name (that $dictFormat's tests/filters/bind won't be imported, as they'd probably be tied to the full set of
+ * fields and havind a subset might break things; or should this be an explicit flag?).
  */
 class DictFormat extends AbstractFormat {
 	protected $allowDynamic = false;
@@ -32,6 +35,11 @@ class DictFormat extends AbstractFormat {
 		
 		foreach ($this->fields as $field) {
 			list($name, $format, $required) = $field;
+			
+			if (!$required) {
+				$hasDefault = count($field) > 3;
+				$default = $hasDefault ? $field[3] : null;
+			}
 			
 			if (\key_exists($name, $value)) {
 				$filtered[$name] = $format ? $format->extract($value[$name], $log, $path === null ? $name : $path . '.' . $name) : $value[$name];
@@ -57,6 +65,10 @@ class DictFormat extends AbstractFormat {
 					// Missing fields are a dict-level error (don't add $name to the $path in this case).
 					$log->addError($path, 'Please provide required field "' . $name . '".');
 				}
+			}
+			
+			else if (!$required && $hasDefault) {
+				$filtered[$name] = $default;
 			}
 		}
 		
@@ -95,6 +107,22 @@ class DictFormat extends AbstractFormat {
 		if ($this->rules) throw new \Exception('You should call method optional() before any test*() or filter*() calls.');
 		
 		$this->fields[] = [$name, $format, false]; 
+		
+		return $this;
+	}
+	
+	/**
+	 * Same as optional(), but if the field is missing it'll be created, and the default value will be assigned.
+	 * 
+	 * @param string $name
+	 * @param mixed $default
+	 * @param \Solver\Lab\Format $format
+	 * @return self
+	 */
+	public function optionalWithDefault($name, $default = null, Format $format = null) {
+		if ($this->rules) throw new \Exception('You should call method optional() before any test*() or filter*() calls.');
+		
+		$this->fields[] = [$name, $format, false, $default]; 
 		
 		return $this;
 	}
