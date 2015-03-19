@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -14,9 +14,13 @@
 namespace Solver\Lab;
 
 /**
- * TODO: PHPDoc.
+ * Base for formats.
+ * 
+ * DO NOT extend this class in classes outside this library. It will likely be refactored as a trait in the future.
+ * 
+ * Instead, implement interface Format directly.
  */
-class AbstractFormat implements Format {
+abstract class AbstractFormat implements Format {
 	protected $rules = [];
 	
 	public function extract($value, ErrorLog $log, $path = null) {
@@ -50,7 +54,7 @@ class AbstractFormat implements Format {
 	 * 
 	 * @return self
 	 */
-	public function testCustom(\Closure $test) {
+	public function test(\Closure $test) {
 		// Internally tests must return true/false, hence this wrapper to emulate that. Eventually all test 
 		// functions, including the internal ones, will work only with the log without having to any return result.
 		$this->rules[] = ['test', function ($value, ErrorLog $log, $path) use ($test) {
@@ -63,13 +67,36 @@ class AbstractFormat implements Format {
 	}
 	
 	/**
+	 * The old name for test().
+	 * 
+	 * @deprecated
+	 * @param \Closure $test
+	 * @return self
+	 */
+	public function testCustom(\Closure $test) {
+		return $this->test($test);
+	}
+	
+	/**
 	 * The closure must accept argument ($value) and return the modified $value.
 	 * 
 	 * @return self
 	 */
-	public function filterCustom(\Closure $filter) {
+	public function filter(\Closure $filter) {
 		$this->rules[] = ['filter', $filter];
 		
 		return $this;
+	}
+
+	
+	/**
+	 * The old name for filter().
+	 * 
+	 * @deprecated
+	 * @param \Closure $test
+	 * @return self
+	 */
+	public function filterCustom(\Closure $test) {
+		return $this->filter($test);
 	}
 }
