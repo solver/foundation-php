@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -174,11 +174,11 @@ class Mailer {
 		}
 
 		/*
-		 * Ready to send!
+		 * Ready to send.
 		 */
 
 		$mailer = new \Swift_Mailer($this->transport);
-		return $mailer->send($this->message, $failedRecipientsOut);
+		return $mailer->send($this->message, $failedRecipientsOut) > 0;
 	}
 
 	protected function stripNewlines($string) {
