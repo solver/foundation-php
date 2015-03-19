@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -141,7 +141,7 @@ class SqlConnection {
 	public function query($sql, array $values = null) {		
 		if (!$this->open) $this->open();
 		
-		if (\func_num_args() > 1) $sql = $this->quoteInto($sql, $values);	
+		if ($values !== null) $sql = $this->quoteInto($sql, $values);	
 		
 		try {
 			$handle = $this->handle->query($sql);
@@ -162,7 +162,7 @@ class SqlConnection {
 	public function execute($sql, $values = null) {		
 		if (!$this->open) $this->open();
 		
-		if (\func_num_args() > 1) $sql = $this->quoteInto($sql, $values);
+		if ($values !== null) $sql = $this->quoteInto($sql, $values);
 		
 		try {
 			$affectedRows = $this->handle->exec($sql);
