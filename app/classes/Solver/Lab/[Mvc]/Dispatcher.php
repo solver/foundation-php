@@ -22,9 +22,10 @@ class Dispatcher {
 	 * Router callable. Any callable would do. Takes input, should return one of the following messages (codes after 
 	 * relevant HTTP statuses):
 	 * 
-	 * [200, $pageCallable, $pageInput]
-	 * [301, $url]
-	 * [404]
+	 * - [200, $pageCallable, $pageInput]
+	 * - [301, $url]
+	 * - [404]
+	 * 
 	 * 
 	 * @param callable|string $fallback
 	 * Optional. Either any callable or a string class name of a callable class to invoke. Called when a controller 
@@ -53,6 +54,8 @@ class Dispatcher {
 			case 200:
 				list(, $pageCallable, $pageInput) = $message;
 				
+				// TODO: (Tentative) the exception should be contained within the page, it should be caught and return a
+				// message instead (like router's 404 etc.)?
 				try {
 					$pageCallable($pageInput);
 				} catch (\Exception $e) {
