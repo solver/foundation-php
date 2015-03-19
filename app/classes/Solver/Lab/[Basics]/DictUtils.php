@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -20,15 +20,72 @@ class DictUtils {
 	/**
 	 * Returns a filtered dictionary where any keys not present in the whitelist of keys are removed.
 	 * 
-	 * Also see FUNCTIONNAME for a more generic approach than whitelisting and blacklisting.
+	 * @deprecated
+	 * See select().
 	 * 
 	 * @param array $dict
 	 * Dictionary to filter.
 	 * 
 	 * @param array $keys
 	 * List of key names to allow.
+	 * 
+	 * @return array
+	 * A subset of the input, containing only the selected key value pairs.
 	 */
 	public static function whitelist(array $dict, array $keys) {
+		return self::select($dict, ...$keys);
+	}
+	
+	/**
+	 * Returns a tuple (indexed array) of the values selected by the given keys. If a key does not exist, its value will
+	 * be returned as null.
+	 * 
+	 * Typical usage for selectively destructing dictionaries:
+	 * 
+	 * <code>
+	 * $dict = ['a' => 1, 'b' => 2, 'c' => 3, 'd' => 4];
+	 * 
+	 * list($a, $c, $e) = DictUtils::tuple($dict, 'a', 'c', 'e'); // Produces [1, 3, null].
+	 * </code>
+	 * 
+	 * @param array $dict
+	 * Dictionary to map to a tuple.
+	 * 
+	 * @param array $keys
+	 * List of key names to select for the result. If you pass a key that's not in the input, the value defaults to
+	 * null to preserve tuple's length.
+	 * 
+	 * @return array
+	 * A tuple of the given keys in the dictionary.
+	 */
+	public static function tuple(array $dict, ...$keys) {
+		$out = [];
+		
+		foreach ($keys as $key) {
+			if (\key_exists($key, $dict)) {
+				$out[] = $dict[$key];
+			} else {
+				$out[] = null;
+			}
+		}
+		
+		return $out;
+	}
+	
+	/**
+	 * Returns a filtered dictionary where any keys not present in the whitelist of keys are removed.
+	 * 
+	 * @param array $dict
+	 * Dictionary to filter.
+	 * 
+	 * @param array $keys
+	 * List of key names to select for the result. If you pass a key that's not in the input, it'll not be present in
+	 * the output either (no errors).
+	 * 
+	 * @return array
+	 * A subset of the input, containing only the selected key value pairs.
+	 */
+	public static function select(array $dict, ...$keys) {
 		$out = [];
 		
 		foreach ($keys as $key) if (\key_exists($key, $dict)) {
@@ -41,7 +98,8 @@ class DictUtils {
 	/**
 	 * Returns a filtered dictionary where any keys in the provided blacklist are filtered out from the result.
 	 * 
-	 * Also see FUNCTIONNAME for a more generic approach than whitelisting and blacklisting.
+	 * @deprecated
+	 * No replacement (blacklisting is fragile; use select() to whitelist, instead).
 	 * 
 	 * @param array $dict
 	 * Dictionary to filter.
@@ -88,14 +146,13 @@ class DictUtils {
 	 * // - One with keys: a, b & c;
 	 * // - One with keys: d, e, f & g;
 	 * // - On with the rest of the key: h & i. 
-	 * list($abc, $defg, $rest) = DictUtils::divide($dict, $keyGroups);
+	 * list($abc, $defg, $rest) = DictUtils::divide($dict, ...$keyGroups);
 	 * </code>
-	 * 
-     * 
+	 *  
 	 * @param array $dict
 	 * A dict to divide.
 	 * 
-	 * @param array $keyGroups
+	 * @param array ...$keyGroups
 	 * A list of key groups (each a list of strings, each the name of the key belonging to that group). Note that if
 	 * a key is present in multiple groups, only the first group to include it will "get" the key in the resulting
 	 * dictionaries.
@@ -104,7 +161,7 @@ class DictUtils {
 	 * Returns a list of dicts, one dict for each group passed, and one more, for any keys that were not included in 
 	 * any of the groups.
 	 */
-	public static function divide(array $dict, array $keyGroups) {
+	public static function divide(array $dict, ...$keyGroups) {
 		$groups = [];
 		
 		foreach ($keyGroups as $i => $keys) {
