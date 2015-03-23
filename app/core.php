@@ -219,7 +219,8 @@ class Core {
 					// Dashes are interpreted the same as directory separators: a namespace delimiter.
 					$symbolName = str_replace('-', '\\', $symbolName);
 					
-					// Strip out brackets and anything between them, normalize repeated backslashes, if any.
+					// Strip out brackets (and whitespace around them) and anything between them, normalize repeated
+					// backslashes, if any.
 					$symbolName = \preg_replace('/\s*\[.*?\]\s*/', '', $symbolName);
 					$symbolName = \preg_replace('/\\\\+/', '\\', $symbolName);
 					
