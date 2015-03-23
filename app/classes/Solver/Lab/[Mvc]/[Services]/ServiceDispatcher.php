@@ -14,14 +14,11 @@ class ServiceDispatcher {
 	 * @param \solver\Lab\ServiceEndpoint $endpoint
 	 * ServiceEndpoint instance to begin the resolution from.
 	 * 
-	 * @param string $route
-	 * String route to resolve to a method.
+	 * @param array $route
+	 * list<string>; List of string segments to resolve to an action (for example a URL split by path separator).
 	 * 
 	 * @param array|null $input
 	 * Input to pass to the method.
-	 * 
-	 * @param string $separator
-	 * Default "/". Which separator to use to split segments out of the given route.
 	 * 
 	 * @return array|null
 	 * Returns the result from the invoked method (an array or null).
@@ -32,8 +29,8 @@ class ServiceDispatcher {
 	 * @throws \Solver\Lab\ServiceException
 	 * With code 'endpointOrActionNotFound', if the route doesn't resolve to a method.
 	 */
-	public function dispatcher(ServiceEndpoint $endpoint, $route, array $input = null, $separator = '/') {
-		$action = $this->route($endpoint, $route, $separator);
+	public function dispatch(ServiceEndpoint $endpoint, $route, array $input = null) {
+		$action = $this->route($endpoint, $route);
 		
 		if ($action === null) {
 			$log = new ServiceLog();
@@ -49,17 +46,15 @@ class ServiceDispatcher {
 	 * 
 	 * @param \solver\Lab\ServiceEndpoint $endpoint
 	 * @param string $route
-	 * @param string $separator
 	 * @return \Closure|null
 	 */
-	protected function route(ServiceEndpoint $endpoint, $route, $separator = '/') {		
-		$routeSegs = explode($separator, trim($route, $separator));
-		$count = count($routeSegs);
+	protected function route(ServiceEndpoint $endpoint, $route) {	
+		$count = count($route);
 		
 		if ($count == 0) return null;
 		
-		for ($i = 0; $i < $count; $i) {
-			$endpoint = $endpoint->resolve($routeSegs[$i]);
+		for ($i = 0; $i < $count; $i++) {
+			$endpoint = $endpoint->resolve($route[$i]);
 			
 			if ($endpoint === null) return null;
 			
