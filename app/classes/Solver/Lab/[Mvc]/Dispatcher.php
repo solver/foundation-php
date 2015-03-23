@@ -70,7 +70,7 @@ class Dispatcher {
 				break;
 				
 			case 301:
-				list(, $url) = $result;
+				list(, $url) = $message;
 				\header('HTTP/1.1 301 Moved Permanently');
 				\header('Location: ' . $url);
 				break;
