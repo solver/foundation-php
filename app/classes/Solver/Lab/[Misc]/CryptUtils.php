@@ -24,9 +24,9 @@ class CryptUtils {
 	 * Number of bytes to return.
 	 * 
 	 * @param bool $allowWeak
-	 * Optional (default = false). If the function can't access a single source of crypto strong random bytes, it'll
-	 * throw an exception. But if this flag is true, it'll instead fall back to the weaker (for crypto) mt_rand API and
-	 * return a valid result.
+	 * Optional (default = false). If the function can't access any source of crypto strong random bytes, it'll throw an
+	 * exception. But if this flag is true, it'll instead fall back to the weaker (for crypto) mt_rand API and return a
+	 * valid result.
 	 * 
 	 * @param string
 	 * Random bytes as a binary string.
