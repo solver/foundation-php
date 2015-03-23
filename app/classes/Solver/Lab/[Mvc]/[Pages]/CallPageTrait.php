@@ -14,7 +14,7 @@
 namespace Solver\Lab;
 
 /**
- * Provides call() and callOneOf(), which directly bind an input value to a call of a public method by the same name.
+ * Provides call*() methods, which directly bind an input value to a call of a public method by the same name.
  */
 trait CallPageTrait {
 	/**
