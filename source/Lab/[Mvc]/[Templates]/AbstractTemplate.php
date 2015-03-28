@@ -13,6 +13,8 @@
  */
 namespace Solver\Lab;
 
+use Solver\Radar\Radar;
+
 /**
  * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
  * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
@@ -95,6 +97,11 @@ abstract class AbstractTemplate {
 	private $tagFuncs;
 	
 	/**
+	 * @var \Solver\Radar\Radar
+	 */
+	private $radar;
+	
+	/**
 	 * FIXME: If we run multiple views that use the same imports, we'll be pointlessly reloading the same file. This
 	 * can be fixed if this list below is static (but this should be fixed together with tags becoming scope-specific,
 	 * and also static, so it all works out).
@@ -117,9 +124,13 @@ abstract class AbstractTemplate {
 	 * 
 	 * Also, just like classes, you can use directory names wrapped in square brackets purely to group files together
 	 * without affecting the template id (see class autoloading).
+	 * 
+	 * @param \Solver\Radar\Radar $radar
+	 * Radar instance that'll be used to resolve template ids (both the root one and nested ones).
 	 */
-	public function __construct($templateId) {
+	public function __construct($templateId, Radar $radar) {
 		$this->templateId = $templateId;
+		$this->radar = $radar;
 	}
 	
 	/**
@@ -168,7 +179,7 @@ abstract class AbstractTemplate {
 		// A leading backslash is accepted as some people will write one, but template ids are always absolute anyway.
 		$templateId = \ltrim($templateId, '\\');
 		
-		if (($path = Core::resolve($templateId)) === false) {
+		if (($path = $this->radar->find($templateId)) === false) {
 			throw new \Exception('Template "' . $templateId . '" not found.');
 		}
 		

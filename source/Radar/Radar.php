@@ -11,19 +11,37 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab { // This file contains multiple namespace blocks.
+namespace Solver\Radar;
 
-/** 
- * Startup routines for Solver\Lab.
+/**
+ * Scans given directories using PSR-0 & PSR-4 compatible superset of features, produces a map (cached) and uses the
+ * map to resolve class/function/etc. locations based on their name.
+ * 
+ * Typical usage is for defining autoloaders:
+ * 
+ * <code>
+ * $radar = new Radar(...); 
+ * 
+ * // Standard style autoloader (slower, allows chaining).
+ * spl_autoload_register(function ($class) use ($radar) {
+ * 	   $path = $radar->find($class);
+ * 	   if ($path !== false) require $path;
+ * });
+ * 
+ * // Alternative (old) style autoloader (faster, no chaining, uses a global).
+ * function __autoload($class) {
+ * 	   global $radar;
+ *     $path = $radar->find($class);
+ *     if ($path) require $path;
+ * }
+ * </code>
  */
-class Core {
-	protected static $locations;
-	protected static $nativeMap;
-	protected static $composerMap;
+class Radar {
+	protected $cacheDir, $symbolDirs, $nativeMap, $composerMap;
 	
 	/**
-	 * @param array $autoloadLocation
-	 * A dict of locations to scan for classes, templates and any other autoloadable symbols, in this format:
+	 * @param array $symbolDirs
+	 * A dict of locations to scan for classes, functions, templates and any other loadable symbols, in this format:
 	 * 
 	 * <code>
 	 * [
@@ -49,40 +67,20 @@ class Core {
 	 * - "Bar/BarController [Deprecated].php"
 	 * - "Bar/[Experimental] BarController.php"
 	 * - etc.
+	 * 
+	 * @param null|string $cacheDir
+	 * A directory where Radar can save its $symbolName => $filePath maps. This location should be writable to Radar.
+	 * 
+	 * @param null|string $composerVendorDir
+	 * If you specify this, Radar will include all composer classes into its lookups. Note you MUST use the -o option
+	 * in composer when installing/updating dependencies, as Radar uses the autoload map produced by this option. If you
+	 * don't need this feature, pass null.
 	 */
-	public static function init($autoloadLocations) {		
-		/*
-		 * Check minimum requirements.
-		 */
-		
-		if (\version_compare('5.4.11', PHP_VERSION) == 1) throw new \Exception('This code requires PHP 5.4.11 or later.');
-		if (!\extension_loaded('intl')) throw new \Exception('This code requires extension "intl".');
-		if (!\extension_loaded('iconv')) throw new \Exception('This code requires extension "iconv".');
-		if (!\extension_loaded('mbstring')) throw new \Exception('This code requires extension "mbstring".');
-		
-		/*
-		 * Fix common config problems.
-		 */
-		
-		\error_reporting(-1);
-		\ini_set('log_errors', !\DEBUG); // Log only on production server.
-		\ini_set('display_errors', \DEBUG); // Display only on dev machines.
-		if (!\ini_get('ignore_user_abort')) \ignore_user_abort(true);
-		if (\ini_get('session.use_trans_sid')) \ini_set('session.use_trans_sid', false);
-		
-		// The defaults are typically 14 for precision, and 17 for serialize_precision. Using 14 leads to needless data
-		// loss, as counterintuitively the 'precision' setting is used for many serialization contexts (json, sql etc.).
-		// While in some edge cases 17 digits of precision are required to encode a double as a string exactly, it
-		// produces false digits, which while they don't harm precision, produce noise and bloat up the size of the
-		// serialized version of the number. Most implementations use 16 digits of precision for serializing doubles,
-		// and they are defined as having 15.95 decimal digits of precision in IEEE 754, so we're using this as well.		
-		if (\ini_get('precision') != 16) \ini_set('precision', 16);
-		if (\ini_get('serialize_precision') != 16) \ini_set('serialize_precision', 16);
-		
+	public function __construct($cacheDir, array $symbolDirs, $composerVendorDir = null) {
 		/*
 		 * Initialize autoloader state.
 		 */
-		self::$locations = $autoloadLocations;
+		$this->symbolDirs = $symbolDirs;
 		
 		// Some packages still use this feature (odd), and since we replace Composer's autoloader, we should support it.
 //		UNDER CONSIDERATION. The always-loaded files (like from Swift) are horribly slow and it's such a bad idea to 
@@ -93,11 +91,11 @@ class Core {
 // 			require $file;
 // 		}
 		 
-		self::$composerMap = require \APP_ROOT . '/vendor/composer/autoload_classmap.php';
+		$this->composerMap = $composerVendorDir ? $composerVendorDir . '/composer/autoload_classmap.php' : null;
 		
 		// TRICKY: We need the mute operator to avoid a file_exists check just for first time map cache generation.
-		if ((self::$nativeMap = @include \APP_ROOT . '/cache/map.php') === false) {
-			self::$nativeMap = self::map();
+		if (($this->nativeMap = @include $cacheDir . '/map.php') === false) {
+			$this->nativeMap = $this->map();
 		}
 	}
 	
@@ -105,12 +103,12 @@ class Core {
 	 * Resolves class names & template ids to an absolute file path.
 	 * 
 	 * @param string $symbolId
-	 * A full class name or a template id.
+	 * A full class name, function, template id etc.
 	 * 
 	 * @return string|false
 	 * Full path to the resolved file. False if the file was not found.
 	 */
-	public static function resolve($symbolId) {		
+	public function find($symbolId) {		
 		/*
 		 * Try the maps.
 		 * 
@@ -126,10 +124,10 @@ class Core {
 				// The file was moved/renamed/deleted/etc. Stale cache. Remap.
 				// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
 				// can have the native map overlap Composer by adding to it select /vendor components under development.
-				self::$nativeMap = self::map();
+				$this->nativeMap = self::map();
 				
-				if (isset(self::$nativeMap[$symbolId])) {
-					return self::$nativeMap[$symbolId];
+				if (isset($this->nativeMap[$symbolId])) {
+					return $this->nativeMap[$symbolId];
 				} else {
 					return false;
 				}
@@ -138,14 +136,14 @@ class Core {
 			}
 		};
 		
-		$map = self::$nativeMap;
+		$map = $this->nativeMap;
 		
 		if (isset($map[$symbolId])) {
 			$path = $getVerified(\APP_ROOT . '/' . $map[$symbolId]);			
 			if ($path !== false) return $path;
 		}
 		
-		$map = self::$composerMap;
+		$map = $this->composerMap;
 		
 		if (isset($map[$symbolId])) {
 			$path = $getVerified($map[$symbolId]);			
@@ -166,7 +164,7 @@ class Core {
 		// shouldn't call class_exists without disabling autoloader look-ups, if the class is expected not to exist 
 		// during normal script operation (the saner alternative).
 		if ($newMap !== false) {
-			$map = self::$nativeMap = $newMap;
+			$map = $this->nativeMap = $newMap;
 			
 			if (isset($map[$symbolId])) {
 				return \APP_ROOT . '/' . $map[$symbolId];
@@ -179,7 +177,7 @@ class Core {
 		
 	}
 	
-	protected static function map() {
+	protected function map() {
 		// There's no point in mapping more than once per request. So we refuse a second map run & let the app fail with
 		// the relevant "symbol not found" error.
 		static $didMap = false;
@@ -248,20 +246,12 @@ class Core {
 			}
 		};
 		
-		foreach (self::$locations as $dir => $ns) {
+		foreach ($this->symbolDirs as $dir => $ns) {
 			$scanDir($dir, $ns);
 		}
 		
-		\file_put_contents(\APP_ROOT . '/cache/map.php', '<?php return ' . \var_export($map, true) . ';');
+		if (is_dir($this->cacheDir)) mkdir($this->cacheDir, 0777, true);
+		\file_put_contents($this->cacheDir . '/map.php', '<?php return ' . \var_export($map, true) . ';');
 		return $map;
-	}
-} // Class Core.
-} // Namespace Solver\Lab.
-
-namespace {
-	// TRICKY: This should be defined in the root namespace.
-	function __autoload($class) {
-		$path = Solver\Lab\Core::resolve($class);
-		if ($path !== false) require $path;
 	}
 }
