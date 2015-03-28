@@ -95,7 +95,7 @@ abstract class Page {
 	 * 
 	 * Without a dot "." or at "@", names are considered absolute.
 	 * 
-	 * The default value if you pass null (or nothing) for template id is "@\Template".
+	 * The default value if you pass null (or nothing) for template id is "@\DefaultTemplate".
 	 * 
 	 * LEGACY: Page class names ending in Controller will be resolved by default (if templateId is null or not passed)
 	 * to names ending in View. For example, for controller "Foo\BarController", the assumed template identifier will be
@@ -108,11 +108,10 @@ abstract class Page {
 		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);
 			
 		if ($templateId === null) {
-			// Legacy resolution.
-			if (preg_match('/^(.*)Controller$/', $class, $matches)) {
+			if (preg_match('/^(.*)Controller$/', $class, $matches)) { // Legacy resolution.
 				$templateId = $matches[1] . 'View';
-			} else {
-				$templateId = '@\Template';
+			} else { // New resolution.
+				$templateId = '@\DefaultTemplate';
 			}
 		}
 		
