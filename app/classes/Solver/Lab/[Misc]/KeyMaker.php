@@ -32,6 +32,8 @@ class KeyMaker {
 	 * characters). The keys produced with the default alphabet are selected to be usable verbatim without processing 
 	 * and escaping in a wide range of mediums and encodings (ASCII, UTF-8, 7-bit encoding, URLs, JSON etc.).
 	 * 
+	 * Max alphabet length - 256 characters (it's encoded in ASCII so more wouldn't make sense anyway).
+	 * 
 	 * @param bool $cryptoWeak
 	 * Default false. Enable this to use a much faster and still sufficiently random, but cryptographically insecure
 	 * algorithm. If you enable this flag and use the resulting keys as tokens, passwords etc. your application may be
@@ -45,6 +47,10 @@ class KeyMaker {
 		$alphabetLength = \strlen($alphabet);
 		$key = '';
 		
+		if ($alphabetLength > 256) {
+			throw new \Exception('Max alphabet length should be 256 characters.');
+		}
+		
 		if ($cryptoWeak) {
 			for ($i = 0; $i < $length; $i++) {
 				$key .= $alphabet[\mt_rand(0, $alphabetLength - 1)];
@@ -53,6 +59,7 @@ class KeyMaker {
 			$bytes = CryptUtils::getRandomBytes($length);
 			
 			for ($i = 0; $i < $length; $i++) {
+				// TODO: Using modulo here introduces a bit of a skew in the selected index, if 256 % $length != 0. Improve.
 				$key .= $alphabet[ord($bytes[$i]) % $alphabetLength];
 			}
 		}
