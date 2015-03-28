@@ -14,11 +14,12 @@
 namespace Solver\Lab;
 
 /**
- * Assists in creating and checking properly salted blowfish password hashes (using crypt()).
+ * Assists in creating and checking properly salted blowfish password hashes (using crypt()) & other crypto-related
+ * functionality.
  */
 class CryptUtils {
 	/**
-	 * Returns cryptographically strong random bytes for use in hash salts and other.
+	 * Returns cryptographically strong random bytes for use in hash salts, iv and other.
 	 * 
 	 * @param int $length
 	 * Number of bytes to return.
