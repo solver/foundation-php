@@ -97,11 +97,6 @@ abstract class AbstractTemplate {
 	private $tagFuncs;
 	
 	/**
-	 * @var \Solver\Radar\Radar
-	 */
-	private $radar;
-	
-	/**
 	 * FIXME: If we run multiple views that use the same imports, we'll be pointlessly reloading the same file. This
 	 * can be fixed if this list below is static (but this should be fixed together with tags becoming scope-specific,
 	 * and also static, so it all works out).
@@ -112,6 +107,13 @@ abstract class AbstractTemplate {
 	 * @var array
 	 */
 	private $renderedTemplateIds = [];
+	
+	/**
+	 * See constructor.
+	 *
+	 * @var \Closure
+	 */
+	private $resolver;
 	
 	/**
 	 * @param string $templateId
@@ -125,12 +127,14 @@ abstract class AbstractTemplate {
 	 * Also, just like classes, you can use directory names wrapped in square brackets purely to group files together
 	 * without affecting the template id (see class autoloading).
 	 * 
-	 * @param \Solver\Radar\Radar $radar
-	 * Radar instance that'll be used to resolve template ids (both the root one and nested ones).
+	 * @param null|\Closure $resolver
+	 * null | ($templateId: string) => null | string; Takes template id, returns filepath to it (or null if not found).
+	 *
+	 * This parameter is optional. If not passed, the template id will be resolved via a call to Radar::find().
 	 */
-	public function __construct($templateId, Radar $radar) {
+	public function __construct($templateId, \Closure $resolver = null) {
 		$this->templateId = $templateId;
-		$this->radar = $radar;
+		$this->resolver = $resolver;
 	}
 	
 	/**
@@ -179,7 +183,13 @@ abstract class AbstractTemplate {
 		// A leading backslash is accepted as some people will write one, but template ids are always absolute anyway.
 		$templateId = \ltrim($templateId, '\\');
 		
-		if (($path = $this->radar->find($templateId)) === false) {
+		if ($this->resolver) {
+			$path = $this->resolver->__invoke($templateId);
+		} else {
+			$path = Radar::find($templateId);
+		}
+		
+		if ($path === null) {
 			throw new \Exception('Template "' . $templateId . '" not found.');
 		}
 		

@@ -14,244 +14,299 @@
 namespace Solver\Radar;
 
 /**
- * Scans given directories using PSR-0 & PSR-4 compatible superset of features, produces a map (cached) and uses the
- * map to resolve class/function/etc. locations based on their name.
- * 
- * Typical usage is for defining autoloaders:
- * 
- * <code>
- * $radar = new Radar(...); 
- * 
- * // Standard style autoloader (slower, allows chaining).
- * spl_autoload_register(function ($class) use ($radar) {
- * 	   $path = $radar->find($class);
- * 	   if ($path !== false) require $path;
- * });
- * 
- * // Alternative (old) style autoloader (faster, no chaining, uses a global).
- * function __autoload($class) {
- * 	   global $radar;
- *     $path = $radar->find($class);
- *     if ($path) require $path;
- * }
- * </code>
+ * A map-based autoloader. Mapping is done on-demand (first run, cache miss, file moved, etc.) and cached. Provides a
+ * small set of highly reusable mapping handlers to cover all scenarios.
  */
-class Radar {
-	protected $cacheDir, $symbolDirs, $nativeMap, $composerMap;
+class Radar {	
+	protected static $strategy;
+	
+	
+	// Write best in production to not enable map on demand to avoid badly behaving code from causin remap when testing class_loaded for missing classes with autoloader.
 	
 	/**
-	 * @param array $symbolDirs
-	 * A dict of locations to scan for classes, functions, templates and any other loadable symbols, in this format:
-	 * 
-	 * <code>
-	 * [
-	 * 		"path/to/files" => "Optional\Namespace\Prefix",
-	 * 		...,
-	 * 		...
-	 * ]
-	 * </code>
-	 * 
-	 * Paths are considered relative to APP_ROOT.
-	 *  
-	 * For PSR-0 formatted directories, you can have an empty string as the namespace prefix.
-	 * 
-	 * An additional feature: directory & file name fragments wrapped in square brackets (and optionally surrounded by 
-	 * whitespace) won't be counted towards the namespace and name of a class, so you can use it to organize files
-	 * freely without affecting the actual class name.
-	 * 
-	 * All of the following filepaths will map to the same class name "Foo\BarController":
-	 * 
-	 * - "Foo/[Controllers]/BarController.php"
-	 * - "Foo [Controllers]/BarController.php"
-	 * - "Foo/[Module]/[Controllers]/BarController.php"
-	 * - "Bar/BarController [Deprecated].php"
-	 * - "Bar/[Experimental] BarController.php"
-	 * - etc.
+	 * Initializes the autoloader.
 	 * 
 	 * @param null|string $cacheDir
-	 * A directory where Radar can save its $symbolName => $filePath maps. This location should be writable to Radar.
+	 * A directory where Radar can save its $resourceName => $filePath map & other related caches. This location should
+	 * be writable to Radar, if you intend to use on-demand remapping.
 	 * 
-	 * @param null|string $composerVendorDir
-	 * If you specify this, Radar will include all composer classes into its lookups. Note you MUST use the -o option
-	 * in composer when installing/updating dependencies, as Radar uses the autoload map produced by this option. If you
-	 * don't need this feature, pass null.
+	 * @param array $symbolDirs
+	 * dict<filepath: string, specification: #Specification>;
+	 * 
+	 * Optional. If you pass this parameter, you enable on-demand symbol mapping. This dictionary lists directories and
+	 * assigns them to be processed by a given handler. It's recommended to generate your map once and disable on-demand
+	 * mapping on production, as some poorly written libraries may issue class_exists with autoloading on classes that
+	 * are missing during normal app operation. This could trigger a costly mapping operation (which still won't find
+	 * the missing class).
+	 * 
+	 * #Specification: string; A string in format "handler" or "handler:settings". The settings segment is specific to
+	 * each handler, see below. 
+	 * 
+	 * The following handlers are supported:
+	 * 
+	 * - Handler "psrx". A PSR-0 and PSR-4 compliant superset (described below). Supports specifying a base namespace
+	 * for the given path (PSR-4 compliant), for ex. "psrx:Foo\Bar". 
+	 * - Handler "composer". The path should point to Composer's vendor directory. This handler requires that all 
+	 * composer updates and installs are done with the "-o" option (generates optimized autoload maps).
+	 * 
+	 * PSRX:
+	 * 
+	 * On top of the standard format expected by PSR compliant autoloader, the PSRX handler supports additional
+	 * semantics.
+	 * 
+	 * 1. Directory & file name fragments wrapped in square brackets (and optionally surrounded by whitespace) won't be
+	 * counted towards the namespace and name of a class, so you can use it to organize files freely without affecting
+	 * the actual class name. All of the following filepaths will map to the same class name ""Foo\Bar":
+	 * 
+	 * - "Foo/[Controllers]/Bar.php"
+	 * - "Foo [Controllers]/Bar.php"
+	 * - "Foo/[Module]/[Controllers]/Bar.php"
+	 * - "Bar/Bar [Deprecated].php"
+	 * - "Bar/[Experimental] Bar.php"
+	 * - etc.
+	 * 
+	 * 2. Aside from nested folders, you can use a dash "-" as a namespace separate to keep your directory tree shallow
+	 * when it makes more sense. All of the following filepaths will map to "Foo\Bar\Baz".
+	 * 
+	 * - "Foo/Bar/Baz.php"
+	 * - "Foo/Bar-Baz.php"
+	 * - "Foo-Bar/Baz.php"
+	 * - "Foo-Bar-Baz.php"
+	 * - etc.
 	 */
-	public function __construct($cacheDir, array $symbolDirs, $composerVendorDir = null) {
-		/*
-		 * Initialize autoloader state.
-		 */
-		$this->symbolDirs = $symbolDirs;
+	public static function init($cacheDir, $symbolDirs) {
+		if (self::$strategy) throw new \Exception('Radar is already initialized.');
+		self::$strategy = new RadarStrategy($cacheDir, $symbolDirs);
 		
-		// Some packages still use this feature (odd), and since we replace Composer's autoloader, we should support it.
-//		UNDER CONSIDERATION. The always-loaded files (like from Swift) are horribly slow and it's such a bad idea to 
-//		always load them.
-//		
-// 		$autoloadFiles = \APP_ROOT . '/vendor/composer/autoload_files.php';
-// 		if (file_exists($autoloadFiles)) foreach (require $autoloadFiles as $file) {
-// 			require $file;
-// 		}
-		 
-		$this->composerMap = $composerVendorDir ? $composerVendorDir . '/composer/autoload_classmap.php' : null;
-		
-		// TRICKY: We need the mute operator to avoid a file_exists check just for first time map cache generation.
-		if (($this->nativeMap = @include $cacheDir . '/map.php') === false) {
-			$this->nativeMap = $this->map();
-		}
+		// TODO: Bench __autoload vs. spl and replace if needed.
+		spl_autoload_register(function ($class) {
+			list($found, $result) = self::$strategy->load($class);
+			return $found;
+		}, true, true);
 	}
 	
 	/**
-	 * Resolves class names & template ids to an absolute file path.
+	 * Returns the filepath for the given symbol id.
 	 * 
-	 * @param string $symbolId
-	 * A full class name, function, template id etc.
+	 * @param string $symbolName
+	 * Fully qualified symbol name (function, class, template id etc.)
 	 * 
-	 * @return string|false
-	 * Full path to the resolved file. False if the file was not found.
+	 * @return null|string
+	 * Full filepath to the symbol (or null if it not found).
 	 */
-	public function find($symbolId) {		
+	public static function find($symbolId) {
+		if (!self::$strategy) throw new \Exception('Initialize before using find().');
+		return self::$strategy->find($symbolId);
+	}
+	
+	/**
+	 * Loads the given symbol id (if found).
+	 * 
+	 * Prefer using this method versus manually including the filepath returned from find(), as Radar may use an
+	 * optimized codepath for finding and loading a resource in one go.
+	 * 
+	 * @param string $symbolName
+	 * Fully qualified symbol name (function, class, template id etc.).
+	 * 
+	 * @return array
+	 * tuple...
+	 * - found: bool; Whether a symbol with that name was found and loaded.
+	 * - result: any; The return result provided by including the resource (if any, otherwise null).
+	 * The return result of loading the symbol (if any).
+	 */
+	public static function load($symbolId) {
+		if (!self::$strategy) throw new \Exception('Initialize before using load().');
+		return self::$strategy->load($symbolId);
+	}
+	
+	/**
+	 * Forces a symbol re-scan.
+	 * 
+	 * You shouldn't ever need to call this method in most of your apps. Radar will automatically issue re-scans when it
+	 * has to in order to keep the map cache current, but it does so up to one time per "PHP request", assuming your
+	 * code files don't change *while* PHP is running. If this assumption is wrong (for ex. long-running PHP processes
+	 * with "live" codebase updates) you can call this function to update the map.
+	 */
+	public static function remap() {
+		if (!self::$strategy) throw new \Exception('Initialize before using remap().');
+		return self::$strategy->remap();
+	}
+}
+
+/**
+ * DO NOT instantiate this class, it's a (likely temporary) implementation detail of Radar. Use Radar directly.
+ * 
+ * We have this in preparation of eventually having multiple independent strategies, should a use case show up for it.
+ */
+class RadarStrategy {
+	protected $base, $map, $mappedOnce = false, $composerMap = null, $cacheDir, $symbolDirs = null;
+	
+	public function __construct($cacheDir, array $symbolDirs) {
+		// We use special handling for composer right now. TODO: Move this to the mapping phase to improve performance.
+		foreach ($symbolDirs as $path => $handler) {
+			if ($handler === 'composer') {
+				if ($this->composerMap === null) {
+					$this->composerMap = require $path . '/composer/autoload_classmap.php';
+				} else {
+					throw new \Exception('You have supplied multiple "composer" directories, you can only have one.');
+				}
+			}
+		}
+		
+		$this->cacheDir = $cacheDir;
+		$this->symbolDirs = $symbolDirs;
+		
+		// TRICKY: We need the mute operator to avoid a file_exists check just for first time map cache generation.
+		if (($cache = @include $cacheDir . '/cache.php') === false) {
+			$this->mapOnce();
+		} else {
+			$this->base = $cache['base'];
+			$this->map = $cache['map'];
+		}
+	}
+	
+	public function find($symbolId) {
 		/*
 		 * Try the maps.
 		 * 
-		 * Note: Composer has no automatic rescan on stale map, we do, so always query native 1st (above), Composer 2nd.
-		 * We also no longer trust Composer's map to be up-to-date (it isn't when a module in the vendor dir is being
-		 * worked on) hence the file check applies to Composer too.
+		 * Composer can't re-scan if a map is stale (files in "vendor" dir modified), while Radar can, so Radar's own
+		 * map has a higher priority.
 		 */
 		
-		$getVerified = function ($path) use ($symbolId) {
-			// TODO: This file_exists() check can go once the error-to-exception mapper is ported. That'll speed things
-			// up a notch.
-			if (!\file_exists($path)) { 
-				// The file was moved/renamed/deleted/etc. Stale cache. Remap.
+		$verified = function ($path) use ($symbolId) {
+			// The file was moved/renamed/deleted/etc. Stale cache. Remap.
+			// TODO: Remove these file_exist() checks once we can rely on throws "include missing" exceptions from Guard.
+			if (!\file_exists($path)) {
 				// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
-				// can have the native map overlap Composer by adding to it select /vendor components under development.
-				$this->nativeMap = self::map();
-				
-				if (isset($this->nativeMap[$symbolId])) {
-					return $this->nativeMap[$symbolId];
-				} else {
-					return false;
-				}
+				// can have the native map overlap Composer by adding to it select vendor components under development.
+				$this->mapOnce();
+				return isset($this->map[$symbolId]) ? $this->base . $this->map[$symbolId] : null;
 			} else {
 				return $path;
 			}
 		};
 		
-		$map = $this->nativeMap;
+		$map = $this->map;
 		
 		if (isset($map[$symbolId])) {
-			$path = $getVerified(\APP_ROOT . '/' . $map[$symbolId]);			
-			if ($path !== false) return $path;
+			$path = $verified($this->base . $map[$symbolId]);			
+			if ($path !== null) return $path;
 		}
 		
-		$map = $this->composerMap;
+		$composerMap = $this->composerMap;
 		
-		if (isset($map[$symbolId])) {
-			$path = $getVerified($map[$symbolId]);			
-			if ($path !== false) return $path;
+		if ($composerMap && isset($composerMap[$symbolId])) {
+			$path = $verified($composerMap[$symbolId]);			
+			if ($path !== null) return $path;
 		}
 		
 		/*
 		 * No match in either map, try a re-map.
 		 */
 		
-		$newMap = self::map();
+		$didMap = $this->mapOnce();
 		
-		// TRICKY: Some (not very well written) third party code probes for class existence by invoking the autoloader
-		// on a non-existing class. This causes a remap, but doesn't mean the script will end with a fatal error at this
-		// point. So we should take care not to overwrite the native map (with false) if map() is running for the second
-		// time in this script. To work around the performance implications of rescanning on every run, production code
-		// should not use automatic remapping, but be deployed with a stable pre-generated map. Alternatively, code 
-		// shouldn't call class_exists without disabling autoloader look-ups, if the class is expected not to exist 
-		// during normal script operation (the saner alternative).
-		if ($newMap !== false) {
-			$map = $this->nativeMap = $newMap;
-			
+		if ($didMap) {
 			if (isset($map[$symbolId])) {
-				return \APP_ROOT . '/' . $map[$symbolId];
+				return $this->base . $map[$symbolId];
 			} else {
-				return false;
+				return null;
 			}
 		} else {
-			return false;
+			return null;
 		}
-		
 	}
 	
-	protected function map() {
-		// There's no point in mapping more than once per request. So we refuse a second map run & let the app fail with
-		// the relevant "symbol not found" error.
-		static $didMap = false;
-		if ($didMap) return false;
-		$didMap = true;
-		
-		$map = [];
-		
-		$scanDir = function ($dir, $ns) use (& $scanDir, & $map) {
-			$ns = \trim($ns, '\\');
+	public function load($symbolId) {
+		$path = $this->find($symbolId);
+		if ($path === null) {
+			return [false, null];
+		} else {
+			return [true, require $path];
+		}
+	}
+	
+	public function remap() {
+		if ($this->symbolDirs === null) {
+			throw new \Exception('Cannot remap: symbol locations have not been configured.');
+		} else {
+			if (!class_exists(__NAMESPACE__ . '\PsrxMapper', false)) require __DIR__ . '/[Internal]/PsrxMapper.php';
+			$mapper = new PsrxMapper();
 			
-			try {
-				$iterator = new \DirectoryIterator(\APP_ROOT . '/'. $dir);
-			} catch (\RuntimeException $e) {
-				throw new \Exception('Invalid or unreadable directory: ' . $dir . '.');
-			}
+			$badConfig = function ($path, $config) {
+				throw new \Exception('Bad config "'. $config .'" for path "'. $path .'".');
+			};
 			
-			foreach ($iterator as $file) {
-				$filename = $file->getFilename();
+			$this->base = '';
+			$this->map = [];
+			
+			$import = function ($path, $symbolId) {
+				// We need canonical paths, as we'll be comparing one with another.
+				$path = realpath($path); 
 				
-				$isDir = $file->isDir();
-				
-				// Skip files and dirs with a leading dot (".", "..", ".svn", ".git" etc.)
-				if ($filename[0] === '.') continue;
-				
-				if ($isDir) {
-					$scanDir($dir . '/' . $filename, $ns . '\\' . $filename, $map);
-				} else {	
-					$pathInfo = \pathinfo($filename);
-					
-					// Ignore any files not having a PHP extension.
-					if (!isset($pathInfo['extension']) || $pathInfo['extension'] !== 'php') continue;
-					
-					$symbolPath = $dir . '/' . $filename;
-					$symbolName = ($ns === '' ? '' : $ns . '\\') . $pathInfo['filename'];
-					
-					// Dashes are interpreted the same as directory separators: a namespace delimiter.
-					$symbolName = str_replace('-', '\\', $symbolName);
-					
-					// Strip out brackets (and whitespace around them) and anything between them, normalize repeated
-					// backslashes, if any.
-					$symbolName = \preg_replace('/\s*\[.*?\]\s*/', '', $symbolName);
-					$symbolName = \preg_replace('/\\\\+/', '\\', $symbolName);
-					
-					// Legacy Solver framework "Flow" used extension ".class.php" for classes. "Flow" also had supported
-					// arbitrary folders for class placement, without namespacing. To support loading these classes we 
-					// filter out ".class" and any namespace when we detect a Flow class. This should be removed when we
-					// no longer have Flow code to maintain.
-					if (\preg_match('/\.class$/D', $symbolName)) {
-						$symbolName = \preg_replace('/(.*\\\\)|\.class$/D', '', $symbolName);
+				if (isset($this->map[$symbolId])) {
+					// We allow overlapping discovery if locations match, but we don't allow the same symbol in two locations.
+					if ($this->map[$symbolId] !== $path) {
+						throw new \Exception('Symbol "' . $symboId . '" has been declared twice, at "' . $path . '" and "' . $this->map[$symbolId] . '".');
 					}
-					
-					// Using quick heuristics to detect & support legacy classes using underscores (vs. namespaces).
-					$symbolLegacyName = \str_replace('\\', '_', $symbolName);
-				
-					if (\preg_match('/(class|interface|trait)\s+' . $symbolLegacyName . '\b/si', \file_get_contents(\APP_ROOT . '/' . $symbolPath))) {
-						$symbolName = $symbolLegacyName;
-					}
-					
-					if (isset($map[$symbolName])) {
-						throw new \Exception('Duplicate declarations for symbol ' . $symbolName . ' at file "' . $map[$symbolName] . '" and file "' . $symbolPath . '".');
-					}
-					
-					$map[$symbolName] = $symbolPath;
+				} else {
+					$this->map[$symbolId] = $path;
 				}
+			};
+			
+			foreach ($this->symbolDirs as $path => $config) {
+				if ($config === 'composer') continue; // We handle this eariler as a special case.
+				
+				if ($config === '') $badConfig($path, $config);
+				$config = explode(':', $config);
+				if (count($config) > 2) $badConfig($path, $config);
+				if ($config[0] !== 'psrx') $badConfig($path, $config);
+				if (!isset($config[1])) $config[1] = null;
+				
+				$mapper->map($path, $config[1], $import);
 			}
-		};
+			
+			// Extracts the common prefix of all paths (if any) to save RAM & I/O from having the cache.
+			$this->extractMapBase();
+						
+			if (!is_dir($this->cacheDir)) mkdir($this->cacheDir, 0777, true);
+			file_put_contents($this->cacheDir . '/cache.php', '<?php return ' . var_export(['base' => $this->base, 'map' => $this->map], true) . ';');
+		}
+	}
+	
+	/**
+	 * Runs once in radar's lifetime (if symbol directories have been defined).
+	 * 
+	 * @return bool
+	 * True if it issued a (re)map, false if it didn't.
+	 */
+	protected function mapOnce() {
+		if ($this->mappedOnce || $this->symbolDirs === null) {
+			return false;
+		} else {
+			$this->mappedOnce = true;
+			$map = $this->remap();
+			return true;
+		}
+	}
+	
+	protected function extractMapBase() {
+		if (!$this->map) return;
+		$base = reset($this->map);
 		
-		foreach ($this->symbolDirs as $dir => $ns) {
-			$scanDir($dir, $ns);
+		foreach ($this->map as $symbolId => $path) {
+			while (strpos($path, $base) !== 0 && $base !== '') {
+				$base = substr($base, 0, -1);
+			}
 		}
 		
-		if (is_dir($this->cacheDir)) mkdir($this->cacheDir, 0777, true);
-		\file_put_contents($this->cacheDir . '/map.php', '<?php return ' . \var_export($map, true) . ';');
-		return $map;
+		if ($base !== '')  {
+			$this->base = $base;
+			$baseLen = strlen($base);
+			
+			foreach ($this->map as $symbolId => $path) {
+				$this->map[$symbolId] = substr($path, $baseLen);
+			}
+		}
 	}
 }

@@ -45,15 +45,6 @@ abstract class Page {
 	 * @var \Solver\Lab\PageLog
 	 */
 	protected $log = [];
-	
-	/**
-	 * @var PageContext
-	 */
-	private $ctx;
-	
-	public function __construct(PageContext $ctx) {
-		$this->ctx = $ctx;
-	}
 
 	final public function __invoke(array $input) {
 		try {
@@ -126,7 +117,7 @@ abstract class Page {
 		
 		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
 		
-		$template = new Template($templateId, $this->ctx->getRadar());
+		$template = new Template($templateId);
 		$template($this->data, $this->log);
 	}
 	
