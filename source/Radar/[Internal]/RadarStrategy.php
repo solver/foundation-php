@@ -59,6 +59,8 @@ class RadarStrategy {
 			if (!\file_exists($path)) {
 				// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
 				// can have the native map overlap Composer by adding to it select vendor components under development.
+				// This can be used to edit files within Composer packages (useful for editing a library in the context
+				// of a specific project).
 				$this->mapOnce();
 				return isset($this->map[$symbolId]) ? $this->base . $this->map[$symbolId] : null;
 			} else {
