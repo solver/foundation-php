@@ -68,6 +68,8 @@ class Guard {
 		 * 
 		 * Note that:
 		 * - Operator "@" is supported due to unfortunate inconsistent use of warnings/notices by internal PHP APIs.
+		 * 
+		 * TODO: Move back to specific exceptions (for I/O and includes).
 		 */
 		
 		set_error_handler(function ($severity, $message, $file, $line) {

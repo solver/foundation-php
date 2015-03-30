@@ -20,9 +20,6 @@ namespace Solver\Radar;
 class Radar {	
 	protected static $strategy;
 	
-	
-	// Write best in production to not enable map on demand to avoid badly behaving code from causin remap when testing class_loaded for missing classes with autoloader.
-	
 	/**
 	 * Initializes the autoloader.
 	 * 
@@ -274,12 +271,6 @@ class RadarStrategy {
 		}
 	}
 	
-	/**
-	 * Runs once in radar's lifetime (if symbol directories have been defined).
-	 * 
-	 * @return bool
-	 * True if it issued a (re)map, false if it didn't.
-	 */
 	protected function mapOnce() {
 		if ($this->mappedOnce || $this->symbolDirs === null) {
 			return false;
