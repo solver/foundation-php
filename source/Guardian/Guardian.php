@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Guard;
+namespace Solver\Guardian;
 
 /**
  * It's recommended to run Guard::init() immediately after your autoloader is operational.
@@ -27,7 +27,7 @@ namespace Solver\Guard;
  * 
  * TODO: Remove dependency on global DEBUG constant.
  */
-class Guard {
+class Guardian {
 	/**
 	 * Checks the system for proper settings, required extensions etc.
 	 */
