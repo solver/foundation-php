@@ -296,7 +296,8 @@ class EventService {
 		$row['dateCreated'] = SqlExpression::toDatetime(time());
 				
 		// Dedicated "details" fields.
-		if ($this->fieldNames) foreach ($this->fieldNames as $fieldName) {
+		$fieldNames = $this->fieldNames;
+		if ($fieldNames) foreach ($fieldNames as $fieldName) {
 			if (isset($details[$fieldName])) {
 				$row['details_' . $fieldName] = $details[$fieldName];
 				unset($details[$fieldName]); 

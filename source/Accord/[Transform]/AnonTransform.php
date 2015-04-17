@@ -11,13 +11,31 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Accord;
 
-use Solver\Report\DefaultTransientStatusLog;
+use Solver\Report\ErrorLog;
 
-/**
- * Logs the progress of events in the page controller (success, info, warning, error).
- * 
- * This log is given to templates for display (if needed).
- */
-class PageLog extends DefaultTransientStatusLog {}
+class AnonTransform implements Transform {
+	use TransformBase;
+	
+	/**
+	 * @var \Closure
+	 */
+	protected $apply;
+	
+	public function __construct(\Closure $apply = null) {
+		$this->apply = $apply;
+	}
+	
+	public function setApplyMethod(\Closure $apply) {
+		$this->apply = $apply;
+	}
+	
+	public function apply($value, ErrorLog $log, $path = null) {
+		if ($this->apply) {
+			return $this->apply->__invoke($value, $log, $path);
+		} else {
+			throw new \Exception('Method apply() has not been set.');
+		}
+	}
+}

@@ -101,7 +101,7 @@ class EntitySet {
 		if ($options['encode'] && !$options['encodeAll']) {
 			$options['encodeAll'] = function ($entities) {
 				$records = [];
-				foreach ($entities as $entity) { $records[] = $this->encode($entity); }
+				foreach ($entities as $entity) { $records[] = $this->encode->__invoke($entity); }
 				return $records;
 			};
 		}
@@ -109,23 +109,21 @@ class EntitySet {
 		if ($options['decode'] && !$options['decodeAll']) {
 			$options['decodeAll'] = function ($records) {
 				$entities = [];
-				foreach ($records as $record) { $entities[] = $this->decode($record); }
+				foreach ($records as $record) { $entities[] = $this->decode->__invoke($record); }
 				return $entities;
 			};
 		}
 		
 		if ($options['encodeAll'] && !$options['encode']) {
 			$options['encode'] = function ($entity) {
-				$encodeAll = $this->encodeAll;
-				$records = $encodeAll([$entity]);
+				$records = $this->encodeAll->__invoke([$entity]);
 				return $records[0];
 			};
 		}
 		
 		if ($options['decodeAll'] && !$options['decode']) {
 			$options['decode'] = function ($record) {
-				$decodeAll = $this->decodeAll;
-				$entities = $decodeAll([$record]);
+				$entities = $this->decodeAll->__invoke([$record]);
 				return $entities[0];
 			};
 		}

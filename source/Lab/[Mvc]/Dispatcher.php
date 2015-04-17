@@ -17,6 +17,8 @@ namespace Solver\Lab;
  * Ties the router & page controller together, invokes an optional fallback handler in case of exceptions.
  */
 class Dispatcher {
+	protected $router, $fallback, $factory;
+	
 	/**
 	 * @param callable $router
 	 * Router callable. Any callable would do. Takes input, should return one of the following messages (codes after 
@@ -33,10 +35,18 @@ class Dispatcher {
 	 * 
 	 * If you don't specify a fallback, or if the fallback itself throws an exception, that exception will be thrown 
 	 * out and left to the dispatcher client to handle.
+	 * 
+	 * 
+	 * @param callable $factory
+	 * ($className: string) => function; If specified, any time a route returns a "$pageCallable" as a string class
+	 * name, it won't instantiate it directly but give the class name to this factory to construct it and return it.
+	 * This gives you the chance to inject the necessary dependencies for the handler. The factory also applies if you
+	 * pass a string for your error handler.
 	 */
-	public function __construct(callable $router, $fallback = null) {
+	public function __construct(callable $router, $fallback = null, $factory = null) {
 		$this->router = $router;
 		$this->fallback = $fallback;
+		$this->factory = $factory;
 	}
 	
 	/**
@@ -57,11 +67,13 @@ class Dispatcher {
 				// TODO: (Tentative) the exception should be contained within the page, it should be caught and return a
 				// message instead (like router's 404 etc.)?
 				try {
-					$pageCallable($pageInput);
+					$handler = $this->createHandler($pageCallable);
+					$handler($pageInput);
 				} catch (\Exception $e) {
 					if ($this->fallback) {
 						$input['exception'] = $e;
-						$this->dispatchFallback($input);
+						$handler = $this->createHandler($this->fallback);
+						$handler($input);
 						return;
 					} else {
 						throw $e;
@@ -80,7 +92,8 @@ class Dispatcher {
 				
 				if ($this->fallback) {
 					$input['exception'] = $notFound;
-					$this->dispatchFallback($input);
+					$handler = $this->createHandler($this->fallback);
+					$handler($input);
 					return;
 				} else {
 					throw $notFound;
@@ -92,9 +105,15 @@ class Dispatcher {
 		}
 	}
 	
-	protected function dispatchFallback($input) {
-		if (is_string($this->fallback)) $this->fallback = new $this->fallback;
-		$fallback = $this->fallback;
-		return $fallback($input);
+	protected function createHandler($handlerSpec) {
+		if (is_string($handlerSpec)) {
+			if ($this->factory) {
+				return $this->factory->__invoke($handlerSpec);
+			} else {
+				return new $handlerSpec();
+			}
+		} else {
+			return $handlerSpec;
+		}
 	}
 }

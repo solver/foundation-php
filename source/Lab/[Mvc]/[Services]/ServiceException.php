@@ -17,16 +17,14 @@ namespace Solver\Lab;
  * An exception containing one or more error events. This exception is thrown on domain & validation errors occuring in
  * a model's service layer. See ServiceLog.
  * 
- * Services may also throw other exceptions in unexpected circumstances (like database access failure). 
- * 
- * TODO: Override getMessage() to print all error messages (with codes and paths if any).
+ * Services may also throw other exceptions in unexpected circumstances (like database access failure).
  */
-class ServiceException extends \Exception implements EventProvider {
+class ServiceException extends \Exception {
 	/**
 	 * @var \Solver\Lab\ServiceLog
 	 */
 	protected $log;
-	
+
 	/**
 	 * TRICKY: As a special type of exception this one has no message/code etc. Instead it acts as a proxy for the
 	 * errors contained in the log passed here.
@@ -37,8 +35,33 @@ class ServiceException extends \Exception implements EventProvider {
 		parent::__construct();		
 		$this->log = $log;
 	}
+	
+	/**
+	 * @return \Solver\Lab\ServiceLog
+	 */
+	public function getLog() {
+		return $this->log;
+	}
+	
+	public function getLogMessages() {
+		$messages = [];
 		
-	public function getAllEvents() {
-		return $this->log->getAllEvents();
+		foreach ($this->log->getErrors() as $error) {
+			$message = '';
+			
+			if ($error['path'] !== null && $error['path'] !== '') {
+				$message = '(@' . $error['path'] . ') ';
+			}
+			
+			if ($error['message'] === null) {
+				$message = 'Code: ' + $error['code'];
+			} else {
+				$message .= $error['message'];
+			}
+			
+			$messages[] = $message;
+		}
+		
+		return implode("\n", $messages);
 	}
 }

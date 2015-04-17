@@ -31,7 +31,7 @@ class Guardian {
 	/**
 	 * Checks the system for proper settings, required extensions etc.
 	 */
-	public static function init() {
+	public static function init($errorLogFile) {
 		/*
 		 * Check minimum requirements.
 		 */
@@ -47,6 +47,7 @@ class Guardian {
 		
 		\error_reporting(-1);
 		\ini_set('log_errors', !\DEBUG); // Log only on production server.
+		\ini_set('error_log', $errorLogFile);
 		\ini_set('display_errors', \DEBUG); // Display only on dev machines.
 		if (!\ini_get('ignore_user_abort')) \ignore_user_abort(true);
 		if (\ini_get('session.use_trans_sid')) \ini_set('session.use_trans_sid', false);

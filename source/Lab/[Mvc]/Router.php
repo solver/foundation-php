@@ -24,40 +24,27 @@ class Router {
 	
 	/**
 	 * @param array $config
-	 * A dict with keys:
+	 * dict...
+	 * - preferTrailingSlash: bool; True if you want to append slashes to URLs, unless they appear to have a file
+	 * extension. False if you want to remove a trailing slash. In both cases there's one canonical version for every
+	 * URL with and without a slash.
+	 * - routes: list<#Route>; A list of routes (from least to most specific, last match is used).
 	 * 
-	 * # bool $preferTrailingSlash
-	 * True if you want to append slashes to URLs, unless they appear to have a file extension. False if you want to 
-	 * remove a trailing slash. In both cases there's one canonical version for every URL with and without a slash.
-	 * 
-	 * # list $routes
-	 * 
-	 * A list of routes (from least to most specific, last match is used). Each route is a dict with the following
-	 * properties:
-	 * 
-	 * <code>
-	 * ['path' => '/URL/to/match', 'call' => 'Controller\Class' or function ($input, $router) {...} ]
-	 * </code>
-	 * 
-	 * Additional optional keys you may add:
-	 * 
-	 * - "tail" (boolean, false by default). If enabled, the router will parse path segments after the route as
-	 * parameters (and puts them in $input['t']).
-	 * 
-	 * - "tailLength" (int, null by default). If specified, sets a limit on the exact length the tail can be for this 
-	 * route to match (i.e. how many path segments). By default there's no limit.
-	 * 
-	 * - "tailLengthMax" (int, null by default). If specified, sets a limit on how long the tail can be for this route
-	 * to match (i.e. how many path segments). By default there's no limit.
-	 * 
-	 * - "tailLengthMin" (int, null by default). If specified, sets a limit on how short the tail can be for this route
-	 * to match (i.e. how many path segments). By default there's no limit.
-	 * 
-	 * - "vars" (mixed). Typically, but necessarily a dict. If present, it'll be added to $input under key "v". You can
-	 * use this feature to pass custom data to controllers.
-	 * 
-	 * # list $head
-	 * Reserved for future use (for use with multi-lingual sites ex. foo.com/en-us/page). Don't pass this yet.
+	 * #Route: dict...
+	 * - path: string;
+	 * - call: string|closure; A class name of a callable (__invoke) class, or a function to call.
+	 * - tail: bool; tailLength: int; tailLengthMax
+	 * - tail: boolean = false; If enabled, the router will parse path segments after the route as parameters (and puts
+	 * them in $input['t']).
+	 * - tailLength: null|int = null; If specified, sets a limit on the exact length the tail can be for this route to
+	 * match (i.e. how many path segments). By default there's no limit.
+	 * - tailLengthMax: null|int = null; If specified, sets a limit on how long the tail can be for this route to match
+	 * (i.e. how many path segments). By default there's no limit.
+	 * - tailLengthMin: null|int = null; If specified, sets a limit on how short the tail can be for this route to match
+	 * (i.e. how many path segments). By default there's no limit.
+	 * - vars: null|dict = null; If present, it'll be added to $input under key "vars". You can use this feature to pass
+	 * custom data to controllers.
+	 * - head?: Reserved for future use. TODO: Add this for use with multi-lingual sites ex. foo.com/en-us/page.
 	 */
 	public function __construct(array $config) {
 		ParamValidator::validate('config', $config, [
@@ -65,14 +52,15 @@ class Router {
 			'req' => [
 				'preferTrailingSlash' => 'bool',
 				'routes' => 'list',
-			]
+			],
 		]);
 		
 		$this->config =  $config;
 	}
 	
 	/**
-	 * Expects a map of inputs and invokes the matching presenter.
+	 * Expects a map of inputs and returns modified inputs and the matching route callback. See Dispatcher for details
+	 * on the expected return format.
 	 * 
 	 * @param array $input
 	 * A map with the following keys (as applicable depending on the running context):
@@ -92,6 +80,9 @@ class Router {
 	 * The router may also add these keys when passing the above input to a controller:
 	 * - tail			= "Tail" path parameters as a list of strings, if any.
 	 * - vars			= "Vars" added from the route (if key "vars" is specified in the route configuration).
+	 * 
+	 * @return array
+	 * dict: See Dispatcher for details on the expected return format.
 	 */
 	public function __invoke(array $input) {
 		// As a reminder, here are some reasons why trailing slashes are preferable for user-facing URLs.
@@ -165,9 +156,7 @@ class Router {
 		}
 
 		if ($handler === null) return [404];
-		
-		if (isset($handler['vars'])) $input['vars'] = $handler['vars'];		
-		if (is_string($handler['call'])) $handler['call'] = new $handler['call']();
+		if (isset($handler['vars'])) $input['vars'] = $handler['vars'];
 			
 		return [200, $handler['call'], $input];
 	}

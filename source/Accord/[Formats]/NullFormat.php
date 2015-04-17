@@ -11,13 +11,23 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Accord;
 
-use Solver\Report\DefaultTransientStatusLog;
+use Solver\Report\ErrorLog;
 
 /**
- * Logs the progress of events in the page controller (success, info, warning, error).
+ * This format validates only if the value is null.
  * 
- * This log is given to templates for display (if needed).
+ * This is useful in combination with UnionFormat, in order to create values which can optionally be null.
  */
-class PageLog extends DefaultTransientStatusLog {}
+class NullFormat implements Format {
+	public function apply($value, ErrorLog $log, $path = null) {
+		if ($value !== null) {
+			// If added first in a UnionFormat, this awkward message won't be seen.
+			$log->error($path, 'Please provide a null value.');
+			return null;
+		} else {
+			return $value;
+		}
+	}
+}

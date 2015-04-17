@@ -16,6 +16,11 @@ namespace Solver\Radar;
 /**
  * A map-based autoloader. Mapping is done on-demand (first run, cache miss, file moved, etc.) and cached. Provides a
  * small set of highly reusable mapping handlers to cover all scenarios.
+ * 
+ * TODO: Provide a separate tool for generating reusable maps, and for moving all files in the map in a PSR tree (so a 
+ * map won't be needed on production). Partial PSR tree is a possible optimization (map first for the special cases 
+ * where a class has location-specific behavior, PSR tree as a fallback). A PSR tree of one-liner *.txt files pointing
+ * to the real location is another variant. We need tools for all those.
  */
 class Radar {	
 	protected static $strategy;
@@ -30,10 +35,10 @@ class Radar {
 	 * @param array $symbolDirs
 	 * dict<filepath: string, specification: #Specification>;
 	 * 
-	 * Optional. If you pass this parameter, you enable on-demand symbol mapping. This dictionary lists directories and
+	 * Optional. If you pass this parameter, you enable on-demand re-mapping. This dictionary lists directories and
 	 * assigns them to be processed by a given handler. It's recommended to generate your map once and disable on-demand
 	 * mapping on production, as some poorly written libraries may issue class_exists with autoloading on classes that
-	 * are missing during normal app operation. This could trigger a costly mapping operation (which still won't find
+	 * are missing during normal app operation. This could trigger a costly re-mapping operation (which still won't find
 	 * the missing class).
 	 * 
 	 * #Specification: string; A string in format "handler" or "handler:settings". The settings segment is specific to
@@ -71,9 +76,9 @@ class Radar {
 	 * - "Foo-Bar-Baz.php"
 	 * - etc.
 	 */
-	public static function init($cacheDir, $symbolDirs) {
+	public static function init($cacheDir, array $symbolDirs = null) {
 		if (self::$strategy) throw new \Exception('Radar is already initialized.');
-		if (!class_exists(RadarStrategy::class, false)) require __DIR__ . '\[Internal]\RadarStrategy.php';
+		if (!class_exists(RadarStrategy::class, false)) require __DIR__ . '\[Private]\RadarStrategy.php';
 		self::$strategy = new RadarStrategy($cacheDir, $symbolDirs);
 		
 		// TODO: Bench __autoload vs. spl and replace if needed.

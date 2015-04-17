@@ -49,6 +49,7 @@ class Insider {
 // 	public static function getAssert($symbolName, $code = null) {
 //		if (!self::$initialized) self::throwNotInitialized();
 //		// TODO		
+//		// Should return a closure used like this $assert($boolExpresions, $optionalFailMessageString_or_failMessageHandler_returning_string);
 // 	}
 
 	protected static function throwNotInitialized() {

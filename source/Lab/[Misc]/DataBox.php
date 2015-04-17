@@ -13,6 +13,8 @@
  */
 namespace Solver\Lab;
 
+use Solver\Toolbox\CollectionUtils;
+
 /**
  * Reading information from deeply nested arrays, often coming from untrusted sources may mean a lot of isset() & data
  * format checks. This class wraps an array & provides a small set of convenience methods to address your most common 
@@ -57,7 +59,7 @@ class DataBox {
 	 */
 	public function get($path, $default = null) {
 		// TODO: Can be optimized.
-		$value = ArrayUtils::drill($this->data, $path, $keyOut);
+		$value = CollectionUtils::drill($this->data, $path, $keyOut);
 		
 		if ($keyOut !== null && isset($value[$keyOut])) {
 			return $value[$keyOut];

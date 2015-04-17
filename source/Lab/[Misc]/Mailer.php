@@ -26,6 +26,7 @@ namespace Solver\Lab;
  * other version (including 5.0.x versions) should be manually verified.
  */
 class Mailer {
+	protected $swiftMailerPath;
 	protected $transport = null;
 	protected $message = null;
 	protected $textBody = null;
@@ -75,7 +76,7 @@ class Mailer {
 	public function resetMessage() {
 		$this->message = new MailerMessage();
 		$this->textBody = $this->htmlBody = null;
-		$this->inlineFiles = $this->downloadableFiles = null;
+		$this->inlineFiles = $this->attachedFiles = null;
 	}
 
 	public function setFrom($email, $name = null) {

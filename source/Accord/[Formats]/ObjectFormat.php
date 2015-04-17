@@ -11,13 +11,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Accord;
 
-use Solver\Report\DefaultTransientStatusLog;
+use Solver\Report\ErrorLog;
 
 /**
- * Logs the progress of events in the page controller (success, info, warning, error).
+ * If the input value is a PHP object (of any kind) it's returned unmodified.
  * 
- * This log is given to templates for display (if needed).
+ * TODO: This class will eventually be extended with more specific tests, like isInstanceOf(...$types).
  */
-class PageLog extends DefaultTransientStatusLog {}
+class ObjectFormat implements Format {	
+	public function apply($value, ErrorLog $log, $path = null) {
+		if (!\is_object($value)) {
+			$log->error($path, 'Please provide a valid object.');
+			return null;
+		} else {
+			return $value;
+		}
+	}
+}
