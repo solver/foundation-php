@@ -22,15 +22,17 @@ use Solver\Report\ErrorLog;
 trait TransformBase {
 	/**
 	 * @param array $functions
-	 * list<($value, & $errors, $path) => any>;
+	 * list<#Function>;
 	 * 
-	 * Where errors is a list of tuples. Each tuple matching the argument list of ErrorLog::error()'s method.
+	 * #Function: ($value: any, & $errors: list<#Error>, $path: null|string) => any;
+	 * 
+	 * #Error: tuple; A tuple matching a valid argument list for ErrorLog::error()'s method.
 	 * 
 	 * @param mixed $value
 	 * Value to transform.
 	 * 
 	 * @param \Solver\Accord\ErrorLog $log
-	 * where to log errors.
+	 * Where to log errors.
 	 * 
 	 * @param null|string $path
 	 * Base path for errors.
@@ -43,6 +45,7 @@ trait TransformBase {
 		
 		foreach ($functions as $function) {
 			$value = $function($value, $errors, $path);
+			
 			if ($errors) {
 				$this->importErrors($log, $errors);
 				return null;

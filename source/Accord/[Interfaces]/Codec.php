@@ -13,19 +13,23 @@
  */
 namespace Solver\Accord;
 
+use Solver\Report\ErrorLog;
+
 /**
  * Combines two "opposite" transforms into one interface.
  * 
+ * Methods encode(), decode() have the same semantics as Transform::apply().
+ * 
  * You must respect the following contract:
  * 
- * - All Codec implementations MUST respect the contract rules for the Transform interface as well.
+ * - All Codec implementations MUST respect the contract rules specified for the Transform interface.
  * 
- * - When method "decode()" is fed the output of "encode()", its output SHOULD ostensibly match the input of "encode()",
- * i.e. the transforms should be symmetric. There's no requirement for match to be perfect, but it should be sufficient
- * to the semantics of your data domain, i.e. it's acceptable to model lossy transforms with this interface, for example 
- * encoding a bitmap to a JPEG stream and decoding it back to a similar bitmap.
+ * - When method "decode()" is fed the output of "encode()", its output SHOULD semantically match the input of
+ * "encode()", i.e. the transforms should be symmetric. There's no requirement for a binary match, but it should be
+ * sufficient to the semantics of your data domain, i.e. it's acceptable to model lossy transforms with this interface,
+ * for example encoding a bitmap stream to a JPEG stream and decoding it back to a similar bitmap stream.
  */
 interface Codec {
-	public function encode($value, $log, $path = null);
-	public function decode($value, $log, $path = null);
+	public function encode($value, ErrorLog $log, $path = null);
+	public function decode($value, ErrorLog $log, $path = null);
 }
