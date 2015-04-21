@@ -43,15 +43,13 @@ trait TransformBase {
 		
 		foreach ($functions as $function) {
 			$value = $function($value, $errors, $path);
-			if ($errors) return null;
+			if ($errors) {
+				$this->importErrors($log, $errors);
+				return null;
+			}
 		}
 		
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
-		} else {
-			return $value;
-		}
+		return $value;
 	}
 	
 	/**
