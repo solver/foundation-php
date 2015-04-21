@@ -28,38 +28,6 @@ class ListFormat implements Format {
 		if ($itemFormat) $this->itemFormat = $itemFormat;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_array($value)) {
-			$log->error($path, 'Please provide a list.');
-			return null;
-		}
-		
-		$errors = new TempLog($errors);
-		$itemFormat = $this->itemFormat;
-		$filtered = [];
-				
-		// We require a sequential, zero based list, anything else is ignored. The PHP array order of the keys in the
-		// input, however is irrelevant (the return value will be sorted by key order anyway).
-		for ($i = 0;; $i++) {
-			if (\key_exists($i, $value)) {
-				$filtered[$i] = $itemFormat 
-					? $itemFormat->apply($value[$i], $tempLog, $path === null ? $i : $path . '.' . $i) 
-					: $value[$i];
-			} else {
-				break;
-			}
-		}
-		
-		$value = $this->applyFunctions($this->functions, $filtered, $errors, $path);
-		
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
-		} else {
-			return $value;
-		}
-	}
-	
 	public function setItems(Format $format) {		
 		$this->itemFormat = $format;
 		return $this;
@@ -133,5 +101,39 @@ class ListFormat implements Format {
 		};
 		
 		return $this;
+	}
+	
+	public function apply($value, ErrorLog $log, $path = null) {
+		if (!\is_array($value)) {
+			$log->error($path, 'Please provide a list.');
+			return null;
+		}
+		
+		$tempLog = new TempLog($errors);
+		$itemFormat = $this->itemFormat;
+		$filtered = [];
+				
+		// We require a sequential, zero based list, anything else is ignored. The PHP array order of the keys in the
+		// input, however is irrelevant (the return value will be sorted by key order anyway).
+		for ($i = 0;; $i++) {
+			if (\key_exists($i, $value)) {
+				$filtered[$i] = $itemFormat 
+					? $itemFormat->apply($value[$i], $tempLog, $path === null ? $i : $path . '.' . $i) 
+					: $value[$i];
+			} else {
+				break;
+			}
+		}
+		
+		if ($errors) {
+			$this->importErrors($log, $errors);
+			return null;
+		} else {
+			if ($this->functions) {
+				return $this->applyFunctions($this->functions, $value, $log, $path);
+			} else {
+				return $value;
+			}
+		}
 	}
 }

@@ -30,40 +30,6 @@ class NumberFormat implements Format {
 	
 	protected $functions = [];
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		// We deliberately do not use the result here (a PHP float) as we don't want to lose precision for large string
-		// numbers.
-		if (filter_var($value, FILTER_VALIDATE_FLOAT) === false) goto error;
-		
-		if (is_string($value)) {
-			// We refuse to process strings which are suspiciously large to hold a usable floating point value, in order
-			// to avoid blowing up the application in places where such large (if otherwise valid) number values are not
-			// expected, such as databases.
-			//
-			// TODO: Revise this decision. Ideally we'd normalize the exponent and be able to trim precision for a float
-			// to a user supplied limit (for ex. for single/double/quad IEEE floats).
-			if (strlen($value) > 128) {
-				goto error;
-			} else {
-				$value = $this->normalize($value);
-			}
-		}
-		
-		success:
-		$tempLog = new TempLog($errors);
-		$value = $this->applyFunctions($this->functions, $value, $errors, $path);
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
-		} else {
-			return $value;
-		}
-		
-		error:
-		$log->error($path, 'Please provide a number.');
-		return null;
-	}
-	
 	/**
 	 * @param int $min
 	 * 
@@ -194,5 +160,37 @@ class NumberFormat implements Format {
 		}
 		
 		return $value;
+	}
+	
+	public function apply($value, ErrorLog $log, $path = null) {
+		// We deliberately do not use the result here (a PHP float) as we don't want to lose precision for large string
+		// numbers.
+		if (filter_var($value, FILTER_VALIDATE_FLOAT) === false) goto error;
+		
+		if (is_string($value)) {
+			// We refuse to process strings which are suspiciously large to hold a usable floating point value, in order
+			// to avoid blowing up the application in places where such large (if otherwise valid) number values are not
+			// expected, such as databases.
+			//
+			// TODO: Revise this decision. Ideally we'd normalize the exponent and be able to trim precision for a float
+			// to a user supplied limit (for ex. for single/double/quad IEEE floats).
+			if (strlen($value) > 128) {
+				goto error;
+			} else {
+				$value = $this->normalize($value);
+			}
+		}
+		
+		success:
+		
+		if ($this->functions) {
+			return $this->applyFunctions($this->functions, $value, $log, $path);
+		} else {
+			return $value;
+		}
+		
+		error:
+		$log->error($path, 'Please provide a number.');
+		return null;
 	}
 }

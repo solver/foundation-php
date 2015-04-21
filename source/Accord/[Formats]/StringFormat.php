@@ -25,23 +25,6 @@ class StringFormat implements Format {
 	
 	protected $functions = [];
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_string($value)) {
-			// We tolerate certain scalars by automatically converting them to strings.
-			if (\is_int($value) || \is_float($value) || \is_bool($value)) {
-				$value = (string) $value;
-			} else {
-				$log->error($path, 'Please provide a string.');
-				return null;
-			}
-		}
-		
-		$tempLog = new TempLog($errors);
-		$value = $this->applyFunctions($this->functions, $value, $errors, $path);
-		if ($errors) $this->importErrors($log, $errors);
-		return $value;
-	}
-	
 	/**
 	 * @param string $form
 	 * 
@@ -313,5 +296,23 @@ class StringFormat implements Format {
 		};
 		
 		return $this;
+	}
+	
+	public function apply($value, ErrorLog $log, $path = null) {
+		if (!\is_string($value)) {
+			// We tolerate certain scalars by automatically converting them to strings.
+			if (\is_int($value) || \is_float($value) || \is_bool($value)) {
+				$value = (string) $value;
+			} else {
+				$log->error($path, 'Please provide a string.');
+				return null;
+			}
+		}
+	
+		if ($this->functions) {
+			return $this->applyFunctions($this->functions, $value, $log, $path);
+		} else {
+			return $value;
+		}
 	}
 }

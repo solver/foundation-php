@@ -29,8 +29,8 @@ trait TransformBase {
 	 * @param mixed $value
 	 * Value to transform.
 	 * 
-	 * @param array $errors
-	 * list<tuple>; Tuples as utilized by TempLog.
+	 * @param \Solver\Accord\ErrorLog $log
+	 * where to log errors.
 	 * 
 	 * @param null|string $path
 	 * Base path for errors.
@@ -38,15 +38,20 @@ trait TransformBase {
 	 * @return null|mixed
 	 * Transformed value (or null).
 	 */
-	protected function applyFunctions($functions, $value, & $errors, $path) {
-		if ($errors) return null;
+	protected function applyFunctions($functions, $value, $log, $path) {
+		$tempLog = new TempLog($errors);
 		
 		foreach ($functions as $function) {
 			$value = $function($value, $errors, $path);
 			if ($errors) return null;
 		}
 		
-		return $value;
+		if ($errors) {
+			$this->importErrors($log, $errors);
+			return null;
+		} else {
+			return $value;
+		}
 	}
 	
 	/**

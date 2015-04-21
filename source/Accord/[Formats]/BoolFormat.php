@@ -31,6 +31,8 @@ use Solver\Report\ErrorLog;
  * - (int) 1
  * - (float) 1.0
  * - (string) "1", "true" (case sensitive)
+ * 
+ * TODO: add isTrue() and isFalse().
  */
 class BoolFormat implements Format {	
 	public function apply($value, ErrorLog $log, $path = null) {

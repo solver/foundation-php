@@ -18,15 +18,36 @@ use Solver\Report\ErrorLog;
 /**
  * If the input value is a PHP object (of any kind) it's returned unmodified.
  * 
- * TODO: This class will eventually be extended with more specific tests, like isInstanceOf(...$types).
+ * TODO: Consider isNotInstanceOf, isInstanceOfAll, isInstanceOfAny variations etc.
  */
-class ObjectFormat implements Format {	
+class ObjectFormat implements Format {
+	use TransformBase;
+	
+	protected $functions = [];
+	
 	public function apply($value, ErrorLog $log, $path = null) {
 		if (!\is_object($value)) {
 			$log->error($path, 'Please provide a valid object.');
 			return null;
+		}	
+	
+		if ($this->functions) {
+			return $this->applyFunctions($this->functions, $value, $log, $path);
 		} else {
 			return $value;
 		}
+	}
+	
+	public function isInstanceOf($className) {
+		$this->functions[] = static function ($value, & $errors, $path) use ($className) {
+			if (!$value instanceof $className) {
+				$errors[] = [$path, 'Please provide an object instance of ' . $className. '.'];
+				return null;
+			} else {
+				return $value;
+			}
+		};
+		
+		return $this;
 	}
 }

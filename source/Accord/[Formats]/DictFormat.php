@@ -25,6 +25,45 @@ class DictFormat implements Format {
 	protected $rest = false;
 	protected $restFormat = null;
 	
+	/**
+	 * @return self
+	 */
+	public function addRequired($name, Format $format = null) {
+		$this->fields[] = [$name, $format, 0]; 
+		return $this;
+	}
+	
+	/**
+	 * @return self
+	 */
+	public function addOptional($name, Format $format = null) {
+		$this->fields[] = [$name, $format, 1]; 
+		return $this;
+	}
+	
+	/**
+	 * Same as addOptional(), but if the field is missing it'll be created, and the default value will be assigned.
+	 * 
+	 * @return self
+	 */
+	public function addDefault($name, $default = null, Format $format = null) {
+		$this->fields[] = [$name, $format, 2, $default];
+		return $this;
+	}
+	
+	/**
+	 * Allows keys which are specified neither as required nor optional to be extracted. Be careful with this option,
+	 * this means you have no control over which keys end up in your filtered data.
+	 * 
+	 * return $this
+	 */
+	public function addRest(Format $format = null) {
+		if ($this->rest) throw new \Exception('Method addRest() can only be called once per DictFormat instance.');
+		$this->rest = true;
+		$this->restFormat = $format;
+		return $this;
+	}
+	
 	public function apply($value, ErrorLog $log, $path = null) {
 		static $TYPE_REQUIRED = 0;
 		static $TYPE_OPTIONAL = 1;
@@ -74,44 +113,5 @@ class DictFormat implements Format {
 		} else {
 			return $selected;
 		}
-	}
-	
-	/**
-	 * @return self
-	 */
-	public function addRequired($name, Format $format = null) {
-		$this->fields[] = [$name, $format, 0]; 
-		return $this;
-	}
-	
-	/**
-	 * @return self
-	 */
-	public function addOptional($name, Format $format = null) {
-		$this->fields[] = [$name, $format, 1]; 
-		return $this;
-	}
-	
-	/**
-	 * Same as addOptional(), but if the field is missing it'll be created, and the default value will be assigned.
-	 * 
-	 * @return self
-	 */
-	public function addDefault($name, $default = null, Format $format = null) {
-		$this->fields[] = [$name, $format, 2, $default];
-		return $this;
-	}
-	
-	/**
-	 * Allows keys which are specified neither as required nor optional to be extracted. Be careful with this option,
-	 * this means you have no control over which keys end up in your filtered data.
-	 * 
-	 * return $this
-	 */
-	public function addRest(Format $format = null) {
-		if ($this->rest) throw new \Exception('Method addRest() can only be called once per DictFormat instance.');
-		$this->rest = true;
-		$this->restFormat = $format;
-		return $this;
 	}
 }
