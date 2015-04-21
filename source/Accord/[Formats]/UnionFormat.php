@@ -66,8 +66,8 @@ class UnionFormat implements Format {
 	}
 	
 	public function apply($value, ErrorLog $log, $path = null) {
-		$formatMaxIndex = \count($this->formats) - 1;
 		$tempLog = new TempLog($errors);
+		$formatMaxIndex = \count($this->formats) - 1;
 		
 		foreach ($this->formats as $i => $format) {
 			$subValue = $format->apply($value, $tempLog, $path);
@@ -83,6 +83,8 @@ class UnionFormat implements Format {
 					}
 					
 					return null;
+				} else {
+					$errors = [];
 				}
 			} else {
 				$value = $subValue;

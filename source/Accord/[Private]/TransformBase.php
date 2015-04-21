@@ -16,19 +16,25 @@ namespace Solver\Accord;
 use Solver\Report\ErrorLog;
 
 /**
- * DO NOT USE. This is an internal implementation detail of Solver\Accord's formats, and may change or go away without
- * warning.
+ * DO NOT USE. This is an internal implementation detail of Solver\Accord's formats & transforms, and may change or go
+ * away without warning.
  */
 trait TransformBase {
 	/**
 	 * @param array $functions
 	 * list<($value, & $errors, $path) => any>;
+	 * 
+	 * Where errors is a list of tuples. Each tuple matching the argument list of ErrorLog::error()'s method.
+	 * 
 	 * @param mixed $value
 	 * Value to transform.
+	 * 
 	 * @param array $errors
 	 * list<tuple>; Tuples as utilized by TempLog.
+	 * 
 	 * @param null|string $path
 	 * Base path for errors.
+	 * 
 	 * @return null|mixed
 	 * Transformed value (or null).
 	 */
@@ -46,6 +52,7 @@ trait TransformBase {
 	/**
 	 * @param ErrorLog $log
 	 * Imports errors here.
+	 * 
 	 * @param array $errors
 	 * list<tuple>; Tuples as utilized by TempLog.
 	 */
