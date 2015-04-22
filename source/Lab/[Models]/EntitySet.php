@@ -31,8 +31,8 @@ namespace Solver\Lab;
 class EntitySet {
 	protected $encode; // (dict) => dict;
 	protected $decode; // (dict) => dict;
-	protected $encodeAll; // (dict[]) => dict[];
-	protected $decodeAll; // (dict[]) => dict[];
+	protected $encodeAll; // (list<dict>) => list<dict>;
+	protected $decodeAll; // (list<dict>) => list<dict>;
 	protected $useCache; // bool;
 	protected $idFieldName; // string;
 	protected $tableName; // string;

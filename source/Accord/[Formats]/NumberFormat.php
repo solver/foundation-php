@@ -19,6 +19,8 @@ use Solver\Report\ErrorLog;
  * Accepts integers, floats, and strings formatted as an integer or a float. Numbers as strings will be normalized
  * (whitespace trimmed, trailing zeroes removed etc.), but left as strings to avoid precision loss.
  * 
+ * TODO: Add isOneOf, isEqualTo (and negative variants) as with StringFormat, but with numbers semantics.
+ * 
  * TODO: Split into distinct FloatFormat, IntFormat, BigIntFormat, BigNumber format with arbitrary precision tests and 
  * filters (for numbers in strings).
  * 
