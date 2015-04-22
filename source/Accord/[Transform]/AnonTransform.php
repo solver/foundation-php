@@ -29,6 +29,8 @@ class AnonTransform implements Transform {
 	
 	public function setApplyMethod(\Closure $apply) {
 		$this->apply = $apply;
+		
+		return $this;
 	}
 	
 	public function apply($value, ErrorLog $log, $path = null) {
