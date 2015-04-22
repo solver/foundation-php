@@ -21,8 +21,8 @@ class WebServerUtils {
 	/**
 	 * Streams the static file at the given URL path to STDOUT, with a correct "Content-Type" header.
 	 * 
-	 * @param string $docRoot
-	 * Document root path (no trailing slash).
+	 * @param string $publicRoot
+	 * Public root directory (a.k.a. "document root"), no trailing slash.
 	 * 
 	 * @param string $url
 	 * Request URI.
@@ -30,8 +30,8 @@ class WebServerUtils {
 	 * @return boolean
 	 * True if file was found and served. False if no file was found (and served).
 	 */
-	function serveStaticFile($docRoot, $url) {
-		$file = $docRoot . parse_url($url, PHP_URL_PATH);
+	public static function serveStaticFile($publicRoot, $url) {
+		$file = $publicRoot . parse_url($url, PHP_URL_PATH);
 		
 		if (file_exists($file) && !is_dir($file)) {
 			if (preg_match('/\.([\w+])$/AD', $file, $matches)) {
@@ -52,8 +52,8 @@ class WebServerUtils {
 				$mime = $fi->file($file);
 			}
 			
-			header('Content-Type: ' . $mime);
-			readfile($file);
+			\header('Content-Type: ' . $mime);
+			\readfile($file);
 			
 			return true;
 		} else {
