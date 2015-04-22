@@ -75,6 +75,22 @@ class ListFormat implements Format {
 		return $this;
 	}
 	
+	/**
+	 * A convenience combination of hasLengthMin() and hasLengthMax().
+	 * 
+	 * @param int $min
+	 * 
+	 * @param int $max
+	 * 
+	 * @return self
+	 */
+	public function hasLengthInRange($min, $max) {
+		$this->hasLengthMin($min);
+		$this->hasLengthMax($max);
+		
+		return $this;
+	}
+	
 	public function isEmpty() {
 		$this->functions[] = function ($value, & $errors, $path) {
 			if (\count($value) == 0) {

@@ -69,12 +69,28 @@ class NumberFormat implements Format {
 	}
 	
 	/**
+	 * A convenience combination of isMin() and isMax().
+	 * 
+	 * @param int $min
+	 * 
+	 * @param int $max
+	 * 
+	 * @return self
+	 */
+	public function isInRange($min, $max) {
+		$this->isMin($min);
+		$this->isMax($max);
+		
+		return $this;
+	}	
+	
+	/**
 	 * This is identical as isMin(0), but provides a specialized error message for a common test (positive numbers).
 	 * 
 	 * @return self
 	 */
 	public function isPositive() {
-		$this->functions[] = function ($value, & $errors, $path)) {
+		$this->functions[] = function ($value, & $errors, $path) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($value + 0 < 0) {
 				$errors[] = [$path, "Please provide a positive number."];
