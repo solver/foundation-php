@@ -34,7 +34,7 @@ class WebServerUtils {
 		$file = $publicRoot . parse_url($url, PHP_URL_PATH);
 		
 		if (file_exists($file) && !is_dir($file)) {
-			if (preg_match('/\.([\w+])$/AD', $file, $matches)) {
+			if (preg_match('/\.(\w+)$/iD', $file, $matches)) {
 				$extension = $matches[1];
 			} else {
 				$extension = null;
