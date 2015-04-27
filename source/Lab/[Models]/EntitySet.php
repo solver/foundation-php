@@ -220,7 +220,7 @@ class EntitySet {
 			unset($idList2);
 		}
 		
-		if ($sql = $this->sqlByIdList($idList, $forUpdate)) {
+		if ($sql = $this->sqlById($idList, $forUpdate)) {
 			$entities = $this->getAllBySql($sql, null, true);
 		} else {
 			$entities = [];
@@ -330,7 +330,7 @@ class EntitySet {
 	public function mapAllById($idList, \Closure $map) {
 		$tableNameQ = $this->qIdent($this->tableName);
 		
-		if ($sql = $this->sqlByIdList($idList, true)) {
+		if ($sql = $this->sqlById($idList, true)) {
 			$this->mapAllBySql($sql, null, $map, true);
 		} else {
 			return 0;
@@ -503,7 +503,7 @@ class EntitySet {
 		return $entities;
 	}
 	
-	protected function sqlByIdList($idList, $forUpdate) {
+	protected function sqlById($idList, $forUpdate) {
 		$count = count($idList);		
 		if ($count == 0) return null;
 			

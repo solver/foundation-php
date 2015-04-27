@@ -39,7 +39,7 @@ class InputFromGlobals {
 	 * An array with the following keys:
 	 * 
 	 * - "query" ($_GET)
-	 * - "body" (combined $_POST and $_FILES)
+	 * - "body" (combined $_POST and $_FILES, where files become objects of instance HttpUpload)
 	 * - "cookies" ($_COOKIE)
 	 * - "server" ($_SERVER)
 	 * - "env" ($_ENV)
