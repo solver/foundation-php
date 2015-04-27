@@ -151,6 +151,19 @@ class StringFormat implements Format {
 	}
 	
 	/**
+	 * A convenience shortcut combining hasLengthMin() and hasLengthMax().
+	 * 
+	 * @param int $lengthMin
+	 * @param int $lengthMax
+	 * @return self
+	 */
+	public function hasLengthInRange($lengthMin, $lengthMax) {
+		$this->hasLengthMin($lengthMin);
+		$this->hasLengthMax($lengthMax);
+		return $this;
+	}
+	
+	/**
 	 * @return self
 	 */
 	public function isNotEmpty() {
