@@ -26,6 +26,7 @@ use Solver\Report\ErrorLog;
  * 
  * TODO: Allow scalars where all sub-formats must have the same output and no errors for the result to be valid?
  * TODO: Allow arrays with overlapping values as long as the values are the same?
+ * TODO: Add useError() like UnionFormat.
  */
 class IntersectFormat implements Format {
 	use TransformBase;
