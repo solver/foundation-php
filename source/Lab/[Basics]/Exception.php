@@ -22,8 +22,8 @@ namespace Solver\Lab;
 class Exception extends \Exception {
 	protected $details;
 	
-	public function __construct($message = '', $code = 0, $previous = null, $details = null) {
-		parent::__construct($message, (int) $code, $previous); // The constructor want an int $code.
+	public function __construct($message = '', $code = 0, array $details = null, \Exception $previous = null) {
+		parent::__construct($message, (int) $code, $previous); // The constructor wants an int $code.
 		$this->code = $code; // But we still assign the (potentially) string $code (and it'll be returned by getCode()).
 		$this->details = $details;
 	}
