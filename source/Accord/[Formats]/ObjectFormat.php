@@ -41,7 +41,7 @@ class ObjectFormat implements Format {
 	public function isInstanceOf($className) {
 		$this->functions[] = static function ($value, & $errors, $path) use ($className) {
 			if (!$value instanceof $className) {
-				$errors[] = [$path, 'Please provide an object instance of ' . $className. '.'];
+				$errors[] = [$path, 'Please provide an instance of ' . $className. '.'];
 				return null;
 			} else {
 				return $value;
