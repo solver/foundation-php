@@ -13,6 +13,7 @@
  */
 namespace Solver\Lab;
 
+use Solver\Toolbox\ListUtils;
 /**
  * Implements an SQL-backed basic table model with optional local (in memory) cache for reads (writes are committed
  * immediately). Suitable as a helper for implementing DAL / repository classes. Avoid inheritance and prefer 
@@ -47,16 +48,16 @@ class EntitySet {
 	/**
 	 * @var \Solver\Lab\SqlConnection
 	 */
-	protected $sqlConnection;
+	protected $sqlConn;
 	
 	/**
 	 * For legacy reasons this constructor supports an alternative argument signature:
 	 * 
-	 * __construct($sqlConnection, $tableName, $idName = 'id', $useCache = false, $encode = null, $decode = null);
+	 * __construct($sqlConn, $tableName, $idName = 'id', $useCache = false, $encode = null, $decode = null);
 	 * 
 	 * Move your code away to the new signature as the old one will be dropped in a future major release.
 	 * 
-	 * @param SqlConnection $sqlConnection
+	 * @param SqlConnection $sqlConn
 	 * 
 	 * @param string $tableName
 	 * 
@@ -75,7 +76,7 @@ class EntitySet {
 	 * - encode?: (dict) => dict; Identical to encodeAll, but for one entity. You can provide both, or either of them,
 	 * depending on what you have implemented.
 	 */
-	public function __construct(SqlConnection $sqlConnection, $tableName, $options = null) {
+	public function __construct(SqlConnection $sqlConn, $tableName, $options = null) {
 		// Legacy signature? 
 		if (is_string($options) || func_num_args() > 3) {
 			$args = func_get_args();
@@ -128,7 +129,7 @@ class EntitySet {
 			};
 		}
 				
-		$this->sqlConnection = $sqlConnection;
+		$this->sqlConn = $sqlConn;
 		$this->tableName = $tableName;
 		$this->idFieldName = $options['idFieldName'];
 		$this->useCache = $options['useCache'];
@@ -136,6 +137,17 @@ class EntitySet {
 		$this->decodeAll = $options['decodeAll'];
 		$this->encode = $options['encode'];
 		$this->decode = $options['decode'];
+	}
+	
+	/**
+	 * Runs the entity set operations contained in the given function in a transactional manner.
+	 * 
+	 * To roll back throw an exception, or return boolean false.
+	 * 
+	 * @param \Closure $function
+	 */
+	public function transactional(\Closure $function) {
+		return $this->sqlConn->transactional(null, $function);
 	}
 	
 	/**
@@ -150,24 +162,16 @@ class EntitySet {
 	 */
 	public function create($entity) {
 		$encode = $this->encode;
-		$this->sqlConnection->insert($this->tableName, $encode ? $encode($entity) : $entity);
+		$this->sqlConn->insert($this->tableName, $encode ? $encode($entity) : $entity);
 		
 		if (isset($entity[$this->idFieldName])) {
 			$id = $entity[$this->idFieldName];
 		} else {
-			$id = $this->sqlConnection->getLastId();
+			$id = $this->sqlConn->getLastId();
 			$entity[$this->idFieldName] = $id;
 		}
 		
 		return $id;
-	}
-	
-	/**
-	 * @deprecated
-	 * This is the old name for method add().
-	 */
-	public function add($entity) {
-		return $this->create($entity);
 	}
 	
 	/**
@@ -184,14 +188,6 @@ class EntitySet {
 	}
 	
 	/**
-	 * @deprecated
-	 * This is the old name for method getById().
-	 */
-	public function get($id) {
-		return $this->getById($id);
-	}
-	
-	/**
 	 * Returns the entities with the given ids.
 	 *
 	 * @param string[] $idList
@@ -202,7 +198,7 @@ class EntitySet {
 	 * provides additional guarantees during a transaction if you plan to update the entities.
 	 * 
 	 * @return array
-	 * List of entity dicts. Note there's to correspondence to the list indexes for input ids and output entities. The
+	 * List of entity dicts. Note there's no correspondence to the list indexes for input ids and output entities. The
 	 * order if the entities is undefined, and if there's no entity with a given id, it simply won't be present in the
 	 * output (it won't be returned as an array item set to null).
 	 */
@@ -231,6 +227,48 @@ class EntitySet {
 		} else {
 			return $entities;
 		}
+	}
+	
+	/**
+	 * Returns an entity matching the given field values.
+	 * 
+	 * @param array $example
+	 * dict<fieldName: string, fieldValue: scalar>; One or more field values to match (i.e. partial entity).
+	 * 
+	 * The dictionary will be passed through the entity encoder (if any) so make sure you're searching by fields which
+	 * are represented by searchable columns in the SQL records (i.e. searching by fields that encode to JSON would lead
+	 * to unpredictable results).
+	 * 
+	 * @param bool $forUpdate
+	 * Optional, default false. Pass true to skip cache (if enabled) and make the SQL select "FOR UPDATE", which
+	 * provides additional guarantees during a transaction if you plan to update the entities.
+	 * 
+	 * @return array|null
+	 * dict|null; An entity dict or null of there was no match.
+	 */
+	public function getByExample($example, $forUpdate = false) {
+		return ListUtils::first($this->getAllBySqlInternal($example, $forUpdate, true));
+	}
+	
+	/**
+	 * Returns all entities matching the given field values.
+	 * 
+	 * @param array $example
+	 * dict<fieldName: string, fieldValue: scalar>; One or more field values to match (i.e. partial entity).
+	 * 
+	 * The dictionary will be passed through the entity encoder (if any) so make sure you're searching by fields which
+	 * are represented by searchable columns in the SQL records (i.e. searching by fields that encode to JSON would lead
+	 * to unpredictable results).
+	 * 
+	 * @param bool $forUpdate
+	 * Optional, default false. Pass true to skip cache (if enabled) and make the SQL select "FOR UPDATE", which
+	 * provides additional guarantees during a transaction if you plan to update the entities.
+	 * 
+	 * @return array
+	 * List of entity dicts.
+	 */
+	public function getAllByExample($example, $forUpdate = false) {
+		return $this->getAllBySqlInternal($example, $forUpdate, false);
 	}
 	
 	/**
@@ -287,7 +325,7 @@ class EntitySet {
 	 */
 	public function set($entity) {
 		$encode = $this->encode;
-		$this->sqlConnection->updateByPrimaryKey($this->tableName, $this->idFieldName, $encode ? $encode($entity) : $entity);
+		$this->sqlConn->updateByPrimaryKey($this->tableName, $this->idFieldName, $encode ? $encode($entity) : $entity);
 		
 		// The combination of partial rows, encoders, decoders and so on make updating the cache after set() very 
 		// tricky, so we just clear the cache for this entry after update to be on the safe side.
@@ -400,7 +438,7 @@ class EntitySet {
 	 */
 	public function deleteById($id) {
 		$sql = 'DELETE FROM ' . $this->qIdent($this->tableName) . ' WHERE ' . $this->qIdent($this->idFieldName) . ' = ?';
-		$this->sqlConnection->query($sql, [$id]);
+		$this->sqlConn->query($sql, [$id]);
 		
 		if (isset($this->cache[$id])) unset($this->cache[$id]);
 	}
@@ -448,14 +486,14 @@ class EntitySet {
 	 * Shortcut; used a lot.
 	 */
 	protected function qIdent($ident) {
-		return $this->sqlConnection->quoteIdentifier($ident);
+		return $this->sqlConn->quoteIdentifier($ident);
 	}
 	
 	protected function mapAllBySqlInternal($firstOnly, $sql, $params, \Closure $map, $canonical = false) {
 		$count = false;
 		
 		// TODO: The get/set loop should stream for large number of results, to avoid going out of RAM.
-		$this->sqlConnection->transactional(function () use ($firstOnly, $sql, $params, $map, & $count, $canonical) {
+		$this->sqlConn->transactional(function () use ($firstOnly, $sql, $params, $map, & $count, $canonical) {
 			$entities = $this->getAllBySqlInternal($firstOnly, $sql, $params, $canonical);
 			$count = count($entities);
 			
@@ -475,9 +513,9 @@ class EntitySet {
 	}
 	
 	protected function getAllBySqlInternal($firstOnly, $sql, $params, $canonical) {
-		$sqlConnection = $this->sqlConnection;
+		$sqlConn = $this->sqlConn;
 		
-		$resultSet = $sqlConnection->query($sql, $params);
+		$resultSet = $sqlConn->query($sql, $params);
 		
 		if ($firstOnly) {
 			$records = [$resultSet->fetchOne()];
@@ -508,7 +546,7 @@ class EntitySet {
 		if ($count == 0) return null;
 			
 		list($tableNameQ, $idFieldNameQ) = $this->qIdent([$this->tableName, $this->idFieldName]);
-		$idListQ = $this->sqlConnection->quoteValue($idList);
+		$idListQ = $this->sqlConn->quoteValue($idList);
 		
 		$sql = "SELECT * FROM $tableNameQ WHERE ";
 		
@@ -521,5 +559,24 @@ class EntitySet {
 		if ($forUpdate) $sql .= ' FOR UPDATE';
 		
 		return $sql;
+	}
+	
+	public function getAllByExampleInternal($example, $forUpdate, $single) {
+		$sqlConn = $this->sqlConn;
+		$tableQ = $sqlConn->quoteIdentifier($this->tableName);
+		
+		$example = $this->encode ? $this->encode->__invoke($example) : $example;
+		
+		// Non-scalar values have a specific meaning in SqlExpression::boolean that we don't want to expose here.
+		foreach ($example as $key => $val) if (!is_scalar($val)) {
+			throw new \Exception('Provided field values must be scalars.');
+		}
+		
+		$exprQ = SqlExpression::boolean($sqlConn, $boolExpr);
+		
+		$sql = "SELECT * FROM $tableQ WHERE $expQ" . ($single ? ' LIMIT 1' : '');
+		if ($forUpdate) $sql .= ' FOR UPDATE';
+		
+		return $this->getAllBySql($sql, null, true);
 	}
 }

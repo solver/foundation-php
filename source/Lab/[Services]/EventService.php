@@ -22,7 +22,7 @@ class EventService {
 	/**
 	 * @var \Solver\Lab\SqlConnection
 	 */
-	protected $sqlConnection;
+	protected $sqlConn;
 	
 	/**
 	 * @var string
@@ -40,7 +40,7 @@ class EventService {
 	protected $extensions;
 	
 	/**
-	 * @param SqlConnection $sqlConnection
+	 * @param SqlConnection $sqlConn
 	 * 
 	 * @param string $tableName
 	 * An SQL table name having these required fields (and any other you need, see $fields):
@@ -91,10 +91,10 @@ class EventService {
 	 * 
 	 * Optional fields must be nullable, with NULL as their default value.
 	 */
-	public function __construct(SqlConnection $sqlConnection, $tableName, $fieldNames = null, $extensions = null) {
+	public function __construct(SqlConnection $sqlConn, $tableName, $fieldNames = null, $extensions = null) {
 		// TODO: Add assertion checks for duplicate field names across extension combinations.
 		
-		$this->sqlConnection = $sqlConnection;
+		$this->sqlConn = $sqlConn;
 		$this->tableName = $tableName;
 		$this->fieldNames = $fieldNames;
 		$this->extensions = $extensions;
@@ -319,13 +319,13 @@ class EventService {
 		// Dynamic (JSON) fields.
 		if ($details) $row['details'] = \json_encode($details, \JSON_UNESCAPED_UNICODE);
 		
-		$this->sqlConnection->transactional(function () use (& $row, & $extRows) {
-			$this->sqlConnection->insert($this->tableName, $row);
-			$id = $this->sqlConnection->getLastId();
+		$this->sqlConn->transactional(function () use (& $row, & $extRows) {
+			$this->sqlConn->insert($this->tableName, $row);
+			$id = $this->sqlConn->getLastId();
 			
 			foreach ($extRows as $extTableName => $extRow) {
 				$extRow['id'] = $id;
-				$this->sqlConnection->insert($extTableName, $extRow);
+				$this->sqlConn->insert($extTableName, $extRow);
 			}
 		});
 	}
@@ -358,11 +358,11 @@ class EventService {
 			$sqlFilter['dateCreated'] = ['<=', SqlExpression::toDatetime($dateMax)];
 		}
 				
-		if ($sqlFilter) $sql .= 'WHERE ' . SqlExpression::boolean($this->sqlConnection, $sqlFilter, 'AND') . ' ';
+		if ($sqlFilter) $sql .= 'WHERE ' . SqlExpression::boolean($this->sqlConn, $sqlFilter, 'AND') . ' ';
 		
 		$sql .= 'ORDER BY ' . $this->tableName . '.id ' . ($isAsc ? 'ASC' : 'DESC') . ' LIMIT ' . (int) $count;
 				
-		$rows = $this->sqlConnection->query($sql)->fetchAll();
+		$rows = $this->sqlConn->query($sql)->fetchAll();
 		
 		foreach ($rows as & $row) {
 			$row['dateCreated'] = SqlExpression::fromDatetime($row['dateCreated']);
