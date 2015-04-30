@@ -7,7 +7,7 @@ namespace Solver\Lab;
  * 
  * For ex. $endpoint = "foo/bar/baz" will attempt to resolve to public $endpoint->foo->bar->baz($input);
  */
-class ServiceDispatcher {
+class ServiceEndpointDispatcher {
 	/**
 	 * Tries to find a method for the given route and returns it. Returns null if no matching method is found.
 	 * 
@@ -23,18 +23,18 @@ class ServiceDispatcher {
 	 * @return array|null
 	 * Returns the result from the invoked method (an array or null).
 	 * 
-	 * @throws \Solver\Lab\ServiceException
-	 * If the method throws a ServiceException.
+	 * @throws \Solver\Lab\ServiceEndpointException
+	 * If the method throws a ServiceEndpointException.
 	 * 
-	 * @throws \Solver\Lab\ServiceException
+	 * @throws \Solver\Lab\ServiceEndpointException
 	 * With code 'endpointOrActionNotFound', if the route doesn't resolve to a method.
 	 */
 	public function dispatch(ServiceEndpoint $endpoint, $route, array $input = null) {
 		$action = $this->route($endpoint, $route);
 		
 		if ($action === null) {
-			$log = new ServiceLog();
-			$log->addError(null, 'Endpoint or action not found.', 'endpointOrActionNotFound');
+			$log = new ServiceEndpointLog();
+			$log->error(null, 'Endpoint or action not found.', 'endpointOrActionNotFound');
 			$log->throwIfErrors(); 
 		}
 		

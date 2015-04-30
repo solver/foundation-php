@@ -15,13 +15,13 @@ namespace Solver\Lab;
 
 /**
  * An exception containing one or more error events. This exception is thrown on domain & validation errors occuring in
- * a model's service layer. See ServiceLog.
+ * a model's service layer. See ServiceEndpointLog.
  * 
  * Services may also throw other exceptions in unexpected circumstances (like database access failure).
  */
-class ServiceException extends \Exception {
+class ServiceEndpointException extends \Exception {
 	/**
-	 * @var \Solver\Lab\ServiceLog
+	 * @var \Solver\Lab\ServiceEndpointLog
 	 */
 	protected $log;
 
@@ -29,15 +29,15 @@ class ServiceException extends \Exception {
 	 * TRICKY: As a special type of exception this one has no message/code etc. Instead it acts as a proxy for the
 	 * errors contained in the log passed here.
 	 * 
-	 * @param ServiceLog $log
+	 * @param ServiceEndpointLog $log
 	 */
-	public function __construct(ServiceLog $log) {
+	public function __construct(ServiceEndpointLog $log) {
 		parent::__construct();		
 		$this->log = $log;
 	}
 	
 	/**
-	 * @return \Solver\Lab\ServiceLog
+	 * @return \Solver\Lab\ServiceEndpointLog
 	 */
 	public function getLog() {
 		return $this->log;

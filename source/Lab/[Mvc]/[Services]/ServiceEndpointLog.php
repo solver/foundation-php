@@ -16,19 +16,19 @@ namespace Solver\Lab;
 use Solver\Report\DefaultTransientErrorLog;
 
 /**
- * A log that can contain error events, with an ability to throw a ServiceException (containing the log), when there
+ * A log that can contain error events, with an ability to throw a ServiceEndpointException (containing the log), when there
  * are errors in the log.
  * 
- * Throwing a ServiceException with one or more errors by manipulating a ServiceLog is the standard way for a service
+ * Throwing a ServiceEndpointException with one or more errors by manipulating a ServiceEndpointLog is the standard way for a service
  * endpoint to end with an error and communicate it to its clients.
  */
-class ServiceLog extends DefaultTransientErrorLog {
+class ServiceEndpointLog extends DefaultTransientErrorLog {
 	public function throwIfErrors() {
-		if ($this->hasErrors()) throw new ServiceException($this);
+		if ($this->hasErrors()) throw new ServiceEndpointException($this);
 	}
 	
 	public function errorAndThrow($path, $message, $code = null, array $details = null) {
 		$this->error($path, $message, $code, $details);
-		throw new ServiceException($this);
+		throw new ServiceEndpointException($this);
 	}
 }

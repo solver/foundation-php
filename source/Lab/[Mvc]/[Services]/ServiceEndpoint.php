@@ -16,7 +16,7 @@ interface ServiceEndpoint {
 	 * 
 	 * - A public property holding a ServiceEndpoint instance.
 	 * - A method (as a Closure instance) which takes a dict (or nothing) and return a dict (or nothing) or throws a
-	 * ServiceException on error.
+	 * ServiceEndpointException on error.
 	 * - Null if the name doesn't resolve to either of the above.
 	 * 
 	 * Some reasons for encapsulating this logic as a method, instead of relying directly on reflection:
