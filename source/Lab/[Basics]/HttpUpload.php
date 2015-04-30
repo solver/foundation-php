@@ -41,6 +41,42 @@ class HttpUpload {
 		}
 	}
 	
+	// Returns null if there's no error.
+	public function getErrorMessage() {
+		switch ($this->errorCode) {
+			case 0:
+				return null;
+				break;
+			case 1:
+				return 'The uploaded file exceeds the server-specified maximum allowed size.';
+				break;
+			case 2:
+				return 'The uploaded file exceeds the client-specified maximum allowed size.';
+				break;
+			case 3:
+				return 'The uploaded file was only partially uploaded.';
+				break;
+			case 4:
+				return 'No file was uploaded.';
+				break;
+				
+			// Not a mistake, there is no code 5.		
+				
+			case 6:
+				return 'Missing a temporary folder.';
+				break;
+			case 7:
+				return 'Failed to write file to disk.';
+				break;
+			case 8:
+				return 'Forbidden file extension.';
+				break;
+			default:
+				return 'Unknown file upload error.';
+				break;
+		}	
+	}
+	
 	public function hasError() {
 		return $this->getErrorCode() !== null;
 	}
