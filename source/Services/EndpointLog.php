@@ -11,24 +11,24 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Services;
 
 use Solver\Report\DefaultTransientErrorLog;
 
 /**
- * A log that can contain error events, with an ability to throw a ServiceEndpointException (containing the log), when there
+ * A log that can contain error events, with an ability to throw a EndpointException (containing the log), when there
  * are errors in the log.
  * 
- * Throwing a ServiceEndpointException with one or more errors by manipulating a ServiceEndpointLog is the standard way for a service
+ * Throwing a EndpointException with one or more errors by manipulating a EndpointLog is the standard way for a service
  * endpoint to end with an error and communicate it to its clients.
  */
-class ServiceEndpointLog extends DefaultTransientErrorLog {
+class EndpointLog extends DefaultTransientErrorLog {
 	public function throwIfErrors() {
-		if ($this->hasErrors()) throw new ServiceEndpointException($this);
+		if ($this->hasErrors()) throw new EndpointException($this);
 	}
 	
 	public function errorAndThrow($path, $message, $code = null, array $details = null) {
 		$this->error($path, $message, $code, $details);
-		throw new ServiceEndpointException($this);
+		throw new EndpointException($this);
 	}
 }

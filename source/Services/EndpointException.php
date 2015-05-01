@@ -11,17 +11,17 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * An exception containing one or more error events. This exception is thrown on domain & validation errors occuring in
- * a model's service layer. See ServiceEndpointLog.
+ * a model's service layer. See EndpointLog.
  * 
  * Services may also throw other exceptions in unexpected circumstances (like database access failure).
  */
-class ServiceEndpointException extends \Exception {
+class EndpointException extends \Exception {
 	/**
-	 * @var \Solver\Lab\ServiceEndpointLog
+	 * @var \Solver\Services\EndpointLog
 	 */
 	protected $log;
 
@@ -29,15 +29,15 @@ class ServiceEndpointException extends \Exception {
 	 * TRICKY: As a special type of exception this one has no message/code etc. Instead it acts as a proxy for the
 	 * errors contained in the log passed here.
 	 * 
-	 * @param ServiceEndpointLog $log
+	 * @param EndpointLog $log
 	 */
-	public function __construct(ServiceEndpointLog $log) {
+	public function __construct(EndpointLog $log) {
 		parent::__construct();		
 		$this->log = $log;
 	}
 	
 	/**
-	 * @return \Solver\Lab\ServiceEndpointLog
+	 * @return \Solver\Services\EndpointLog
 	 */
 	public function getLog() {
 		return $this->log;

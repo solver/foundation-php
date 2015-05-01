@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * Changes a web-formatted (lowercase, dashes) set of route segments to a PHP-formatted (camelcased) set of route

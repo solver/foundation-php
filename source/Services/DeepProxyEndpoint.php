@@ -2,12 +2,12 @@
 namespace Solver\Lab;
 
 /**
- * A variation of ServiceEndpointProxy {@see \Solver\Lab\ServiceEndpointProxy}.
+ * A variation of EndpointProxy {@see \Solver\Services\EndpointProxy}.
  * 
  * This implementation will automatically proxy endpoints deeper into the given root endpoints, so you can cover a whole
  * tree of endpoints with one proxy configuration.
  * 
- * In ServiceEndpointProxy, when you invoke root->foo->bar->baz(); and "root" is a proxy, your callbacks will only be
+ * In EndpointProxy, when you invoke root->foo->bar->baz(); and "root" is a proxy, your callbacks will only be
  * invoked with $name "foo". 
  * 
  * But with this class, your callbacks will be invoked three times with $path set to, in order:
@@ -21,19 +21,19 @@ namespace Solver\Lab;
  * 
  * Note that the chain execution interrupts if both your $resolver and the $endpoint you pass resolve to null or a
  * method (i.e. a Closure instance). To avoid that, your $filter function can convert non-endpoint resolutions to an 
- * instance of EmptyServiceEndpoint.
+ * instance of EmptyEndpoint.
  * 
  */
-class DeepProxyServiceEndpoint implements ServiceEndpoint {
-	use AbstractProxyServiceEndpoint;
+class DeepProxyEndpoint implements Endpoint {
+	use AbstractProxyEndpoint;
 	
 	/** @var array */
 	protected $path = [];
 	
 	/**
-	 * #Resolution: \Solver\Lab\ServiceEndpoint|\Closure|null;
+	 * #Resolution: \Solver\Services\Endpoint|\Closure|null;
 	 * 
-	 * @param \Solver\Lab\ServiceEndpoint $endpoint
+	 * @param \Solver\Services\Endpoint $endpoint
 	 * The endpoint this object will decorate (i.e. wrap).
 	 * 
 	 * @param null|callable $resolver
@@ -52,7 +52,7 @@ class DeepProxyServiceEndpoint implements ServiceEndpoint {
 	 * Keep in mind if you return nothing that's effectively the same as overriding the resolution to null. If you don't
 	 * want to override the result, you must return the passed resolution value.
 	 */
-	public function __construct(ServiceEndpoint $endpoint, $resolver = null, $filter = null) {
+	public function __construct(Endpoint $endpoint, $resolver = null, $filter = null) {
 		$this->endpoint = $endpoint;
 		
 		$this->resolver = function ($name) use ($endpoint, $resolver, $filter) {

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * An endpoint with no properties and methods. This is useful with some proxy techniques in order to keep the 
@@ -7,7 +7,7 @@ namespace Solver\Lab;
  * 
  * An instance of this class is immutable & stateless, so it's a singleton obtained via static method get().
  */
-class EmptyServiceEndpoint implements ServiceEndpoint {
+class EmptyEndpoint implements Endpoint {
 	public function resolve($name) { 
 		return null;
 	}

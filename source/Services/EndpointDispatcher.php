@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * A simple router that will traverse service endpoints and either return a closure of the method to call, or null if
@@ -7,12 +7,12 @@ namespace Solver\Lab;
  * 
  * For ex. $endpoint = "foo/bar/baz" will attempt to resolve to public $endpoint->foo->bar->baz($input);
  */
-class ServiceEndpointDispatcher {
+class EndpointDispatcher {
 	/**
 	 * Tries to find a method for the given route and returns it. Returns null if no matching method is found.
 	 * 
-	 * @param \solver\Lab\ServiceEndpoint $endpoint
-	 * ServiceEndpoint instance to begin the resolution from.
+	 * @param \solver\Lab\Endpoint $endpoint
+	 * Endpoint instance to begin the resolution from.
 	 * 
 	 * @param array $route
 	 * list<string>; List of string segments to resolve to an action (for example a URL split by path separator).
@@ -23,17 +23,17 @@ class ServiceEndpointDispatcher {
 	 * @return array|null
 	 * Returns the result from the invoked method (an array or null).
 	 * 
-	 * @throws \Solver\Lab\ServiceEndpointException
-	 * If the method throws a ServiceEndpointException.
+	 * @throws \Solver\Services\EndpointException
+	 * If the method throws a EndpointException.
 	 * 
-	 * @throws \Solver\Lab\ServiceEndpointException
+	 * @throws \Solver\Services\EndpointException
 	 * With code 'endpointOrActionNotFound', if the route doesn't resolve to a method.
 	 */
-	public function dispatch(ServiceEndpoint $endpoint, $route, array $input = null) {
+	public function dispatch(Endpoint $endpoint, $route, array $input = null) {
 		$action = $this->route($endpoint, $route);
 		
 		if ($action === null) {
-			$log = new ServiceEndpointLog();
+			$log = new EndpointLog();
 			$log->error(null, 'Endpoint or action not found.', 'endpointOrActionNotFound');
 			$log->throwIfErrors(); 
 		}
@@ -44,11 +44,11 @@ class ServiceEndpointDispatcher {
 	/**
 	 * Tries to find a method for the given route and returns it. Returns null if no matching method is found.
 	 * 
-	 * @param \solver\Lab\ServiceEndpoint $endpoint
+	 * @param \solver\Lab\Endpoint $endpoint
 	 * @param string $route
 	 * @return \Closure|null
 	 */
-	protected function route(ServiceEndpoint $endpoint, $route) {	
+	protected function route(Endpoint $endpoint, $route) {	
 		$count = count($route);
 		
 		if ($count == 0) return null;

@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * Allows you to intercept the resolution of methods and sub-endpoints on an endpoint.
@@ -7,13 +7,13 @@ namespace Solver\Lab;
  * This allows you to decorate / wrap / override endpoint methods and properties, and add cross-cutting functionality
  * that would be harder to implement by overriding every endpoint's method manually.
  */
-class ProxyServiceEndpoint implements ServiceEndpoint {
-	use AbstractProxyServiceEndpoint;
+class ProxyEndpoint implements Endpoint {
+	use AbstractProxyEndpoint;
 	
 	/**
-	 * #Resolution: \Solver\Lab\ServiceEndpoint|\Closure|null;
+	 * #Resolution: \Solver\Services\Endpoint|\Closure|null;
 	 * 
-	 * @param \Solver\Lab\ServiceEndpoint $endpoint
+	 * @param \Solver\Services\Endpoint $endpoint
 	 * The endpoint this object will decorate (i.e. wrap).
 	 * 
 	 * @param null|callable $resolver
@@ -32,7 +32,7 @@ class ProxyServiceEndpoint implements ServiceEndpoint {
 	 * Keep in mind if you return nothing that's effectively the same as overriding the resolution to null. If you don't
 	 * want to override the result, you must return the passed resolution value.
 	 */
-	public function __construct(ServiceEndpoint $endpoint, $resolver = null, $filter = null) {
+	public function __construct(Endpoint $endpoint, $resolver = null, $filter = null) {
 		$this->endpoint = $endpoint;
 		$this->resolver = $resolver;
 		$this->filter = $filter;		

@@ -1,10 +1,10 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
- * Provides a generic implementation of needed facilities for a service endpoint (see \Solver\Lab\ServiceEndpoint).
+ * Provides a generic implementation of needed facilities for a service endpoint (see \Solver\Services\Endpoint).
  */
-trait SimpleServiceEndpoint {
+trait SimpleEndpoint {
 	use Properties;
 	
 	/**
@@ -12,7 +12,7 @@ trait SimpleServiceEndpoint {
 	 * endpoints, and any public methods except magic methods (leading double underscore).
 	 * 
 	 * @param string $name
-	 * @return \solver\Lab\ServiceEndpoint|\Closure|null
+	 * @return \solver\Lab\Endpoint|\Closure|null
 	 */
 	public function resolve($name) {
 		/*
@@ -38,7 +38,7 @@ trait SimpleServiceEndpoint {
 		if (!isset($this->solverLabProperties[$name]['get'])) goto noGetter;
 		
 		$property = $this->solverLabProperties[$name]['get']();
-		if (!$property instanceof ServiceEndpoint) goto noGetter;
+		if (!$property instanceof Endpoint) goto noGetter;
 		
 		return $property;
 		
@@ -55,7 +55,7 @@ trait SimpleServiceEndpoint {
 		if (!$propertyRefl->isPublic() || !$propertyRefl->isStatic()) goto noProperty;
 		
 		$property = $this->{$name};
-		if (!$property instanceof ServiceEndpoint) goto noProperty;
+		if (!$property instanceof Endpoint) goto noProperty;
 		
 		return $property;
 		
@@ -78,7 +78,7 @@ trait SimpleServiceEndpoint {
 	 * Name for this property.
 	 * 
 	 * @param \Closure $factory
-	 * A closure that must return a ServiceEndpoint instance (the factory is invoked no more than once, no need to cache
+	 * A closure that must return a Endpoint instance (the factory is invoked no more than once, no need to cache
 	 * the instance inside the factory, this is taken care of for you).
 	 */
 	protected function defineEndpointProperty($name, \Closure $factory) {

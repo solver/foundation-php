@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * A service "endpoint" in this context is the interfacing component of a service, which exposes its public API and is
@@ -10,13 +10,13 @@ namespace Solver\Lab;
  * A client uses a service by instantiating the service class (the root endpoint) and accessing any other endpoints
  * provided by it (exposed as public properties), and not by instantiating them directly.
  */
-interface ServiceEndpoint {
+interface Endpoint {
 	/**
 	 * Returns one of two types of members based on the passed name:
 	 * 
-	 * - A public property holding a ServiceEndpoint instance.
+	 * - A public property holding a Endpoint instance.
 	 * - A method (as a Closure instance) which takes a dict (or nothing) and return a dict (or nothing) or throws a
-	 * ServiceEndpointException on error.
+	 * EndpointException on error.
 	 * - Null if the name doesn't resolve to either of the above.
 	 * 
 	 * Some reasons for encapsulating this logic as a method, instead of relying directly on reflection:
@@ -29,7 +29,7 @@ interface ServiceEndpoint {
 	 * @param string $name
 	 * Name of a public property or a method.
 	 * 
-	 * @return \Solver\Lab\ServiceEndpoint|\Closure|null
+	 * @return \Solver\Services\Endpoint|\Closure|null
 	 * Endpoint instance, method as a closure, or null if the name does not resolve to either. 
 	 */
 	public function resolve($name);

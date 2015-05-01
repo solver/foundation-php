@@ -1,12 +1,12 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * DO NOT use this trait, it's an internal implementation detail for the proxy classes in the library & might go away or
  * change without warning.
  */
-trait AbstractProxyServiceEndpoint {
-	/** @var \Solver\Lab\ServiceEndpoint */
+trait AbstractProxyEndpoint {
+	/** @var \Solver\Services\Endpoint */
 	protected $endpoint;
 	
 	/** @var callable */
@@ -46,7 +46,7 @@ trait AbstractProxyServiceEndpoint {
 	public function __get($name) {
 		$property = $this->resolve($name);
 		
-		if (!$property instanceof ServiceEndpoint) {
+		if (!$property instanceof Endpoint) {
 			throw new \Exception('Non-existing property "' . $name . '".');
 		} else {
 			return $property;
