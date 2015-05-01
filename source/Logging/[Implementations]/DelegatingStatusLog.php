@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Report;
+namespace Solver\Logging;
 
 class DelegatingStatusLog extends DelegatingErrorLog implements StatusLog {
 	protected $log;
@@ -21,21 +21,21 @@ class DelegatingStatusLog extends DelegatingErrorLog implements StatusLog {
 	}
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\StandardLog::info()
+	 * @see \Solver\Logging\StandardLog::info()
 	 */
 	public function info($path, $message, $code = null, array $details = null) {
 		$this->log->log(['type' => 'info', 'path' => $path, 'message' => $message, 'code' => $code, 'details' => $details]);
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\StandardLog::success()
+	 * @see \Solver\Logging\StandardLog::success()
 	 */
 	public function success($path, $message, $code = null, array $details = null) {
 		$this->log->log(['type' => 'success', 'path' => $path, 'message' => $message, 'code' => $code, 'details' => $details]);
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\StandardLog::warning()
+	 * @see \Solver\Logging\StandardLog::warning()
 	 */
 	public function warning($path, $message, $code = null, array $details = null) {
 		$this->log->log(['type' => 'warning', 'path' => $path, 'message' => $message, 'code' => $code, 'details' => $details]);

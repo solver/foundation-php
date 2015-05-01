@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * TODO: Add subset($dictFormat, ...$fields) or similar: an ability to create a partial clone only of selected fields.

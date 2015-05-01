@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * This format falls in the group of "adapter" formats. Adapt one format to another, but still fulfill the full Format

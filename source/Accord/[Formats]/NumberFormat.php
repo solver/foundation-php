@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * Accepts integers, floats, and strings formatted as an integer or a float. Numbers as strings will be normalized

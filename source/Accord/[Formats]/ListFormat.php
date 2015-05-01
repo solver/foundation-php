@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * TODO: PHPDoc.

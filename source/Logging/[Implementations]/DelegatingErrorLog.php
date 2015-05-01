@@ -11,10 +11,26 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Report;
+namespace Solver\Logging;
 
-// TODO: Document.
-interface TransientErrorLog extends TransientLog, ErrorLog {
-	function hasErrors();
-	function getErrors();
+class DelegatingErrorLog implements ErrorLog {
+	protected $log;
+	
+	public function __construct(Log $log) {
+		$this->log = $log;
+	}
+
+	/* (non-PHPdoc)
+	 * @see \Solver\Logging\ErrorLog::error()
+	 */
+	public function error($path, $message, $code = null, array $details = null) {
+		$this->log->log(['type' => 'error', 'path' => $path, 'message' => $message, 'code' => $code, 'details' => $details]);
+	}
+
+	/* (non-PHPdoc)
+	 * @see \Solver\Logging\EventLog::log()
+	 */
+	public function log(array $event) {
+		$this->log->log($event);
+	}	
 }

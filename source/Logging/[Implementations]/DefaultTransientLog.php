@@ -11,14 +11,14 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Report;
+namespace Solver\Logging;
 
 class DefaultTransientLog implements TransientLog {
 	private $has = []; // TODO: Can be replaced with a bitmask.
 	private $events = [];
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\Log::log()
+	 * @see \Solver\Logging\Log::log()
 	 */
 	public function log(array $event) {
 		$type = $event['type'];
@@ -28,7 +28,7 @@ class DefaultTransientLog implements TransientLog {
 	}	
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\TransientLog::getEvents()
+	 * @see \Solver\Logging\TransientLog::getEvents()
 	 */
 	public function getEvents($types = null) {
 		if ($types === null || !$this->events) {
@@ -42,7 +42,7 @@ class DefaultTransientLog implements TransientLog {
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\TransientLog::hasEvents()
+	 * @see \Solver\Logging\TransientLog::hasEvents()
 	 */
 	public function hasEvents($types = null) {
 		if ($types === null) {

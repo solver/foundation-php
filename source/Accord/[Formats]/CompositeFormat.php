@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * Takes multiple formats and runs the value through each of them in order, feeding the output of one as the input of

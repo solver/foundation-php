@@ -1,5 +1,5 @@
 <?php
-namespace Solver\Lab;
+namespace Solver\Services;
 
 /**
  * A variation of EndpointProxy {@see \Solver\Services\EndpointProxy}.

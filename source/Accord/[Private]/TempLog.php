@@ -13,8 +13,8 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\LogException;
-use Solver\Report\ErrorLog;
+use Solver\Logging\LogException;
+use Solver\Logging\ErrorLog;
 
 /**
  * DO NOT USE. For internal consumption by the Solver\Accord library only.
@@ -40,7 +40,7 @@ class TempLog implements ErrorLog {
 	}
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\ErrorLog::error()
+	 * @see \Solver\Logging\ErrorLog::error()
 	 */
 	public function error($path, $message, $code = null, array $details = null) {
 		if ($message === null && $code === null) LogException::throwNullMessageAndCode();
@@ -48,7 +48,7 @@ class TempLog implements ErrorLog {
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Report\Log::log()
+	 * @see \Solver\Logging\Log::log()
 	 */
 	public function log(array $event) {
 		if ($event['type'] !== 'error') LogException::throwBadFormat($type);

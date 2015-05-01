@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * Interface for "formats", which take a value, and return a normalized, validated (for the format) value.
@@ -54,7 +54,7 @@ interface Format extends Transform {
 	 * @param mixed $value
 	 * Value to format.
 	 * 
-	 * @param \Solver\Report\ErrorLog $log
+	 * @param \Solver\Logging\ErrorLog $log
 	 * If the transform of the given value fails, errors will be logged here.
 	 * 
 	 * @param string $path

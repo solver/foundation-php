@@ -246,6 +246,9 @@ class SqlConnection {
 	}
 	
 	/**
+	 * TODO: Extract as a standalone "quoter" which can build a set of expressions from scalars and arrays from inline
+	 * hints like ->add("SELECT @asList", [['foo', 'FOO'], 'bar', 'baz', ['bam' => 'BAM']]).
+	 * 
 	 * Replaces question marks in the $sql string with quoted SQL value literals.
 	 * 
 	 * Note this isn't a prepared statement

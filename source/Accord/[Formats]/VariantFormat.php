@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * A variant is an implementation of a "tagged union" type, for dictionaries where a specific field is designated to 

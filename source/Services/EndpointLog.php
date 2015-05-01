@@ -13,7 +13,7 @@
  */
 namespace Solver\Services;
 
-use Solver\Report\DefaultTransientErrorLog;
+use Solver\Logging\DefaultTransientErrorLog;
 
 /**
  * A log that can contain error events, with an ability to throw a EndpointException (containing the log), when there

@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Report\ErrorLog;
+use Solver\Logging\ErrorLog;
 
 /**
  * Interface for "transforms", which take a value, and produce a transformed value.
@@ -63,7 +63,7 @@ interface Transform {
 	 * @param mixed $value
 	 * Value to transform.
 	 * 
-	 * @param \Solver\Report\ErrorLog $log
+	 * @param \Solver\Logging\ErrorLog $log
 	 * If extracting properly formatted data from the given value fails, errors will be logged here.
 	 * 
 	 * @param string $path

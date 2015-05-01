@@ -13,7 +13,7 @@
  */
 namespace Solver\Lab;
 
-use Solver\Report\DefaultTransientStatusLog;
+use Solver\Logging\DefaultTransientStatusLog;
 
 /**
  * Logs the progress of events in the page controller (success, info, warning, error).
