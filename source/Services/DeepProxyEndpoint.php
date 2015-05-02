@@ -4,8 +4,8 @@ namespace Solver\Services;
 /**
  * A variation of EndpointProxy {@see \Solver\Services\EndpointProxy}.
  * 
- * This implementation will automatically proxy endpoints deeper into the given root endpoints, so you can cover a whole
- * tree of endpoints with one proxy configuration.
+ * This implementation will automatically proxy endpoints deeper into the given root endpoints, so you can cover a 
+ * whole tree of endpoints with one proxy configuration.
  * 
  * In EndpointProxy, when you invoke root->foo->bar->baz(); and "root" is a proxy, your callbacks will only be
  * invoked with $name "foo". 
@@ -16,11 +16,11 @@ namespace Solver\Services;
  * - ["foo", "bar"]
  * - ["foo", "bar", "baz"]
  * 
- * This allows less work when implementing cross-cutting concerns accross deeply nested endpoints, by being able to
+ * This allows less work when implementing cross-cutting concerns across deeply nested endpoints, by being able to
  * cover them easily from one set of proxy callbacks. 
  * 
- * Note that the chain execution interrupts if both your $resolver and the $endpoint you pass resolve to null or a
- * method (i.e. a Closure instance). To avoid that, your $filter function can convert non-endpoint resolutions to an 
+ * Note that the chain execution interrupts if both your $resolver and the $endpoint you pass resolve to null or an
+ * action (i.e. a Closure instance). To avoid that, your $filter function can convert non-endpoint resolutions to an 
  * instance of EmptyEndpoint.
  * 
  */
