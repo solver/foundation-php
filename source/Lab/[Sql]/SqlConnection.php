@@ -390,7 +390,7 @@ class SqlConnection {
 		}
 		
 		if ($this->type === 'sqlite') { // Pgsql also supports this, for when I add it.
-			$this->exec('BEGIN ' . $isolation);
+			$this->execute('BEGIN ' . $isolation);
 		} else {
 			$this->execute('SET TRANSACTION ISOLATION LEVEL ' . $isolation);
 			$this->execute('BEGIN');
