@@ -59,7 +59,7 @@ class DataBox {
 	public function has($path) {
 		$parent = CollectionUtils::drill($this->data, $path, $keyOut, true);
 		
-		if ($keyOut !== null) {
+		if ($parent !== null && isset($parent[$keyOut])) {
 			return true;
 		} else {
 			return false;
@@ -68,35 +68,30 @@ class DataBox {
 	
 	// TODO: Document.
 	public function set($path, $value) {
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true);
-		
-		if ($keyOut !== null) {
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
+		$parent[$keyOut] = $value;
+		if ($parent !== null) {
 			$parent[$keyOut] = $value;
-		} else {
-			throw new \Exception('A value along the path of "'. $path .'" is set to a value different than an array, the value can\'t be set.');
 		}
 	}
 	
 	// TODO: Document.
 	public function push($path, $value) {
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true);
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
 		
-		if ($keyOut !== null) {
-			
-		} else {
-			throw new \Exception('A value along the path of "'. $path .'" is set to a value different than an array, the value can\'t be pushed.');
+		if (!isset($parent[$keyOut]) || !is_array($parent[$keyOut])) {
+			$parent[$keyOut] = [];
 		}
+		
+		$parent[$keyOut][] = $value;
 	}
 	
 	// TODO: Document.
 	public function remove($path) {
 		$parent = & CollectionUtils::drill($this->data, $path, $keyOut);
 		
-		if ($keyOut !== null) {
+		if ($parent !== null && key_exists($keyOut, $parent)) {
 			unset($parent[$keyOut]);
-			return true;
-		} else {
-			return false;
 		}
 	}
 	
@@ -117,7 +112,7 @@ class DataBox {
 		// TODO: Can be optimized.
 		$parent = CollectionUtils::drill($this->data, $path, $keyOut);
 		
-		if ($keyOut !== null && isset($parent[$keyOut])) {
+		if ($parent !== null && isset($parent[$keyOut])) {
 			return $parent[$keyOut];
 		}
 		
