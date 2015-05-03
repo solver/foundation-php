@@ -11,10 +11,12 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Session;
 
 /**
  * Basic session API.
+ * 
+ * TODO: Port the remaining methods for id regeneration etc. (if need be).
  */
 class Session {
 	private $started = false;
@@ -31,7 +33,7 @@ class Session {
 			\session_start();			
 			$this->started = true;
 		} else {
-			throw new \Exception('Someone started the session elsewhere by directly invoking the native PHP session API.');
+			throw new \Exception('The session was started by directly invoking the native PHP session API.');
 		}
 	}
 	
@@ -64,7 +66,7 @@ class Session {
 	 * will be persisted in the session, without further method calls to this class (just re-bind on the next request).
 	 */
 	public function bind($name, & $data) {
-		if (!$this->started) $this->start();		
+		if (!$this->started) $this->start();
 		if (\key_exists($name, $_SESSION)) $data = $_SESSION[$name];
 		$_SESSION[$name] = & $data;
 	}
