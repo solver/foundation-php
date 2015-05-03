@@ -1,6 +1,8 @@
 <?php
 namespace Solver\Services;
 
+use Solver\Lab\Properties;
+
 /**
  * Provides a generic implementation of needed facilities for a service endpoint (see \Solver\Services\Endpoint).
  */
