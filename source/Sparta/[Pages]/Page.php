@@ -24,31 +24,32 @@ abstract class Page {
 	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in a 
 	 * DataBox instance for convenient data access.
 	 *
-	 * @var \Solver\Lab\DataBox
+	 * @var PageInput
 	 */
 	protected $input;
 
 	/**
 	 * A dict of parameters, which the page accumulates, and passes to the template(s).
 	 *
-	 * This is part of the "viewmodel" in the framework. The other part is property $log.
+	 * This together with the $log property form the "view model" of the page.
 	 *
-	 * @var array
+	 * @var PageModel
 	 */
-	protected $model = [];
+	protected $model;
 
 	/**
 	 * A log of success/info/warning/error events, which the page accumulates, and passes to the template(s).
 	 *
 	 * This is part of the "viewmodel" in the framework. The other part is property $model.
 	 *
-	 * @var \Solver\Sparta\PageLog
+	 * @var PageLog
 	 */
 	protected $log = [];
 
 	final public function __invoke(array $input) {
 		try {
-			$this->input = new DataBox($input);
+			$this->input = new PageInput($input);
+			$this->model = new PageModel();
 			$this->log = new PageLog();
 			$this->main(); 
 		} catch (\Exception $e) {
@@ -81,10 +82,18 @@ abstract class Page {
 	abstract public function main();
 
 	/**
-	 * Renders a view template.
+	 * Renders a view template to standard output.
 	 *
 	 * @param string $templateId
 	 * Optional (default = null).
+	 * 
+	 * @param PageModel $model
+	 * Optional (default = null). A page model to pass to the template instead of $this->model. Setting this parameter
+	 * should be rare, only when rendering auxiliary templates.
+	 * 
+	 * @param PageLog $log
+	 * Optional (default = null). A page log to pass to the template instead of $this->log. Setting this parameter
+	 * should be rare, only when rendering auxiliary templates.
 	 *
 	 * Special symbols:
 	 * 
@@ -103,7 +112,10 @@ abstract class Page {
 	 *
 	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
-	final protected function renderTemplate($templateId = null) {
+	final protected function renderTemplate($templateId = null, PageModel $model = null, PageLog $log = null) {
+		if ($model === null) $model = $this->model;
+		if ($log === null) $model = $this->log;
+		
 		$class = get_class($this);
 		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);
 			
@@ -118,18 +130,7 @@ abstract class Page {
 		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
 		
 		$template = new Template($templateId);
-		$template($this->model, $this->log);
-	}
-	
-	/**
-	 * Legacy alias. See renderTemplate().
-	 * 
-	 * @deprecated
-	 * 
-	 * @param string $templateId
-	 */
-	final protected function renderView($templateId = null) {
-		$this->renderTemplate($templateId);
+		$template($model, $log);
 	}
 	
 	/**
@@ -140,22 +141,19 @@ abstract class Page {
 	 * 
 	 * @param string $templateId
 	 * Optional (default = null). Template id, see renderTemplate() for details.
+	 * 
+	 * @param PageModel $model
+	 * Optional (default = null). A page model to pass to the template instead of $this->model. Setting this parameter
+	 * should be rare, only when capturing auxiliary templates.
+	 * 
+	 * @param PageLog $log
+	 * Optional (default = null). A page log to pass to the template instead of $this->log. Setting this parameter
+	 * should be rare, only when capturing auxiliary templates.
 	 */
-	final protected function captureTemplate($templateId = null) {
+	final protected function captureTemplate($templateId = null, PageModel $model = null, PageLog $log = null) {
 		ob_start();
-		$this->renderTemplate($templateId);
+		$this->renderTemplate($templateId, $model, $log);
 		return ob_get_clean();
-	}
-	
-	/**
-	 * Legacy alias. See captureTemplate().
-	 * 
-	 * @deprecated
-	 * 
-	 * @param string $templateId
-	 */
-	final protected function captureView($templateId = null) {
-		$this->captureTemplate($templateId);
 	}
 	
 	/**

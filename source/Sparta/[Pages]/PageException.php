@@ -13,6 +13,8 @@
  */
 namespace Solver\Sparta;
 
+use Solver\Base\Exception;
+
 /**
  * Used for a dispatcher component (page handler, router) to signal the dispatcher (up the stack) that the currently
  * processed HTTP request should end with the HTTP status as specified in the exception code (i.e. code 404 for not

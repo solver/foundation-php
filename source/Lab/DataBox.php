@@ -16,14 +16,9 @@ namespace Solver\Lab;
 use Solver\Toolbox\CollectionUtils;
 
 /**
- * Reading information from deeply nested arrays, often coming from untrusted sources may mean a lot of isset() & data
- * format checks. This class wraps an array & provides a small set of convenience methods to address your most common 
- * needs in such cases.
- * 
- * Controller's $input and View's $data properties come pre-wrapped with this class.
- * 
- * You can't modify an array once it's in a data box, but you can obtain a copy of the array to play with via method
- * unbox().
+ * A convenient interface for reading & manipulating information from deeply nested arrays, often coming from untrusted
+ * sources, with unverified structure (i.e. provides safe behavior in case of missing keys etc., avoiding the need for
+ * heavy isset() use & common data format checks).
  */
 class DataBox {
 	/**
@@ -31,8 +26,24 @@ class DataBox {
 	 */
 	protected $data;
 	
-	public function __construct($data) {
+	public function __construct($data = []) {
 		$this->data = $data;
+	}
+	
+	/**
+	 * Replaces the entire internal array with the given array.
+	 * 
+	 * @param array $data
+	 */
+	public function replaceAll(array $data) {
+		$this->data = $data;
+	}
+	
+	/**
+	 * Resets the internal data to an empty array.
+	 */
+	public function removeAll() {
+		$this->data = [];
 	}
 	
 	/**
@@ -40,8 +51,53 @@ class DataBox {
 	 * 
 	 * @return array
 	 */
-	public function unbox() {
+	public function getAll() {
 		return $this->data;
+	}
+	
+	// TODO: Document.
+	public function has($path) {
+		$parent = CollectionUtils::drill($this->data, $path, $keyOut, true);
+		
+		if ($keyOut !== null) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	// TODO: Document.
+	public function set($path, $value) {
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true);
+		
+		if ($keyOut !== null) {
+			$parent[$keyOut] = $value;
+		} else {
+			throw new \Exception('A value along the path of "'. $path .'" is set to a value different than an array, the value can\'t be set.');
+		}
+	}
+	
+	// TODO: Document.
+	public function push($path, $value) {
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true);
+		
+		if ($keyOut !== null) {
+			
+		} else {
+			throw new \Exception('A value along the path of "'. $path .'" is set to a value different than an array, the value can\'t be pushed.');
+		}
+	}
+	
+	// TODO: Document.
+	public function remove($path) {
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut);
+		
+		if ($keyOut !== null) {
+			unset($parent[$keyOut]);
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 	/**
@@ -59,13 +115,13 @@ class DataBox {
 	 */
 	public function get($path, $default = null) {
 		// TODO: Can be optimized.
-		$value = CollectionUtils::drill($this->data, $path, $keyOut);
+		$parent = CollectionUtils::drill($this->data, $path, $keyOut);
 		
-		if ($keyOut !== null && isset($value[$keyOut])) {
-			return $value[$keyOut];
-		} else {
-			return $default;
+		if ($keyOut !== null && isset($parent[$keyOut])) {
+			return $parent[$keyOut];
 		}
+		
+		return $default;
 	}
 	
 	/**
@@ -84,12 +140,15 @@ class DataBox {
 	public function getArray($path, $default = null) {
 		$value = $this->get($path);
 		
-		if (\is_array($value)) return $value;
-		else return $default;
+		if (\is_array($value)) {
+			return $value;
+		} 
+		
+		return $default;
 	}
 	
 	/**
-	 * Returns the string or string representation (for float/int/bool) at the given path (or a default value).
+	 * Returns the string or a string representation (for float/int/bool) at the given path (or a default value).
 	 * 
 	 * Note that arrays have no string representation, you'll get the default value instead.
 	 * 
@@ -109,7 +168,7 @@ class DataBox {
 		if (\is_scalar($value)) {
 			return (string) $value;
 		}
-		
+				
 		return $default;
 	}
 	
@@ -147,7 +206,7 @@ class DataBox {
 	/**
 	 * Returns the value at the given path if it passes validation (or a default value). What passes validation:
 	 * 
-	 * - Strings containing only digits, optionally surrounded by whitespace.
+	 * - Strings containing only digits, optionally surrounded by whitespace (whitespace will be trimmed).
 	 * - Positive float values without a fractional part.
 	 * - Positive integer values.
 	 * 
@@ -182,25 +241,5 @@ class DataBox {
 		}
 		
 		return $default;
-	}
-	
-	public function offsetExists($offset) {
-		return isset($this->data[$offset]);
-	}
-
-	public function offsetGet($offset) {
-		return $this->data[$offset];
-	}
-
-	public function offsetSet($offset, $value) {
-		$this->errorReadOnly();
-	}
-	
-	public function offsetUnset($offset) {
-		$this->errorReadOnly();
-	}
-	
-	private function errorReadOnly() {
-		throw new \Exception('This array is wrapped in an instance of Solver\Lab\DataBox, which makes it read-only. You can get a copy of the entire array via method unbox() and modify the copy instead.');
 	}
 }

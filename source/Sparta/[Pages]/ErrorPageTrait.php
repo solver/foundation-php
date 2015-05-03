@@ -15,6 +15,8 @@ namespace Solver\Sparta;
 
 /**
  * Use this trait to implement a controller that should handle common HTTP errors.
+ * 
+ * @property PageInput $input
  */
 trait ErrorPageTrait {
 	/**
@@ -56,6 +58,7 @@ trait ErrorPageTrait {
 	];
 	
 	protected function getStatusCode() {
+		/* @var $e \Exception */
 		$e = $this->input->get('exception');
 		if ($e instanceof PageException) {
 			return $e->getCode();

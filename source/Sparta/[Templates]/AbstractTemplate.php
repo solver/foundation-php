@@ -24,14 +24,14 @@ abstract class AbstractTemplate {
 	/**
 	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
 	 * 
-	 * @var \Solver\Lab\DataBox
+	 * @var PageModel
 	 */
 	protected $model;
 	
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
 	 * 
-	 * @var \Solver\Sparta\PageLog
+	 * @var PageLog
 	 */
 	protected $log;
 	
@@ -143,12 +143,12 @@ abstract class AbstractTemplate {
 	 * by using $this, and by using a local alias that's injected by the system. For example, $this->tag() and $tag()
 	 * are equivalent within a template.
 	 * 
-	 * @param array $model
+	 * @param PageModel $model
 	 * @param PageLog $log
 	 * @return mixed
 	 * Anything returned from the template file.
 	 */
-	public function __invoke(array $model, PageLog $log) {
+	public function __invoke(PageModel $model, PageLog $log) {
 		/*
 		 * Setup calling scope for this template (and embeded rendered/imported templates).
 		 */

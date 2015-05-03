@@ -15,6 +15,8 @@ namespace Solver\Sparta;
 
 /**
  * Provides call*() methods, which directly bind an input value to a call of a public method by the same name.
+ * 
+ * @property PageInput $input
  */
 trait CallPageTrait {
 	/**
