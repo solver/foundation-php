@@ -14,7 +14,5 @@
 namespace Solver\Logging;
 
 // TODO: Document.
-interface TransientErrorLog extends TransientLog, ErrorLog {
-	function hasErrors();
-	function getErrors();
+interface StatusMemoryLog extends ErrorMemoryLog, StatusLog {
 }

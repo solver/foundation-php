@@ -13,7 +13,7 @@
  */
 namespace Solver\Services;
 
-use Solver\Logging\DefaultTransientErrorLog;
+use Solver\Logging\DefaultErrorMemoryLog;
 
 /**
  * A log that can contain error events, with an ability to throw a EndpointException (containing the log), when there
@@ -22,7 +22,7 @@ use Solver\Logging\DefaultTransientErrorLog;
  * Throwing a EndpointException with one or more errors by manipulating a EndpointLog is the standard way for a service
  * endpoint to end with an error and communicate it to its clients.
  */
-class EndpointLog extends DefaultTransientErrorLog {
+class EndpointLog extends DefaultErrorMemoryLog {
 	public function throwIfErrors() {
 		if ($this->hasErrors()) throw new EndpointException($this);
 	}

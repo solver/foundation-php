@@ -14,34 +14,34 @@
 namespace Solver\Logging;
 
 // TODO: Optimization opportunities.
-class DefaultTransientStatusLog extends DelegatingStatusLog implements TransientStatusLog {
+class DefaultErrorMemoryLog extends DelegatingErrorLog implements ErrorMemoryLog {
 	public function __construct() {
-		parent::__construct(new DefaultTransientLog());
+		parent::__construct(new DefaultMemoryLog());
 	}
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\ErrorTransientLog::getErrors()
+	 * @see \Solver\Logging\ErrorMemoryLog::getErrors()
 	 */
 	public function getErrors() {
 		return $this->log->getEvents(['error']);
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\ErrorTransientLog::hasErrors()
+	 * @see \Solver\Logging\ErrorMemoryLog::hasErrors()
 	 */
 	public function hasErrors() {
 		return $this->log->hasEvents(['error']);
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\TransientLog::getEvents()
+	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
 	public function getEvents($types = null) {
 		return $this->log->getEvents($types);
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\TransientLog::hasEvents()
+	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
 	public function hasEvents($types = null) {
 		return $this->log->hasEvents($types);

@@ -15,12 +15,12 @@ namespace Solver\Logging;
 
 class LogUtils {
 	/**
-	 * Imports all events from a TransientLog into another Log with an optional path (re)map.
+	 * Imports all events from a MemoryLog into another Log with an optional path (re)map.
 	 * 
-	 * @param TransientLog $destinationLog
+	 * @param MemoryLog $destinationLog
 	 * Put events in here...
 	 * 
-	 * @param TransientLog $sourceLog
+	 * @param MemoryLog $sourceLog
 	 * Get events out of here...
 	 * 
 	 * @param array $map
@@ -38,7 +38,7 @@ class LogUtils {
 	 * TODO: This certainly needs to be explained better.
 	 * TODO: Add closure ($error => $error|null) as an option for $map, so mapping can be more flexible.
 	 */
-	public static function import(Log $destinationLog, TransientLog $sourceLog, $map = null) {	
+	public static function import(Log $destinationLog, MemoryLog $sourceLog, $map = null) {	
 		if ($map) {
 			// Build a regex with the map keys reverse (later entries take priority, but regex returns first match).	
 			$mapKeys = \array_reverse(\array_keys($map));

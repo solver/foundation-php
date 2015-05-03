@@ -13,11 +13,11 @@
  */
 namespace Solver\Lab;
 
-use Solver\Logging\DefaultTransientStatusLog;
+use Solver\Logging\DefaultStatusMemoryLog;
 
 /**
  * Logs the progress of events in the page controller (success, info, warning, error).
  * 
  * This log is given to templates for display (if needed).
  */
-class PageLog extends DefaultTransientStatusLog {}
+class PageLog extends DefaultStatusMemoryLog {}

@@ -13,7 +13,7 @@
  */
 namespace Solver\Logging;
 
-class DefaultTransientLog implements TransientLog {
+class DefaultMemoryLog implements MemoryLog {
 	private $has = []; // TODO: Can be replaced with a bitmask.
 	private $events = [];
 	
@@ -28,7 +28,7 @@ class DefaultTransientLog implements TransientLog {
 	}	
 	
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\TransientLog::getEvents()
+	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
 	public function getEvents($types = null) {
 		if ($types === null || !$this->events) {
@@ -42,7 +42,7 @@ class DefaultTransientLog implements TransientLog {
 	}
 
 	/* (non-PHPdoc)
-	 * @see \Solver\Logging\TransientLog::hasEvents()
+	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
 	public function hasEvents($types = null) {
 		if ($types === null) {
