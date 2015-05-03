@@ -54,6 +54,7 @@ class EndpointDispatcher {
 		if ($count == 0) return null;
 		
 		for ($i = 0; $i < $count; $i++) {
+			/* @var $endpoint Endpoint */
 			$endpoint = $endpoint->resolve($route[$i]);
 			
 			if ($endpoint === null) return null;

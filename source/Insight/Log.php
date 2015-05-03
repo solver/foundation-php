@@ -34,7 +34,7 @@ class Log {
 	public function addDeprecated($message) 	{ return $this->addSimple('deprecated', $message); }
 	public function addExperimental($message) 	{ return $this->addSimple('experimental', $message); }
 	
-	public function addException($exception) {
+	public function addException(\Exception $exception) {
 		return new LogExtension([
 			'type' => 'exception',
 			'e.message' => $exception->getMessage(),
