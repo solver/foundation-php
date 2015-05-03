@@ -14,7 +14,7 @@
 namespace Solver\Logging;
 
 // TODO: Optimization opportunities.
-class DefaultTransientStatusLog extends DelegatingStatusLog implements TransientStatusLog {
+class DefaultErrorMemoryLog extends DelegatingErrorLog implements ErrorMemoryLog {
 	public function __construct() {
 		parent::__construct(new DefaultTransientLog());
 	}

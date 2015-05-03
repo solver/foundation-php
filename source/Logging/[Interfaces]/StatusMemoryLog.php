@@ -14,5 +14,5 @@
 namespace Solver\Logging;
 
 // TODO: Document.
-interface TransientStatusLog extends TransientErrorLog, StatusLog {
+interface StatusMemoryLog extends ErrorMemoryLog, StatusLog {
 }

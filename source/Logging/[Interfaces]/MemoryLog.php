@@ -13,8 +13,14 @@
  */
 namespace Solver\Logging;
 
-// TODO: Document.
-interface TransientErrorLog extends TransientLog, ErrorLog {
-	function hasErrors();
-	function getErrors();
+/**
+ * Defines a readable in-memory log.
+ * 
+ * Components can pass these logs to each other as reports for their runtime activity.
+ * 
+ * TODO: Document method semantics.
+ */
+interface TransientLog extends Log {
+	function hasEvents($types = null);
+	function getEvents($types = null);
 }
