@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Insider;
+namespace Solver\Insight\Debug;
 
 /*
  * Those are defined only for the benefit of IDEs to pick them up and autocomplete them. The actual constants should be

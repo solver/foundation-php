@@ -11,14 +11,14 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Insider;
+namespace Solver\Insight;
 
 /**
  * Provides debug logging, profiling and assertions.
  * 
  * TODO: This is just a skeleton to cover our most basic needs. More coming soon. Refine, optimize, document.
  */
-class Insider {
+class Debug {
 	protected static $initialized = false, $dir, $logCallback;
 	
 	public static function init($dir) {
@@ -53,6 +53,6 @@ class Insider {
 // 	}
 
 	protected static function throwNotInitialized() {
-		throw new \Exception('Initialize Insider before getting a log, meter, or assert.');
+		throw new \Exception('Initialize Debug before getting a log, meter, or assert.');
 	}
 }
