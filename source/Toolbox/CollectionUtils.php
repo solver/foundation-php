@@ -111,22 +111,25 @@ class CollectionUtils {
 	 * // Don't forget to take the result by reference if you want to modify.
 	 * $parent = & CollectionUtils::drill($arrayRef, $path, $keyOut); 
 	 * 
-	 * // Isset example.
-	 * if ($keyOut !== null && isset($parent[$keyOut])) { 
-	 *  	// Get example.
-	 * 		echo $parent[$keyOut]; 
+	 * // Isset example (the first check verifies we have a valid parent we *could* set a key on, the second check 
+	 * // verifies if it's set (replace isset with key_exists if you differentiate not set from null).
+	 * $isset = $keyOut !== null && isset($parent[$keyOut]);
 	 * 
-	 *  	// Set example.
-	 * 		$parent[$keyOut] = 123; 
+	 * // Alternative of the above check (same semantics):
+	 * $isset = $parent !== null && isset($parent[$keyOut]);
 	 * 
-	 *  	// Unset example.
-	 * 		unset($parent[$keyOut]); 
-	 * }
+	 * // Get example.
+	 * echo $parent[$keyOut]; 
 	 * 
-	 * // Shorter get/set in PHP 5.4+ using dereferencing:
+	 * // Set example.
+	 * $parent[$keyOut] = 123; 
 	 * 
-	 * echo CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut]; // Get example.
-	 * CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut] = 123; // Set example.
+	 * // Unset example.
+	 * unset($parent[$keyOut]);
+	 * 
+	 * // Shorter get/set, where applicable:
+	 * echo CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut];.
+	 * CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut] = 123;
 	 * 
 	 * </code>
 	 * 
@@ -137,54 +140,45 @@ class CollectionUtils {
 	 * Array path identifier, for example: 'abc[def][ghi]', or 'abc.def.ghi'.
 	 * 
 	 * @param string $keyOut
-	 * Returns in this var the key under which the element is found (as per path spec). This will be null of the item
-	 * doesn't exist & parameter $force is false.
+	 * Returns in this var the key under which the element is found (as per path spec). Null if there's no valid parent
+	 * array (and it couldn't be created in case $force was set to true).
 	 * 
 	 * @param bool $force
-	 * Optional (default = false). When true, if the parent array doesn't exist, it's created as per spec. If a non-last
-	 * segment along the way does exist, but is a scalar, $parent will still return null;
+	 * Optional (default = false). When true, if the ancestor arrays for the given path don't exist, they'll be created
+	 * as long as they're not already set to a conflicting type (scalar, resource, object).
 	 * 
 	 * @param string $delim
 	 * One or more chars that will be considered delimiters between path segments, by default ".". You can add "[]" to
 	 * this string, and the function will parse the default PHP array path convention (for ex. "foo[bar][baz]").
 	 * 
 	 * @return mixed
-	 * The parent array of the element, by reference. Null if doesn't exist.
+	 * The parent array of the element, by reference. Null if there's no valid parent array (and it couldn't be created
+	 * in case $force was set to true).
 	 */
-	static public function & drill(array & $arrayRef, $path, & $keyOut, $force = false, $delim = '.') {	
-		$node = & $arrayRef; // current node
-		
-		/*
-		 * TODO: Commented out since not compatible with the short dot syntax. Research if useful.
-		 * 
-		 * This special case speeds up resolving single-segment paths (a common case) but slows down a little the two
-		 * and more segs cases. No enough stats to decide whether to drop this.
-		 * 
-		 * if ($path[strlen($path) - 1] != ']') { $key = $path; return $arr; }
-		 *
-		 * NOTE: Caching parsed keys was tried but cache management turned out slower than parsing always. Caching at a
-		 * higher level by the caller, when possible, may be efficient.
-		 */
-		
+	public static function & drill(array & $arrayRef, $path, & $keyOut, $force = false, $delim = '.') {
+		$parent = & $arrayRef;
 		$keyOut = strtok($path, $delim);
 		
 		for (;;) {
-			if (($candidateKey = strtok($delim)) === false) return $node; 
+			$nextKey = strtok($delim);
+			if ($nextKey === false) return $parent; 
 			
-			if (!isset($node[$keyOut])) { 
-				if ($force) {
-					$node[$keyOut] = [];
-				} else { 
-					$keyOut = null; 
-					$res = null;
-					return $res; 
-				}
+			if (isset($parent[$keyOut])) {
+				if (!is_array($parent[$keyOut])) goto fail;
+			} else {
+				if ($force) $parent[$keyOut] = []; else goto fail;
 			}
 			
-			$node = & $node[$keyOut]; 
-			$keyOut = $candidateKey;
+			$parent = & $parent[$keyOut]; 
+			$keyOut = $nextKey;
 		}
-	}	
+		
+		fail:
+		
+		$keyOut = null;
+		$parent = null;
+		return $parent;
+	}
 	
 	/**
 	 * Converts the dot path syntax (ex. 'foo.bar.baz') to standard PHP bracket array path (ex. 'foo[bar][baz]'). Mixed
