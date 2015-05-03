@@ -13,6 +13,8 @@
  */
 namespace Solver\Lab;
 
+use Solver\Base\Exception;
+
 /**
  * Thrown by SqlConnection & SqlStatement instances.
  */

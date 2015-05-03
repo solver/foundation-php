@@ -61,11 +61,11 @@ trait Properties {
 	 */
 	protected function defineProperty($name, $get, $set) {
 		if ($get === false && $set === false) {
-			throw new Exception('Cannot create property "'. $name . '" with forbidden both access and modification.');
+			throw new \Exception('Cannot create property "'. $name . '" with forbidden both access and modification.');
 		}
 		
 		if (isset($this->solverLabProperties[$name])) {
-			throw new Exception('Cannot create property "'. $name . '" as it already exists.');
+			throw new \Exception('Cannot create property "'. $name . '" as it already exists.');
 		}
 		
 		$property = [];
@@ -77,7 +77,7 @@ trait Properties {
 		// Default "access forbidden" get handler.
 		if ($get === false) {
 			$property['get'] = function () use ($name) {
-				throw new Exception('Cannot access write-only property "'. $name . '".');
+				throw new \Exception('Cannot access write-only property "'. $name . '".');
 			};
 		}
 		
@@ -104,7 +104,7 @@ trait Properties {
 		}
 		
 		else {
-			throw new Exception('Invalid getter specification.');
+			throw new \Exception('Invalid getter specification.');
 		}
 		
 		/*
@@ -114,7 +114,7 @@ trait Properties {
 		// Default "modification forbidden" set handler.
 		if ($set === false) {
 			$property['set'] = function () use ($name) {
-				throw new Exception('Cannot modify read-only property "'. $name . '".');
+				throw new \Exception('Cannot modify read-only property "'. $name . '".');
 			};
 		}
 		
@@ -141,7 +141,7 @@ trait Properties {
 		}
 		
 		else {
-			throw new Exception('Invalid setter specification.');
+			throw new \Exception('Invalid setter specification.');
 		}
 				
 		$this->solverLabProperties[$name] = $property;
@@ -152,7 +152,8 @@ trait Properties {
 			$this->solverLabProperties[$name]['set']($value, $name);
 		}
 		
-		// Emulate the default behavior, which allows dynamic properties. TODO: Consider adding API for sealing properties (to disallow dynamic ones to be set on the object).
+		// Emulate the default behavior, which allows dynamic properties.
+		// TODO: Consider adding API for sealing properties (to disallow dynamic ones to be set on the object).
 		else {
 			$this->{$name} = $value;
 		}

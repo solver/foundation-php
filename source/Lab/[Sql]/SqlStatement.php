@@ -104,24 +104,26 @@ class SqlStatement {
 			return $this->handle->fetchAll(PDO::FETCH_ASSOC);
 		} else if (\is_int($field)) {
 			return $this->handle->fetchAll(PDO::FETCH_COLUMN, $field);
-		} else if (\is_string($field)) {						
-			if (isset($this->fieldMap[$field])) {
-				return $this->handle->fetchAll(PDO::FETCH_COLUMN, $this->fieldMap[$field]);
-			} else {
-				$row = $this->handle->fetch(PDO::FETCH_ASSOC);
+		} else if (\is_string($field)) {
+			$row = $this->handle->fetch(PDO::FETCH_ASSOC);
+			
+			if ($row) {
+				$index = null; 
 				
-				if ($row) {
-					$p = 0; foreach ($row as $k=>$v) {
-						if ($k == $field) break; $p++;
+				foreach ($row as $k => $v) {
+					if ($k == $field) {
+						break;
 					}
-					$this->fieldMap[$field] = $p;
-				} else {
-					return [];
+					
+					$index++;
 				}
 				
-				
-				return \array_merge(array($row[$field]), $this->handle->fetchAll(PDO::FETCH_COLUMN, $this->fieldMap[$field]));
+				if ($index === null) throw new SqlConnectionException('Trying to fetch non-existent result set column "' . $field . '".');
+			} else {
+				return [];
 			}
+			
+			return \array_merge(array($row[$field]), $this->handle->fetchAll(PDO::FETCH_COLUMN, $index));
 		}	
 	}
 	

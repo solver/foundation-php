@@ -14,12 +14,13 @@
 namespace Solver\Sparta;
 
 use Solver\Radar\Radar;
+use Solver\Lab\DataBox;
 
 /**
  * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
  * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
-abstract class AbstractTemplate {	
+abstract class AbstractTemplate {
 	/**
 	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
 	 * 
@@ -158,6 +159,7 @@ abstract class AbstractTemplate {
 		
 		$__localVars__ = $this->getLocalVars();
 		
+		/* @var $scope \Closure */
 		$scope = function ($__path__) use ($__localVars__) {
 			extract($__localVars__, EXTR_REFS);
 			return require $__path__;
@@ -410,6 +412,7 @@ abstract class AbstractTemplate {
 				$reflFunc = new \ReflectionFunction($funcs[$func[0]]);
 				
 				$params = [];
+				/* @var $reflParam \ReflectionParameter */
 				foreach ($reflFunc->getParameters() as $reflParam) {
 					$paramName = $reflParam->getName();
 					

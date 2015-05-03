@@ -13,6 +13,8 @@
  */
 namespace Solver\Sparta;
 
+use Solver\Lab\ParamValidator;
+
 /**
  * A barebones router.
  */

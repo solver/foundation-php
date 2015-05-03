@@ -153,7 +153,7 @@ class SqlExpression {
 	static public function booleanMany(SqlConnection $connection, array $boolExprList, $operator = 'AND', $subOperator = 'AND') {		
 		foreach ($boolExprList as & $boolExpr) {
 			if (is_array($boolExpr)) {
-				$boolExpr = self::renderBoolExpr($boolExpr, $subOperator);			
+				$boolExpr = self::boolean($boolExpr, $subOperator);			
 			}
 		}
 		
