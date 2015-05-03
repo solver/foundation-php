@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Sparta;
 
 /**
  * Base class for page handlers (i.e. controllers, in a typical web MVC framework).
@@ -21,7 +21,7 @@ namespace Solver\Lab;
  */
 abstract class Page {
 	/**
-	 * A dict of inputs as passed by the router (for details, see \Solver\Lab\Router::dispatch()), wrapped in a 
+	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in a 
 	 * DataBox instance for convenient data access.
 	 *
 	 * @var \Solver\Lab\DataBox
@@ -42,7 +42,7 @@ abstract class Page {
 	 *
 	 * This is part of the "viewmodel" in the framework. The other part is property $data.
 	 *
-	 * @var \Solver\Lab\PageLog
+	 * @var \Solver\Sparta\PageLog
 	 */
 	protected $log = [];
 

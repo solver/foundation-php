@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Sparta;
 
 use Solver\Radar\Radar;
 
@@ -30,7 +30,7 @@ abstract class AbstractTemplate {
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
 	 * 
-	 * @var \Solver\Lab\PageLog
+	 * @var \Solver\Sparta\PageLog
 	 */
 	protected $log;
 	

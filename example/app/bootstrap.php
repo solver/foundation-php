@@ -18,7 +18,7 @@
  * This file sets up the app, it's the only file Apache invokes directly for the entire site.
  */
  
-use Solver\Lab\Router;
+use Solver\Sparta\Router;
 use Solver\Base\InputFromGlobals;
 use Solver\Lab\Dispatcher;
 
@@ -67,7 +67,7 @@ ob_start();
 
 // Routes are listed from least to most specific (the last match gets dispatched). Begin each route path with a "/". 
 // Unless you have a file ext. (".json", ".xml" etc.), end with a "/" (or not) if using a preferTrailingSlash mode (or 
-// not). For more info: see Solver\Lab\Router.
+// not). For more info: see Solver\Sparta\Router.
 $routes = [
 	['path' => '/example/', 'call' => 'Example\ExamplePage', 'tail' => true /* Optional */, 'tailLength' => 1 /* Optional */],
 ];
