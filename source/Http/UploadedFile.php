@@ -11,13 +11,13 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Http;
 
 /**
  * Wraps a single $_FILES entry into an object. See InputFromGlobals for automatically producing these out of a $_FILES
  * array.
  */
-class HttpUpload {
+class UploadedFile {
 	protected $tempName;
 	protected $errorCode;
 	protected $size;
@@ -81,15 +81,15 @@ class HttpUpload {
 		return $this->getErrorCode() !== null;
 	}
 	
-	public function getTempName() {
+	public function getFilepath() {
 		return $this->tempName;
 	}
 	
-	public function getClientName() {
+	public function getClientFilename() {
 		return $this->clientName;
 	}
 	
-	public function getClientType() {
+	public function getClientMediaType() {
 		return $this->clientType;
 	}
 	
@@ -97,13 +97,14 @@ class HttpUpload {
 		return $this->size;
 	}
 	
-	public function toArray() {
-		return [
-			'tempName' => $this->tempName,
-			'errorCode' => $this->errorCode,
-			'size' => $this->size,
-			'clientName' => $this->clientName,
-			'clientType' => $this->clientType,	
-		];
-	}
+//	TODO: This method is under consideration and might be removed permanently.
+// 	public function toArray() {
+// 		return [
+// 			'tempName' => $this->tempName,
+// 			'errorCode' => $this->errorCode,
+// 			'size' => $this->size,
+// 			'clientName' => $this->clientName,
+// 			'clientType' => $this->clientType,	
+// 		];
+// 	}
 }

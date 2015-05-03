@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -11,9 +11,9 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Http;
 
-/** 
+/**
  * Prepares an array of input values from PHP's globals (as used by Router's dispatch method).
  * 
  * In the process it undoes the damage PHP does to the input $_FILES metadata. Currently, to read the file name of an
@@ -25,39 +25,38 @@ namespace Solver\Lab;
  * 
  * $_FILES['a']['b']['c']['d']['name'];
  * 
- * The class also wraps every file metadata array into an instance of HttpUpload, and injects that into $_POST where it
+ * The class also wraps every file metadata array into an instance of UploadedFile, and injects that into $_POST where it
  * belongs (i.e. key "body" in the returned array). This means that for the example upload name above, you can find the
  * upload here in the returned array:
  * 
  * $input['body']['a']['b']['c']['d']
  * 
- * And it'll be an instance of HttpUpload.
+ * And it'll be an instance of UploadedFile.
  */
 class InputFromGlobals {
 	/**
 	 * @return array
-	 * An array with the following keys:
-	 * 
-	 * - "query" ($_GET)
-	 * - "body" (combined $_POST and $_FILES, where files become objects of instance HttpUpload)
-	 * - "cookies" ($_COOKIE)
-	 * - "server" ($_SERVER)
-	 * - "env" ($_ENV)
+	 * dict...
+	 * - query: Same as $_GET.
+	 * - body: Combined $_POST and $_FILES, where files become objects of instance UploadedFile.
+	 * - cookies: Same as $_COOKIE.
+	 * - server: Same as $_SERVER.
+	 * - env: dict; Same as $_ENV.
 	 */
 	public static function get() {
 		return [
 			'query' => $_GET,
-			'body' => $_FILES ? self::injectHttpUploads($_POST, $_FILES) : $_POST,
+			'body' => $_FILES ? self::injectUploadedFiles($_POST, $_FILES) : $_POST,
 			'cookies' => $_COOKIE,
 			'server' => $_SERVER,
 			'env' => $_ENV,
 		];
 	}
 	
-	protected static function injectHttpUploads($body, $files) {
+	protected static function injectUploadedFiles($body, $files) {
 		// TODO: This sequence here can certainly be optimized, but now porting from my older code not to waste time.
 		$files = self::fixUploadsMetadata($files);
-		$files = self::replaceWithHttpUpload($files);
+		$files = self::replaceWithUploadedFile($files);
 		return self::merge($body, $files);
 	}
 	
@@ -82,12 +81,12 @@ class InputFromGlobals {
 		return $a;
 	}
 	
-	protected static function replaceWithHttpUpload($files) {
-		// Detects a file metatdata array in a $_FILES like structure and replaces it with an instance of HttpUpload.
+	protected static function replaceWithUploadedFile($files) {
+		// Detects a file metatdata array in a $_FILES like structure and replaces it with an instance of UploadedFile.
 		$replace = function (& $files) use (& $replace) {
 			if (\key_exists('name', $files) && !\is_array($files['name'])) {
 				// File record.
-				$files = new HttpUpload($files['tmp_name'], $files['error'], $files['size'], $files['name'], $files['type']);
+				$files = new UploadedFile($files['tmp_name'], $files['error'], $files['size'], $files['name'], $files['type']);
 			} else {
 				// Go deeper down the hole.
 				foreach ($files as & $v) {
