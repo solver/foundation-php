@@ -190,7 +190,9 @@ class CollectionUtils {
 		fail:
 		
 		$keyOut = null;
-		$parent = null;
+		// TRICKY: We need to unset before we set to null, or we'll alter the array given to us by ref.
+		unset($parent);
+		$parent = null; 
 		return $parent;
 	}
 	
