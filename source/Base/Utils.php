@@ -43,7 +43,7 @@ class Utils {
 	 * - server: Same as $_SERVER.
 	 * - env: dict; Same as $_ENV.
 	 */
-	public static function get() {
+	public static function getInputFromGlobals() {
 		return [
 			'query' => $_GET,
 			'body' => $_FILES ? self::injectUploadedFiles($_POST, $_FILES) : $_POST,
