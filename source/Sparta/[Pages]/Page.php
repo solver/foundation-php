@@ -114,7 +114,7 @@ abstract class Page {
 	 */
 	final protected function renderTemplate($templateId = null, PageModel $model = null, PageLog $log = null) {
 		if ($model === null) $model = $this->model;
-		if ($log === null) $model = $this->log;
+		if ($log === null) $log = $this->log;
 		
 		$class = get_class($this);
 		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);

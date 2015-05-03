@@ -14,7 +14,6 @@
 namespace Solver\Sparta;
 
 use Solver\Radar\Radar;
-use Solver\Lab\DataBox;
 
 /**
  * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
@@ -22,7 +21,7 @@ use Solver\Lab\DataBox;
  */
 abstract class AbstractTemplate {
 	/**
-	 * A dict of custom data as passed by the controller wrapped in a DataBox instance for convenient data access.
+	 * A dict container with custom data as passed by the page controller.
 	 * 
 	 * @var PageModel
 	 */
@@ -36,6 +35,8 @@ abstract class AbstractTemplate {
 	protected $log;
 	
 	/**
+	 * TODO: This is not used much. Remove?
+	 * 
 	 * This is where, by convention, imported templates and the main view template can share data (preferably using the 
 	 * shortcut notation "$shared" instead of the also valid "$this->shared"). 
 	 * 
@@ -153,7 +154,6 @@ abstract class AbstractTemplate {
 		 * Setup calling scope for this template (and embeded rendered/imported templates).
 		 */
 		
-		$model = new DataBox($model);
 		$this->model = $model;
 		$this->log = $log;
 		

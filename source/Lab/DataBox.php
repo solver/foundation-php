@@ -26,8 +26,8 @@ class DataBox {
 	 */
 	protected $data;
 	
-	public function __construct($data = []) {
-		$this->data = $data;
+	public function __construct(array $data = null) {
+		$this->data = $data ?: [];
 	}
 	
 	/**
@@ -109,7 +109,6 @@ class DataBox {
 	 * Returns the array value at that path, or the default if it's not set, or null.
 	 */
 	public function get($path, $default = null) {
-		// TODO: Can be optimized.
 		$parent = CollectionUtils::drill($this->data, $path, $keyOut);
 		
 		if ($parent !== null && isset($parent[$keyOut])) {
