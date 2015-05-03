@@ -113,10 +113,10 @@ class CollectionUtils {
 	 * 
 	 * // Isset example (the first check verifies we have a valid parent we *could* set a key on, the second check 
 	 * // verifies if it's set (replace isset with key_exists if you differentiate not set from null).
-	 * $isset = $keyOut !== null && isset($parent[$keyOut]);
-	 * 
-	 * // Alternative of the above check (same semantics):
 	 * $isset = $parent !== null && isset($parent[$keyOut]);
+	 * 
+	 * // Alternative of the above check (same semantics). Use whichever convenient:
+	 * $isset = $keyOut !== null && isset($parent[$keyOut]);
 	 * 
 	 * // Get example.
 	 * echo $parent[$keyOut]; 
@@ -141,11 +141,15 @@ class CollectionUtils {
 	 * 
 	 * @param string $keyOut
 	 * Returns in this var the key under which the element is found (as per path spec). Null if there's no valid parent
-	 * array (and it couldn't be created in case $force was set to true).
+	 * array (and it couldn't be created depending on the bool flags).
 	 * 
-	 * @param bool $force
+	 * @param bool $createMissingAncestors
 	 * Optional (default = false). When true, if the ancestor arrays for the given path don't exist, they'll be created
 	 * as long as they're not already set to a conflicting type (scalar, resource, object).
+	 * 
+	 * @param bool $replaceInvalidAncestors
+	 * Optional (default = false). When true, if the ancestor arrays for the given path are set to an incompatible type
+	 * (a scalar, object, resource) they'll be silently replaced with arrays in order to create the path as requested.
 	 * 
 	 * @param string $delim
 	 * One or more chars that will be considered delimiters between path segments, by default ".". You can add "[]" to
@@ -153,9 +157,9 @@ class CollectionUtils {
 	 * 
 	 * @return mixed
 	 * The parent array of the element, by reference. Null if there's no valid parent array (and it couldn't be created
-	 * in case $force was set to true).
+	 * depending on the bool flags).
 	 */
-	public static function & drill(array & $arrayRef, $path, & $keyOut, $force = false, $delim = '.') {
+	public static function & drill(array & $arrayRef, $path, & $keyOut, $createMissingAncestors = false, $replaceInvalidAncestors = false, $delim = '.') {
 		$parent = & $arrayRef;
 		$keyOut = strtok($path, $delim);
 		
@@ -164,9 +168,19 @@ class CollectionUtils {
 			if ($nextKey === false) return $parent; 
 			
 			if (isset($parent[$keyOut])) {
-				if (!is_array($parent[$keyOut])) goto fail;
+				if (!is_array($parent[$keyOut])) {
+					if ($replaceInvalidAncestors) {
+						$parent[$keyOut] = [];
+					} else {
+						goto fail;
+					}
+				}
 			} else {
-				if ($force) $parent[$keyOut] = []; else goto fail;
+				if ($createMissingAncestors) {
+					$parent[$keyOut] = []; 
+				} else {
+					goto fail;
+				}
 			}
 			
 			$parent = & $parent[$keyOut]; 
