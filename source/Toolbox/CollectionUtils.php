@@ -106,20 +106,24 @@ class CollectionUtils {
 	 * 
 	 * <code>
 	 * // In this example we operate on $arrayRef['a']['b']['c'].
-	 * 
 	 * $path = 'a.b.c';
-	 * $parent = & CollectionUtils::drill($arrayRef, $path, $keyOut); // Don't forget to take the result by reference if you want to modify.
 	 * 
-	 * if ($keyOut !== null && isset($parent[$keyOut])) { // Isset example.
+	 * // Don't forget to take the result by reference if you want to modify.
+	 * $parent = & CollectionUtils::drill($arrayRef, $path, $keyOut); 
 	 * 
-	 * 		echo $parent[$keyOut]; // Get example.
+	 * // Isset example.
+	 * if ($keyOut !== null && isset($parent[$keyOut])) { 
+	 *  	// Get example.
+	 * 		echo $parent[$keyOut]; 
 	 * 
-	 * 		$parent[$keyOut] = 123; // Set example.
+	 *  	// Set example.
+	 * 		$parent[$keyOut] = 123; 
 	 * 
-	 * 		unset($parent[$keyOut]); // Unset example.
+	 *  	// Unset example.
+	 * 		unset($parent[$keyOut]); 
 	 * }
 	 * 
-	 * // Shorter get/set in PHP 5.4 using dereferencing:
+	 * // Shorter get/set in PHP 5.4+ using dereferencing:
 	 * 
 	 * echo CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut]; // Get example.
 	 * CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut] = 123; // Set example.
@@ -145,43 +149,27 @@ class CollectionUtils {
 	 * this string, and the function will parse the default PHP array path convention (for ex. "foo[bar][baz]").
 	 * 
 	 * @return mixed
-	 * The parent array of the element. Null if doesn't exist.
+	 * The parent array of the element, by reference. Null if doesn't exist.
 	 */
 	static public function & drill(array & $arrayRef, $path, & $keyOut, $force = false, $delim = '.') {	
 		$node = & $arrayRef; // current node
 		
 		/*
-		 * TODO: commented out since not compatible with the short dot syntax
+		 * TODO: Commented out since not compatible with the short dot syntax. Research if useful.
 		 * 
-		 * this special case speeds up resolving single-segment paths (a common case) but slows down a little the two and more
-		 * segs. No enough stats to decide whether to drop this.
+		 * This special case speeds up resolving single-segment paths (a common case) but slows down a little the two
+		 * and more segs cases. No enough stats to decide whether to drop this.
 		 * 
 		 * if ($path[strlen($path) - 1] != ']') { $key = $path; return $arr; }
+		 *
+		 * NOTE: Caching parsed keys was tried but cache management turned out slower than parsing always. Caching at a
+		 * higher level by the caller, when possible, may be efficient.
 		 */
 		
 		$keyOut = strtok($path, $delim);
 		
-		// NOTE: caching the parsed keys was tried but cache management turned out slower than parsing always caching on
-		// a higher level by the caller, when possible, may be efficient
-		
-		// unrolling the loop for the first few cycles shaves ~10% of the function run time. This is the same code as
-		// the for loop below (compacted)
-		
-		if (($ck = strtok($delim)) === false) return $node;
-		if (!isset($node[$keyOut])) if ($force) { $node[$keyOut] = []; } else { $keyOut = null; $res = null; return $res; } 
-		$node = & $node[$keyOut]; $keyOut = $ck;
-		
-		if (($ck = strtok($delim)) === false) return $node;
-		if (!isset($node[$keyOut])) if ($force) { $node[$keyOut] = []; } else { $keyOut = null; $res = null; return $res; } 
-		$node = & $node[$keyOut]; $keyOut = $ck;
-		
-		if (($ck = strtok($delim)) === false) return $node;
-		if (!isset($node[$keyOut])) if ($force) { $node[$keyOut] = []; } else { $keyOut = null; $res = null; return $res; } 
-		$node = & $node[$keyOut]; $keyOut = $ck;
-		
 		for (;;) {
-			// Here $ck stands for "candidate key".
-			if (($ck = strtok($delim)) === false) return $node; 
+			if (($candidateKey = strtok($delim)) === false) return $node; 
 			
 			if (!isset($node[$keyOut])) { 
 				if ($force) {
@@ -194,13 +182,13 @@ class CollectionUtils {
 			}
 			
 			$node = & $node[$keyOut]; 
-			$keyOut = $ck;
+			$keyOut = $candidateKey;
 		}
 	}	
 	
 	/**
-	 * Converts the dot path syntax (ex. 'foo.bar.baz') to standard PHP bracket array path (ex. 'foo[bar][baz]'). Used
-	 * by core components at compile time and runtime. Mixed dot and box brackets syntax isn't supported.
+	 * Converts the dot path syntax (ex. 'foo.bar.baz') to standard PHP bracket array path (ex. 'foo[bar][baz]'). Mixed
+	 * dot and brackets syntax isn't supported.
 	 * 
 	 * To specify "append to array" ('foo[][bar][baz][]') in dot syntax, use repeat/trailing dot ('foo..bar.baz.').
 	 * 
@@ -223,8 +211,8 @@ class CollectionUtils {
 	}	
 	
 	/**
-	 * Converts standard bracket array PHP path ('foo[bar][baz]') to dot array syntax (ex. 'foo.bar.baz'). Used by core
-	 * components at compile time and runtime. Mixed dot and box brackets syntax isn't supported.
+	 * Converts standard bracket array PHP path ('foo[bar][baz]') to dot array syntax (ex. 'foo.bar.baz'). Mixed dot and
+	 * brackets syntax isn't supported.
 	 * 
 	 * @param string $path
 	 * 
