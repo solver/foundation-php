@@ -35,12 +35,12 @@ abstract class Page {
 	 *
 	 * @var array
 	 */
-	protected $data = [];
+	protected $model = [];
 
 	/**
 	 * A log of success/info/warning/error events, which the page accumulates, and passes to the template(s).
 	 *
-	 * This is part of the "viewmodel" in the framework. The other part is property $data.
+	 * This is part of the "viewmodel" in the framework. The other part is property $model.
 	 *
 	 * @var \Solver\Sparta\PageLog
 	 */
@@ -118,7 +118,7 @@ abstract class Page {
 		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
 		
 		$template = new Template($templateId);
-		$template($this->data, $this->log);
+		$template($this->model, $this->log);
 	}
 	
 	/**

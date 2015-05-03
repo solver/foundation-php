@@ -25,7 +25,7 @@ abstract class AbstractTemplate {
 	 * 
 	 * @var \Solver\Lab\DataBox
 	 */
-	protected $data;
+	protected $model;
 	
 	/**
 	 * A log of success/info/warning/error events as passed by the controller.
@@ -142,18 +142,18 @@ abstract class AbstractTemplate {
 	 * by using $this, and by using a local alias that's injected by the system. For example, $this->tag() and $tag()
 	 * are equivalent within a template.
 	 * 
-	 * @param array $data
+	 * @param array $model
 	 * @param PageLog $log
 	 * @return mixed
 	 * Anything returned from the template file.
 	 */
-	public function __invoke(array $data, PageLog $log) {
+	public function __invoke(array $model, PageLog $log) {
 		/*
 		 * Setup calling scope for this template (and embeded rendered/imported templates).
 		 */
 		
-		$data = new DataBox($data);
-		$this->data = $data;
+		$model = new DataBox($model);
+		$this->model = $model;
 		$this->log = $log;
 		
 		$__localVars__ = $this->getLocalVars();
@@ -445,7 +445,7 @@ abstract class AbstractTemplate {
 	 * Escapes strings for HTML (and other targets). The assumed document charset is UTF-8.
 	 * 
 	 * For HTML, this method will gracefully return an empty string if you pass null (which happens when fetching a
-	 * non-existing key from $data).
+	 * non-existing key from $model).
 	 * 
 	 * @param mixed $value
 	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
@@ -480,8 +480,8 @@ abstract class AbstractTemplate {
 	 * All protected/public members (except __construct/__invoke) will be accessible without $this within a template.
 	 */
 	protected function getLocalVars() {
-		return [		
-			'data' => & $this->data,
+		return [
+			'model' => & $this->model,
 			'log' => & $this->log,
 			'shared' => & $this->shared,
 			'render' => (new \ReflectionMethod($this, 'render'))->getClosure($this),
