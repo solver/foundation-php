@@ -13,7 +13,7 @@
  */
 namespace Solver\Logging;
 
-// TODO: Optimization opportunities.
+// TODO: Optimization opportunities for error logs which *only* accept errors (this can't be the default assumption).
 class DefaultErrorMemoryLog extends DelegatingErrorLog implements ErrorMemoryLog {
 	public function __construct() {
 		parent::__construct(new DefaultMemoryLog());

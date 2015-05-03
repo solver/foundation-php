@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Http;
+namespace Solver\Base;
 
 /**
  * Prepares an array of input values from PHP's globals (as used by Router's dispatch method).
@@ -33,7 +33,7 @@ namespace Solver\Http;
  * 
  * And it'll be an instance of UploadedFile.
  */
-class InputFromGlobals {
+class Utils {
 	/**
 	 * @return array
 	 * dict...

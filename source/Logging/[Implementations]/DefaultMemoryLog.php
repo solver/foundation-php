@@ -35,9 +35,22 @@ class DefaultMemoryLog implements MemoryLog {
 			return $this->events;
 		} else {
 			$types = array_flip($types);
-			$events = [];
-			foreach ($this->events as $event) if (isset($types[$event['type']])) $events[] = $event;
-			return $events;
+			
+			// Special optimized case: the given $types mask matches or is a superset of the event types we have.
+			$optimized = true;
+			
+			foreach ($this->has as $key => $val) if (!isset($types[$key])) {
+				$optimized = false;
+				break;
+			}
+				 
+			if ($optimized) {
+				return $this->events;
+			} else {
+				$events = [];
+				foreach ($this->events as $event) if (isset($types[$event['type']])) $events[] = $event;
+				return $events;
+			}
 		}
 	}
 

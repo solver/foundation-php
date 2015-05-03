@@ -19,7 +19,7 @@
  */
  
 use Solver\Lab\Router;
-use Solver\Http\InputFromGlobals;
+use Solver\Base\InputFromGlobals;
 use Solver\Lab\Dispatcher;
 
 /*
