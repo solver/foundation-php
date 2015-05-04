@@ -41,8 +41,9 @@ class CollectionUtils {
 	static public function splitKeys(array $array, $delim = '.[]') {
 		$out = [];
 		
+		// TODO: Optimization opportunity?
 		foreach ($array as $key => $item) {
-			$parent = & self::drill($out, $key, $topKey, true, $delim);
+			$parent = & self::drill($out, $key, $topKey, true, true, $delim);
 			$parent[$topKey] = $item;
 		}
 		
