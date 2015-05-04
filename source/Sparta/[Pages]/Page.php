@@ -21,8 +21,8 @@ namespace Solver\Sparta;
  */
 abstract class Page {
 	/**
-	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in a 
-	 * DataBox instance for convenient data access.
+	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in an 
+	 * object providing convenient & safe data access.
 	 *
 	 * @var PageInput
 	 */
@@ -31,7 +31,8 @@ abstract class Page {
 	/**
 	 * A dict of parameters, which the page accumulates, and passes to the template(s).
 	 *
-	 * This together with the $log property form the "view model" of the page.
+	 * This together with the $log property form the "view model" of the page. Do not confuse this with a domain model,
+	 * whose role is fulfilled by services. This model is defined *by* the page controller *for* the view template.
 	 *
 	 * @var PageModel
 	 */
@@ -102,13 +103,9 @@ abstract class Page {
 	 * - You can use '.' to refer to the page class namespace, so ".\ExampleTemplate", when when executed for class
 	 * "Foo\BarPage" will resolve to template id "Foo\ExampleTemplate".
 	 * 
-	 * Without a dot "." or at "@", names are considered absolute.
+	 * Without a dot "." or at "@", names are considered absolute (don't pass leading slash).
 	 * 
 	 * The default value if you pass null (or nothing) for template id is "@\DefaultTemplate".
-	 * 
-	 * LEGACY: Page class names ending in Controller will be resolved by default (if templateId is null or not passed)
-	 * to names ending in View. For example, for controller "Foo\BarController", the assumed template identifier will be
-	 * "Foo\BarView". This will be removed in the future.
 	 *
 	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
@@ -119,13 +116,7 @@ abstract class Page {
 		$class = get_class($this);
 		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);
 			
-		if ($templateId === null) {
-			if (preg_match('/^(.*)Controller$/', $class, $matches)) { // Legacy resolution.
-				$templateId = $matches[1] . 'View';
-			} else { // New resolution.
-				$templateId = '@\DefaultTemplate';
-			}
-		}
+		if ($templateId === null) $templateId = '@\DefaultTemplate';
 		
 		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
 		

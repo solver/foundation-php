@@ -18,6 +18,6 @@ use Solver\Lab\DataBox;
 /**
  * Provides an abstract model of the page data, which is fed into template to render as HTML (or other).
  * 
- * The data in a page model has no specific structure and depends on the page
+ * The data is specific to each page (no general conventions, except: prefer arrays + scalars over objects).
  */
 class PageModel extends DataBox {}
