@@ -59,7 +59,7 @@ class DataBox {
 	public function has($path) {
 		$parent = CollectionUtils::drill($this->data, $path, $keyOut, true);
 		
-		if ($parent !== null && isset($parent[$keyOut])) {
+		if (isset($parent[$keyOut])) {
 			return true;
 		} else {
 			return false;
@@ -90,9 +90,7 @@ class DataBox {
 	public function remove($path) {
 		$parent = & CollectionUtils::drill($this->data, $path, $keyOut);
 		
-		if ($parent !== null && key_exists($keyOut, $parent)) {
-			unset($parent[$keyOut]);
-		}
+		unset($parent[$keyOut]);
 	}
 	
 	/**
@@ -111,7 +109,7 @@ class DataBox {
 	public function get($path, $default = null) {
 		$parent = CollectionUtils::drill($this->data, $path, $keyOut);
 		
-		if ($parent !== null && isset($parent[$keyOut])) {
+		if (isset($parent[$keyOut])) {
 			return $parent[$keyOut];
 		}
 		
