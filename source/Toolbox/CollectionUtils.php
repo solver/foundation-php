@@ -170,7 +170,7 @@ class CollectionUtils {
 		$parent = & $arrayRef;
 		$keyOut = strtok($path, $delim);
 		
-		for (;;) {
+		start:
 			$nextKey = strtok($delim);
 			if ($nextKey === false) return $parent; 
 			
@@ -192,15 +192,14 @@ class CollectionUtils {
 			
 			$parent = & $parent[$keyOut]; 
 			$keyOut = $nextKey;
-		}
+		goto start;
 		
-		fail:
-		
-		$keyOut = null;
-		// TRICKY: We need to unset before we set to null, or we'll alter the array given to us by ref.
-		unset($parent);
-		$parent = null; 
-		return $parent;
+		fail:		
+			$keyOut = null;
+			// TRICKY: We need to unset before we set to null, or we'll alter the array given to us by ref.
+			unset($parent);
+			$parent = null; 
+			return $parent;
 	}
 	
 	/**
