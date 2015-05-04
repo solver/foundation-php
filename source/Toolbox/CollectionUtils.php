@@ -168,14 +168,14 @@ class CollectionUtils {
 	 */
 	public static function & drill(array & $arrayRef, $path, & $keyOut, $createMissingAncestors = false, $replaceInvalidAncestors = false, $delim = '.') {
 		$parent = & $arrayRef;
-		$keyOut = strtok($path, $delim);
+		$keyOut = \strtok($path, $delim);
 		
 		start:
-			$nextKey = strtok($delim);
+			$nextKey = \strtok($delim);
 			if ($nextKey === false) return $parent; 
 			
 			if (isset($parent[$keyOut])) {
-				if (!is_array($parent[$keyOut])) {
+				if (!\is_array($parent[$keyOut])) {
 					if ($replaceInvalidAncestors) {
 						$parent[$keyOut] = [];
 					} else {
@@ -195,10 +195,12 @@ class CollectionUtils {
 		goto start;
 		
 		fail:		
-			$keyOut = null;
 			// TRICKY: We need to unset before we set to null, or we'll alter the array given to us by ref.
 			unset($parent);
+			
+			$keyOut = null;
 			$parent = null; 
+			
 			return $parent;
 	}
 	
