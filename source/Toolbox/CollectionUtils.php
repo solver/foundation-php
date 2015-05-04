@@ -21,7 +21,7 @@ namespace Solver\Toolbox;
  */
 class CollectionUtils {
 	/**
-	 * Takes a one-dimensional array where the keys may contain "." and "[]" (or a set of other configurable delimiters)
+	 * Takes a one-dimensional array where the keys may contain "." (or a set of other configurable delimiters)
 	 * to define array paths, and converts them to actual array paths, i.e.:
 	 * 
 	 * <code>
@@ -32,13 +32,13 @@ class CollectionUtils {
 	 * Array to be integrated.
 	 * 
 	 * @param string $delim
-	 * Optional (default '.[]'). One or more characters to split the paths by (every character individually will act as
-	 * a delimiter, not as a sequence).
+	 * Optional (default '.'). One or more characters to split the paths by (a sequence of delimiters is considered
+	 * one instance of a delimiter). You can add or replace with '[]' to parse standard PHP array paths like a[b][c].
 	 * 
 	 * @return array
 	 * A new array with the integrated subarrays.
 	 */
-	static public function splitKeys(array $array, $delim = '.[]') {
+	static public function splitKeys(array $array, $delim = '.') {
 		$out = [];
 		
 		// TODO: Optimization opportunity?
