@@ -38,13 +38,13 @@ class PsrxMapper {
 					$pathInfo = \pathinfo($filename);
 					
 					// Ignore any files not having a PHP extension.
-					if (!isset($pathInfo['extension']) || $pathInfo['extension'] !== 'php') continue;
+					if (!isset($pathInfo['extension']) || strtolower($pathInfo['extension']) !== 'php') continue;
 					
 					$symbolPath = $dir . '/' . $filename;
 					$symbolName = ($namespace === '' ? '' : $namespace . '\\') . $pathInfo['filename'];
 					
-					// Dashes are interpreted the same as directory separators: a namespace delimiter.
-					$symbolName = str_replace('-', '\\', $symbolName);
+					// Dots are interpreted the same as directory separators: a namespace delimiter.
+					$symbolName = str_replace('.', '\\', $symbolName);
 					
 					// Strip out brackets (and whitespace around them) and anything between them, normalize repeated
 					// backslashes, if any.
