@@ -14,8 +14,8 @@
 namespace Solver\Toolbox;
 
 /**
- * Utilities for working with PHP arrays representing an arbitrary collection type (no constraints on the array keys,
- * values and structure).
+ * Utilities for working with PHP arrays representing an arbitrary collection type (this class has no specific 
+ * expectations about the format of the given array structure, keys, values).
  * 
  * The operations here are relevant to dicts, lists, tuples, sets, tables, etc.
  */
@@ -89,20 +89,14 @@ class CollectionUtils {
 	}
 	
 	/**
-	 * Allows performing set, get, isset, unset operations on a deep array item by passing the array and path to the
-	 * item as a delimited string.
+	 * This is a low-level operation, that can be used to implement set, get, isset, unset, push etc. operations on a
+	 * deep array item by passing the array and path to the item as a delimited string.
 	 * 
 	 * Drills the array to the last but second path segment and returns the parent (by reference), and the last segment
 	 * key for further operations. With these references you are free to read/set/unset the element in the original
-	 * array. 
-	 * 
-	 * This method provides faster performance compared to individual isset/unset/get/set methods as the drilling has
-	 * to happen only once for multiple operations on the same item.
-	 * 
+	 * array without further loops and complicated logic.
+	 *  
 	 * Example usage:
-	 * 
-	 * You have array $foo, and you want to check if $foo['a']['b']['c'] exists and if so output its value, then unset
-	 * it inside the array. We do this without having the path hardcoded at the time of programming:
 	 * 
 	 * <code>
 	 * // In this example we operate on $arrayRef['a']['b']['c'].
@@ -111,26 +105,38 @@ class CollectionUtils {
 	 * // Don't forget to take the result by reference if you want to modify.
 	 * $parent = & CollectionUtils::drill($arrayRef, $path, $keyOut); 
 	 * 
-	 * // Isset example (the first check verifies we have a valid parent we *could* set a key on, the second check 
-	 * // verifies if it's set (replace isset with key_exists if you differentiate not set from null).
-	 * $isset = $parent !== null && isset($parent[$keyOut]);
+	 * // Perform this check to confirm we can set keys on this parent (if it's not null, it's a valid array).
+	 * $canset = $parent !== null;
 	 * 
-	 * // Alternative of the above check (same semantics). Use whichever convenient:
-	 * $isset = $keyOut !== null && isset($parent[$keyOut]);
+	 * // Same as above (either will $parent and $keyOut be both null, or neither).
+	 * $canset = $keyOut !== null;
 	 * 
-	 * // Get example.
+	 * // Isset example (treats a set null value as "not set"; if indesirable, see next example).
+	 * $isset = isset($parent[$keyOut]);
+	 * 
+	 * // Key exists example (notice we must check parent is an array first to avoid PHP errors).
+	 * $keyexists = $parent !== null && key_exists($keyOut, $parent);
+	 * 
+	 * // Same as above (either will $parent and $keyOut be both null, or neither).
+	 * $keyexists = $keyOut !== null && key_exists($keyOut, $parent);
+	 * 
+	 * // Get example (before: you MUST first perform the $isset or $keyexists check above to avoid errors).
 	 * echo $parent[$keyOut]; 
 	 * 
-	 * // Set example.
+	 * // Set example (before: you MUST first perform the $canset check above to avoid errors).
 	 * $parent[$keyOut] = 123; 
 	 * 
-	 * // Unset example.
+	 * // Unset example (before: you MAY first perform the $isset or $keyexists check above; won't error either way).
 	 * unset($parent[$keyOut]);
 	 * 
-	 * // Shorter get/set, where applicable:
-	 * echo CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut];.
+	 * // Single expression get (if you're sure the item exists):
+	 * echo CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut];
+	 * 
+	 * // Single expression set (if you're sure the item can be set):
 	 * CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut] = 123;
 	 * 
+	 * // Single expression unset (always works):
+	 * unset(CollectionUtils::drill($arrayRef, $path, $keyOut)[$keyOut]);
 	 * </code>
 	 * 
 	 * @param array $arrayRef
@@ -139,23 +145,24 @@ class CollectionUtils {
 	 * @param string $path
 	 * Array path identifier, for example: 'abc[def][ghi]', or 'abc.def.ghi'.
 	 * 
-	 * @param string $keyOut
+	 * @param null|string $keyOut
 	 * Returns in this var the key under which the element is found (as per path spec). Null if there's no valid parent
 	 * array (and it couldn't be created depending on the bool flags).
 	 * 
 	 * @param bool $createMissingAncestors
 	 * Optional (default = false). When true, if the ancestor arrays for the given path don't exist, they'll be created
-	 * as long as they're not already set to a conflicting type (scalar, resource, object).
+	 * as long as they're not already set to a conflicting type (a scalar, resource, object). When enabled, this
+	 * behavior matches a trait of PHP called "array promotion".
 	 * 
 	 * @param bool $replaceInvalidAncestors
-	 * Optional (default = false). When true, if the ancestor arrays for the given path are set to an incompatible type
-	 * (a scalar, object, resource) they'll be silently replaced with arrays in order to create the path as requested.
+	 * Optional (default = false). When true, if any ancestors for the given path are set to a conflicting type  (a 
+	 * scalar, object, resource) they'll be silently replaced by empty arrays in order to create the path as requested.
 	 * 
 	 * @param string $delim
 	 * One or more chars that will be considered delimiters between path segments, by default ".". You can add "[]" to
-	 * this string, and the function will parse the default PHP array path convention (for ex. "foo[bar][baz]").
+	 * this string, and the function will also parse the default PHP array path convention (for ex. "foo[bar][baz]").
 	 * 
-	 * @return mixed
+	 * @return null|array
 	 * The parent array of the element, by reference. Null if there's no valid parent array (and it couldn't be created
 	 * depending on the bool flags).
 	 */
