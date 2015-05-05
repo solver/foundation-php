@@ -43,8 +43,8 @@ class PsrxMapper {
 					$symbolPath = $dir . '/' . $filename;
 					$symbolName = ($namespace === '' ? '' : $namespace . '\\') . $pathInfo['filename'];
 					
-					// Dots are interpreted the same as directory separators: a namespace delimiter.
-					$symbolName = str_replace('.', '\\', $symbolName);
+					// Dashes are interpreted the same as directory separators: a namespace delimiter.
+					$symbolName = str_replace('-', '\\', $symbolName);
 					
 					// Strip out brackets (and whitespace around them) and anything between them, normalize repeated
 					// backslashes, if any.

@@ -67,13 +67,14 @@ class Radar {
 	 * - "Bar/[Experimental] Bar.php"
 	 * - etc.
 	 * 
-	 * 2. Aside from nested folders, you can use a dot "." as a namespace separate to keep your directory tree shallow
-	 * when it makes more sense. All of the following filepaths will map to "Foo\Bar\Baz".
+	 * 2. Aside from nested folders, you can use a dash "-" as a namespace separate to keep your directory tree shallow
+	 * when it makes more sense. We chose against dots to avoid collision with composite extensions like ".tpl.php".
+	 * All of the following filepaths will map to "Foo\Bar\Baz".
 	 * 
 	 * - "Foo/Bar/Baz.php"
-	 * - "Foo/Bar.Baz.php"
-	 * - "Foo.Bar/Baz.php"
-	 * - "Foo.Bar.Baz.php"
+	 * - "Foo/Bar-Baz.php"
+	 * - "Foo-Bar/Baz.php"
+	 * - "Foo-Bar-Baz.php"
 	 * - etc.
 	 */
 	public static function init($cacheDir, array $symbolDirs = null) {
