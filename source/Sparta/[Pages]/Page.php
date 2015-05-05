@@ -21,6 +21,33 @@ namespace Solver\Sparta;
  */
 abstract class Page {
 	/**
+	 * Strips page class suffix when resolving relative $templateId, see render() for details.
+	 * 
+	 *  Set this property to change the default behavior (null = no suffix stripping).
+	 * 
+	 * @var null|string
+	 */
+	protected $templateIgnoreSuffix = 'Page';
+	
+	/**
+	 * Sets the base "theme" namespace when resolving relative $templateId, see render() for details.
+	 * 
+	 * Set this property to change the default behavior (null = use the namespace of the current Page class instance).
+	 * 
+	 * @var null|string
+	 */
+	protected $templateBaseNamespace = null;
+	
+	/**
+	 * Sets the default template id used when you pass null (or nothing) to the render/capture methods.
+	 * 
+	 * Set this property to change the default behavior (null = disable default template id).
+	 * 
+	 * @var null|string
+	 */
+	protected $templateDefaultId = '#\MainLayout';
+	
+	/**
 	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in an 
 	 * object providing convenient & safe data access.
 	 *
@@ -52,7 +79,7 @@ abstract class Page {
 			$this->input = new PageInput($input);
 			$this->model = new PageModel();
 			$this->log = new PageLog();
-			$this->main(); 
+			$this->main();
 		} catch (\Exception $e) {
 			if ($e instanceof PageException) {
 				// TODO: Eating the exception when the code is 0 is a feature we should reconsider (needed for the time
@@ -88,62 +115,122 @@ abstract class Page {
 	 * @param string $templateId
 	 * Optional (default = null).
 	 * 
-	 * @param PageModel $model
-	 * Optional (default = null). A page model to pass to the template instead of $this->model. Setting this parameter
-	 * should be rare, only when rendering auxiliary templates.
+	 * Conventions:
 	 * 
-	 * @param PageLog $log
-	 * Optional (default = null). A page log to pass to the template instead of $this->log. Setting this parameter
-	 * should be rare, only when rendering auxiliary templates.
+	 * - It's recommended to name your pages with suffix "Page", like IndexPage, ContactPage, NewsPage etc.
+	 * - There are three types of templates, and you should name them according to their intended usage.
+	 * - 1. Layout Template, produces a complete page response when called - use suffix "Layout".
+	 * - 2. Partial Template, produces a fragment of a page responce when called - use suffix "Partial".
+	 * - 3. Tags Template, passively defines one or more tags for reuse in other templates - use suffix "Tag" or "Tags".
+	 * - It's recommended to put templates in a namespace named after the page they're made for (if any), without the
+	 * "Page" suffix, i.e. templates for IndexPage should be at Index\MainLayout, Index\DetailsLayout etc.
 	 *
-	 * Special symbols:
+	 * Specially interpreted symbols in $templateId:
 	 * 
-	 * - You can use "@" to refer to the page class name, so "@\ExampleTemplate", when executed for class "Foo\BarPage"
-	 * will resolve to template id "Foo\BarPage\ExampleTemplate".
-	 * - You can use '.' to refer to the page class namespace, so ".\ExampleTemplate", when when executed for class
-	 * "Foo\BarPage" will resolve to template id "Foo\ExampleTemplate".
+	 * - Start with "." to specify a templateId relative to the base template namespace.
+	 * - Start with "#' to specify a templateId relative to the template namespace for the current page class.
+	 * - All other names are considered absolute (don't prefix a leading slash for absolute names).
+	 * - See properties $templateIgnoreSuffix, $templateNamespace to customize how the above symbols resolve.
 	 * 
-	 * Without a dot "." or at "@", names are considered absolute (don't pass leading slash).
+	 * Example resolutions (where "suffix" refers to $templateIgnoreSuffix, and "ns" refers $templateBaseNamespace).
+	 *  
+	 * With $templateIgnoreSuffix = "Page", $templateBaseNamespace = null (defaults):
+	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxLayout", resolution: "Vendor\Foo\QuxLayout".
+	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxLayout", resolution: "Vendor\Foo\Bar\QuxLayout".
 	 * 
-	 * The default value if you pass null (or nothing) for template id is "@\DefaultTemplate".
+	 * With $templateIgnoreSuffix = null, $templateBaseNamespace = null:
+	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxLayout", resolution: "Vendor\Foo\QuxLayout".
+	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxLayout", resolution: "Vendor\Foo\BarPage\QuxLayout".
+	 * 
+	 * With $templateIgnoreSuffix = "Controller", $templateBaseNamespace = "Foo\Views":
+	 * - Page = "Foo\Controllers\BarController", template = ".\QuxView", resolution: "Foo\Views\QuxView".
+	 * - Page = "Foo\Controllers\BarController", template = "#\QuxView", resolution: "Foo\Views\Bar\QuxView".
+	 * 
+	 * If you pass null (or nothing) for template id, it's set to "#\MainLayout" (override via $templateDefaultId).
 	 *
 	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
-	final protected function renderTemplate($templateId = null, PageModel $model = null, PageLog $log = null) {
-		if ($model === null) $model = $this->model;
-		if ($log === null) $log = $this->log;
+	final protected function render($templateId = null) {
+		$this->renderWith($this->model, $this->log, $templateId);
+	}
+	
+	/**
+	 * Identical to render(), however instead of allowing the template to render to the output stream, it
+	 * captures the output and returns it as a string.
+	 * 
+	 * Certain special actions, like the template setting HTTP headers can't be captured.
+	 * 
+	 * @param string $templateId
+	 * Optional (default = null). Template id, see render() for details.
+	 */
+	final protected function capture($templateId = null) {
+		return $this->captureWith($this->model, $this->log, $templateId);
+	}
+	
+	/**
+	 * Identical to render(), but using the supplied page model and log, instead of $this->model and $this->log.
+	 * 
+	 * Using this method instead of render() should be rare, primarily when rendering auxiliary templates.
+	 * 
+	 * @param PageModel $model
+	 * Optional (default = null). A page model to pass to the template instead of $this->model. 
+	 * 
+	 * @param PageLog $log
+	 * Optional (default = null). A page log to pass to the template instead of $this->log.
+	 * 
+	 * @param string $templateId
+	 * Optional (default = null). See render() for details.
+	 */
+	final protected function renderWith(PageModel $model, PageLog $log, $templateId = null) {
+		if ($templateId === null) {
+			if ($this->templateDefaultId === null) {
+				throw new \Exception('Default template id resolution has been disabled. Pass an explicit template id to render/capture.');
+			} else {
+				$templateId = $this->templateDefaultId;
+			}	
+		}
 		
-		$class = get_class($this);
-		$namespace = preg_replace('/^(.*)\\\\[\w\.\@]$/', '', $class);
+		$first = $templateId[0];
+		
+		if ($first === '.') {
+			$baseNamespace = $this->templateBaseNamespace;
+			if ($baseNamespace === null) $baseNamespace = preg_replace('@\\\\?\w+$@', '', get_class($this));
+			$templateId = $baseNamespace . substr($templateId, 1);
+		}
+		
+		elseif ($first === '#') {
+			$class = get_class($this);
+			$baseNamespace = $this->templateBaseNamespace;
+			if ($baseNamespace === null) $baseNamespace = preg_replace('@\\\\?\w+$@', '', $class);
 			
-		if ($templateId === null) $templateId = '@\DefaultTemplate';
-		
-		$templateId = str_replace(['@', '.'], [$class, $namespace], $templateId);
+			$ignoreSuffix = $this->templateIgnoreSuffix;
+			if ($ignoreSuffix !== null) $class = preg_replace('@' . preg_quote($ignoreSuffix) . '$@', '', $class);
+			
+			$baseClass = preg_replace('@(.*\\\\)(?=\w+$)@', '', $class);
+			$templateId = $baseNamespace . '\\' . $baseClass . substr($templateId, 1);
+		}
 		
 		$template = new Template($templateId);
 		$template($model, $log);
 	}
 	
 	/**
-	 * Identical to renderTemplate(), however instead of allowing the template to render to the output stream, it
-	 * captures the output and returns it as a string.
+	 * Identical to capture(), but using the supplied page model and log, instead of $this->model and $this->log.
 	 * 
-	 * Certain special actions, like the template setting HTTP headers can't be captured.
-	 * 
-	 * @param string $templateId
-	 * Optional (default = null). Template id, see renderTemplate() for details.
+	 * Using this method instead of capture() should be rare, primarily when capturing auxiliary templates.
 	 * 
 	 * @param PageModel $model
-	 * Optional (default = null). A page model to pass to the template instead of $this->model. Setting this parameter
-	 * should be rare, only when capturing auxiliary templates.
+	 * Optional (default = null). A page model to pass to the template instead of $this->model. 
 	 * 
 	 * @param PageLog $log
-	 * Optional (default = null). A page log to pass to the template instead of $this->log. Setting this parameter
-	 * should be rare, only when capturing auxiliary templates.
+	 * Optional (default = null). A page log to pass to the template instead of $this->log.
+	 * 
+	 * @param string $templateId
+	 * Optional (default = null). See render() for details.
 	 */
-	final protected function captureTemplate($templateId = null, PageModel $model = null, PageLog $log = null) {
+	final protected function captureWith(PageModel $model, PageLog $log, $templateId = null) {
 		ob_start();
-		$this->renderTemplate($templateId, $model, $log);
+		$this->renderWith($model, $log, $templateId);
 		return ob_get_clean();
 	}
 	
