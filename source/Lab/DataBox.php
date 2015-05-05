@@ -31,6 +31,33 @@ class DataBox {
 	}
 	
 	/**
+	 * Returns a DataBox to an array "namespace" within the contained data.
+	 * 
+	 * Specifics:
+	 * 
+	 * - If you call this from a child class, the returned instance will be of that child class, instead of DataBox.
+	 * - If there's no value at the given $path or it's not an array, it'll be replaced with a blank array.
+	 * - The link is by reference, i.e. changes in the subset will be reflected in the original.
+	 * - If you want to pass a subset by value, instead use new DataBox($super->get($path)).
+	 * 
+	 * @param string $path
+	 * Path (key) to the array value you want a subset of, use dots to describe the key to a nested array. For example 
+	 * "foo.bar.baz" will access key ["foo"]["bar"]["baz"] from the contained array.
+	 * 
+	 * @param array $data
+	 * 
+	 * TODO: Implement this for PageLog as well.
+	 */
+	public function sub($path) {
+		$sub = new static();
+		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
+		if (!isset($parent[$keyOut]) || !is_array($parent[$keyOut])) $parent[$keyOut] = [];
+		$sub->data = & $parent[$keyOut];
+		
+		return $sub;
+	}
+	
+	/**
 	 * Replaces the entire internal array with the given array.
 	 * 
 	 * @param array $data
