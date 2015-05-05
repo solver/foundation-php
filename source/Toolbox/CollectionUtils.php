@@ -168,6 +168,14 @@ class CollectionUtils {
 	 * depending on the bool flags).
 	 */
 	public static function & drill(array & $arrayRef, $path, & $keyOut, $createMissingAncestors = false, $replaceInvalidAncestors = false, $delim = '.') {
+		// Opportunities for optimization if we have code like (best to wait and bench against PHP7 final release):
+		// $segs = explode('.', $path);
+		// switch (count($segs)) {
+		//     ...
+		//     case 3: list($a, $b, $c) = $segs; return isset($arrayRef[$a][$b][$c]) ? $arrayRef[$a][$b][$c] : null;
+		//     ...
+		// }
+		
 		$parent = & $arrayRef;
 		$keyOut = \strtok($path, $delim);
 		
