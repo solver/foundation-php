@@ -6,3 +6,4 @@
 //
 // Usage (shows quadruple with one optional element; optionals are always at the end, like optional function args):
 // $tupleFormat = (new TupleFormat)->add($fmt)->add($fmt)->add($fmt)->addWithDefault(123, $fmt);
+// also add: alist format [name, val, name, val, ...] and tuple-list [x, y, z, x, y, z, x, y, z].
