@@ -28,9 +28,12 @@ class Radar {
 	/**
 	 * Initializes the autoloader.
 	 * 
+	 * @param string $rootDir
+	 * A root directory that all other directories are relative to.
+	 * 
 	 * @param null|string $cacheDir
-	 * A directory where Radar can save its $resourceName => $filePath map & other related caches. This location should
-	 * be writable to Radar, if you intend to use on-demand remapping.
+	 * A $rootDir-relative directory where Radar can save its $resourceName => $filePath map & other related caches.
+	 * This location should be writable to Radar, if you intend to use on-demand remapping. Don't prefix with a slash.
 	 * 
 	 * @param array $symbolDirs
 	 * dict<filepath: string, specification: #Specification>;
@@ -39,7 +42,7 @@ class Radar {
 	 * assigns them to be processed by a given handler. It's recommended to generate your map once and disable on-demand
 	 * mapping on production, as some poorly written libraries may issue class_exists with autoloading on classes that
 	 * are missing during normal app operation. This could trigger a costly re-mapping operation (which still won't find
-	 * the missing class).
+	 * the missing class). All directories are interpreted as $rootDir-relative. Don't prefix with a slash.
 	 * 
 	 * #Specification: string; A string in format "handler" or "handler:settings". The settings segment is specific to
 	 * each handler, see below. 
@@ -76,11 +79,22 @@ class Radar {
 	 * - "Foo-Bar/Baz.php"
 	 * - "Foo-Bar-Baz.php"
 	 * - etc.
+	 * 
+	 * 3. Optionally you can put special file "__config.php" in any source directory to configure how Radar should parse
+	 * files in the directory, set options etc. The contents of your file should look like this:
+	 * 
+	 * <code>
+	 * <?php return function (Solver\RadarPsrxConfig $cfg) {
+	 * 		// Call $cfg API here.
+	 * });
+	 * </code>
+	 * 
+	 * For details on the supported options (which are quite powerful), see class PsrxConfig.
 	 */
-	public static function init($cacheDir, array $symbolDirs = null) {
+	public static function init($rootDir, $cacheDir, array $symbolDirs = null) {
 		if (self::$strategy) throw new \Exception('Radar is already initialized.');
 		if (!class_exists(RadarStrategy::class, false)) require __DIR__ . '\[Private]\RadarStrategy.php';
-		self::$strategy = new RadarStrategy($cacheDir, $symbolDirs);
+		self::$strategy = new RadarStrategy($rootDir, $cacheDir, $symbolDirs);
 		
 		// TODO: Bench __autoload vs. spl and replace if needed.
 		spl_autoload_register(function ($class) {
