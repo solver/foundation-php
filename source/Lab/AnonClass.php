@@ -264,8 +264,8 @@ CODE;
 			elseif ($reflHintClass = $reflParam->getClass()) $param .= '\\' . $reflHintClass->name . ' ';
 			
 			if ($reflParam->isVariadic()) {
-				$param .= '... ';
-				$paramForCall .= '... ';
+				$param .= '...';
+				$paramForCall .= '...';
 			}
 			
 			if ($reflParam->isPassedByReference()) $param .= '& ';
