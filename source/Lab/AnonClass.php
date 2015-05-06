@@ -199,15 +199,15 @@ class AnonClass {
 		if ($implement) $head .= 'implements \\' . implode(', \\', $implement);
 		
 		$body = <<<'CODE'
-		private static $__methods, $__staticMethods;
+		private static $__m, $__sm;
 				
-		private static function __notImplemented($function) {
+		private static function __ni($function) {
 			throw new \Exception('Method ' . $function . ' is not implemented.');
 		}
 				
 		public function __construct(& $params, & $m, & $sm, & $p, & $sp) {
-			self::$__methods = & $m;
-			self::$__staticMethods = & $sm;
+			self::$__m = & $m;
+			self::$__sm = & $sm;
 			foreach ($sm as & $i) $i = $i->bindTo(null, __CLASS__);
 			foreach ($m as & $i) $i = $i->bindTo($this, __CLASS__);
 			foreach ($p as $n => $v) $this->{$n} = $v;
@@ -219,7 +219,7 @@ class AnonClass {
 
 CODE;
 		$body .= implode("\n", $methodsCode);
-		eval($head . " {\n" . $body . "\n\t}\n}"); // <JonyIve>Unapologetically eval</JonyIve>.
+		eval($head . " {\n" . $body . "\n\t}\n}"); // <JonyIve>Beautifully, unapologetically eval</JonyIve>.
 		
 		/*
 		 * Create object.
@@ -296,14 +296,7 @@ CODE;
 		$paramsForCall = trim($paramsForCall, ' ,');
 		
 		$method .= '(' . $params . ') { ';
-		
-		if ($isStaticMethod) {
-			$method .= "\n\t\t\t" . '$sm = & self::$__staticMethods; if (isset($sm[__FUNCTION__])) return $sm[__FUNCTION__]->__invoke(' . $paramsForCall . '); ';
-			$method .= "\n\t\t\t" . 'else self::__notImplemented(__FUNCTION__);' . "\n\t\t}\n";
-		} else {
-			$method .= "\n\t\t\t" . '$m = & self::$__methods; if (isset($m[__FUNCTION__])) return $m[__FUNCTION__]->__invoke(' . $paramsForCall . '); ';
-			$method .= "\n\t\t\t" . 'else self::__notImplemented(__FUNCTION__);' . "\n\t\t}\n";
-		}
+		$method .= "\n\t\t\t" . '$m = & self::$__' . ($isStaticMethod ? 'sm' : 'm') . '; if (isset($m[__FUNCTION__])) return $m[__FUNCTION__]->__invoke(' . $paramsForCall . '); else self::__ni(__FUNCTION__);' . "\n\t\t}\n";
 		
 		return $method;
 	}
