@@ -180,11 +180,16 @@ class AnonClass {
 		 * Validate property / member names to prevent accidental injection opportunities.
 		 */
 		
-		$valid = '@[a-z_]\w*$@ADi';
-		foreach ($properties as $n => $v) if (!preg_match($valid, $n)) throw new \Exception('Invalid property name "' . $n . '".');
-		foreach ($staticProperties as $n => $v) if (!preg_match($valid, $n)) throw new \Exception('Invalid static property name "' . $n . '".');
-		foreach ($methods as $n => $v) if (!preg_match($valid, $n)) throw new \Exception('Invalid method name "' . $n . '".');
-		foreach ($staticMethods as $n => $v) if (!preg_match($valid, $n)) throw new \Exception('Invalid static method name "' . $n . '".');
+		$members = [
+			'property' => $properties,
+			'static property' => $staticProperties, 
+			'method' => $methods,
+			'static method' => $staticMethods,
+		];
+		
+		foreach ($members as $type => $members) if ($members) {
+			foreach ($properties as $n => $v) if (!preg_match('@[a-z_]\w*$@ADi', $n)) throw new \Exception('Invalid ' . $type . ' name "' . $n . '".');
+		}
 		
 		/*
 		 * Gather method definitions.
@@ -193,19 +198,17 @@ class AnonClass {
 		if ($this->partial) {
 			if ($implement) foreach ($implement as $interface) {
 				$reflClass = new \ReflectionClass($interface);
-				if (!$reflClass->isInterface()) throw new \Exception('You cannot implement a class, ' . $interface . '.');
 				$methodsCode = $this->getAllMethodProxies(true, $reflClass) + $methodsCode;
 			}	
 			
 			if ($extend) {
 				$reflClass = new \ReflectionClass($extend);
-				if ($reflClass->isInterface()) throw new \Exception('You cannot extend an interface, ' . $extend . '.');
 				$methodsCode = $this->getAllMethodProxies(false, $reflClass) + $methodsCode;
 			}	
 		}
 		
 		if ($methods) foreach ($methods as $name => $impl) {
-			if ($name === '__construct') continue; // Special handling.
+			if ($name === '__construct') continue; // Special handling in the <<<'CODE' nowdoc below.
 			$reflFunc = new \ReflectionFunction($impl);
 			$methodsCode[$name] = self::getMethodProxy(false, $name, $reflFunc);
 		}	
@@ -239,10 +242,8 @@ class AnonClass {
 			if (isset($m['__construct'])) $m['__construct']->__invoke(...$params);
 			elseif (is_callable('parent::__construct')) parent::__construct(...$params);
 		}
-
-
 CODE;
-		$body .= implode("\n", $methodsCode);
+		$body .= "\n\n" . implode("\n", $methodsCode);
 		eval($head . " {\n" . $body . "\n\t}\n}"); // <JonyIve>Beautifully, unapologetically eval</JonyIve>.
 		
 		/*
