@@ -26,6 +26,7 @@ namespace Solver\Lab;
  */
 class AnonClass {
 	private static $count = 0;
+	private $partial = false;
 	private $params;
 	private $extend = null;
 	private $implement = [];
@@ -55,6 +56,26 @@ class AnonClass {
 	 */
 	protected function __construct(array & $params) {
 		$this->params = & $params;
+	}
+
+	/**
+	 * Call this method if you want AnonClass to automatically add "stub methods" for all abstract and interface
+	 * methods in the class you extend and interface you implement. This allows you to quickly prototype and mock
+	 * objects while only implementing methods you expect to be needed (part of an interface for ex.)
+	 * 
+	 * When called, the stubs will throw an exception with message like "Method fooBar() is not implemented.".
+	 * 
+	 * If you don't call this method, the default is to require full abstract method & interface implementation.
+	 * 
+	 * @param bool $partial
+	 * Default = true. True if you want to implement abstract methods & interfaces partially, false to require full
+	 * implementation.
+	 * 
+	 * @return self
+	 */
+	public function partial($partial = true) {
+		$this->partial = $partial;
+		return $this;
 	}
 	
 	/**
@@ -140,6 +161,7 @@ class AnonClass {
 	 * @return AnonClass
 	 */
 	public function end() {
+		$partial = $this->partial;
 		$params = & $this->params;
 		$extend = $this->extend;
 		$implement = $this->implement;
@@ -168,18 +190,20 @@ class AnonClass {
 		 * Gather method definitions.
 		 */
 		
-		if ($implement) foreach ($implement as $interface) {
-			$reflClass = new \ReflectionClass($interface);
-			if (!$reflClass->isInterface()) throw new \Exception('You cannot implement a class, ' . $interface . '.');
-			$methodsCode = $this->getAllMethodProxies(true, $reflClass) + $methodsCode;
-		}	
+		if ($this->partial) {
+			if ($implement) foreach ($implement as $interface) {
+				$reflClass = new \ReflectionClass($interface);
+				if (!$reflClass->isInterface()) throw new \Exception('You cannot implement a class, ' . $interface . '.');
+				$methodsCode = $this->getAllMethodProxies(true, $reflClass) + $methodsCode;
+			}	
+			
+			if ($extend) {
+				$reflClass = new \ReflectionClass($extend);
+				if ($reflClass->isInterface()) throw new \Exception('You cannot extend an interface, ' . $extend . '.');
+				$methodsCode = $this->getAllMethodProxies(false, $reflClass) + $methodsCode;
+			}	
+		}
 		
-		if ($extend) {
-			$reflClass = new \ReflectionClass($extend);
-			if ($reflClass->isInterface()) throw new \Exception('You cannot extend an interface, ' . $extend . '.');
-			$methodsCode = $this->getAllMethodProxies(false, $reflClass) + $methodsCode;
-		}	
-
 		if ($methods) foreach ($methods as $name => $impl) {
 			if ($name === '__construct') continue; // Special handling.
 			$reflFunc = new \ReflectionFunction($impl);
@@ -201,8 +225,8 @@ class AnonClass {
 		$body = <<<'CODE'
 		private static $__m, $__sm;
 				
-		private static function __ni($function) {
-			throw new \Exception('Method ' . $function . ' is not implemented.');
+		private static function __ni($f) {
+			throw new \Exception('Method ' . $f . '() is not implemented.');
 		}
 				
 		public function __construct(& $params, & $m, & $sm, & $p, & $sp) {
