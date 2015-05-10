@@ -261,4 +261,17 @@ class DataBox {
 		
 		return $default;
 	}
+	
+	/**
+	 * A shortcut to get(), mostly for use in templates.
+	 * 
+	 * It means instead of: $databox->get('foo.bar') you can use the short call syntax $databox('foo.bar').
+	 *  
+	 * @param unknown $path
+	 * @param string $default
+	 * @return \Solver\Lab\mixed
+	 */
+	public function __invoke($path, $default = null) {
+		return $this->get($path, $default);
+	}
 }
