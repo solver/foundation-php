@@ -20,13 +20,15 @@ namespace Solver\Lab;
  * It's intended for test mock generation, and as a substitute for real anonymous classes until PHP7 is popular enough.
  * 
  * All abstract and interface methods in the object will be implemented with stubs, so you don't have to specify every
- * one of them (only those you expect to be called). Stubs throw "method not implemented" if called.
+ * one of them (only those you expect to be called). Stubs throw "method not implemented" if called, or you can provide
+ * your own stubs via the resolver() method.
  * 
  * Keep in mind eval() will be used (safe, but a bit slow).
  */
 class AnonClass {
 	private static $count = 0;
 	private $partial = false;
+	private $resolver = null;
 	private $params;
 	private $extend = null;
 	private $implement = [];
@@ -63,7 +65,8 @@ class AnonClass {
 	 * methods in the class you extend and interface you implement. This allows you to quickly prototype and mock
 	 * objects while only implementing methods you expect to be needed (part of an interface for ex.)
 	 * 
-	 * When called, the stubs will throw an exception with message like "Method fooBar() is not implemented.".
+	 * When called, the stubs will throw an exception with message like "Method fooBar() is not implemented.", unless
+	 * differently behaving stubs are provided by your custom resolver (see resolver()).
 	 * 
 	 * If you don't call this method, the default is to require full abstract method & interface implementation.
 	 * 
@@ -76,6 +79,21 @@ class AnonClass {
 	public function partial($partial = true) {
 		$this->partial = $partial;
 		return $this;
+	}
+	
+	/**
+	 * Pass a method to be called, which can return implementations to abstract & interface properties not provided
+	 * by your method() and staticMethod() calls.
+	 * 
+	 * This allows you to resolve methods using patterns and rules (for ex. all get*() methods, all set*() methods...).
+	 * 
+	 * Note that like method() and staticMethod() the implementations you return will be bound to the object being
+	 * created, but the resolver itself will be left as-is.
+	 * 
+	 * @param \Closure $resolver
+	 */
+	public function resolver(\Closure $resolver) {
+		$this->resolver = $resolver;
 	}
 	
 	/**
@@ -162,6 +180,7 @@ class AnonClass {
 	 */
 	public function end() {
 		$partial = $this->partial;
+		$resolver = $this->resolver;
 		$params = & $this->params;
 		$extend = $this->extend;
 		$implement = $this->implement;
@@ -198,25 +217,46 @@ class AnonClass {
 		if ($this->partial) {
 			if ($implement) foreach ($implement as $interface) {
 				$reflClass = new \ReflectionClass($interface);
-				$methodsCode = $this->getAllMethodProxies(true, $reflClass) + $methodsCode;
+				$methodsCode = $this->getAbstractMethods(true, $reflClass) + $methodsCode;
 			}	
 			
 			if ($extend) {
 				$reflClass = new \ReflectionClass($extend);
-				$methodsCode = $this->getAllMethodProxies(false, $reflClass) + $methodsCode;
+				$methodsCode = $this->getAbstractMethods(false, $reflClass) + $methodsCode;
 			}	
 		}
 		
 		if ($methods) foreach ($methods as $name => $impl) {
 			if ($name === '__construct') continue; // Special handling in the <<<'CODE' nowdoc below.
 			$reflFunc = new \ReflectionFunction($impl);
-			$methodsCode[$name] = self::getMethodProxy(false, $name, $reflFunc);
+			$methodsCode[$name] = $this->getMethodProxy(false, $name, $reflFunc);
 		}	
 		
 		if ($staticMethods) foreach ($staticMethods as $name => $impl) {
 			$reflFunc = new \ReflectionFunction($impl);
-			$methodsCode[$name] = self::getMethodProxy(true, $name, $reflFunc);
+			$methodsCode[$name] = $this->getMethodProxy(true, $name, $reflFunc);
 		}	
+		
+		
+		/**
+		 * Resolve methods without a provided implementation.
+		 */
+		
+		foreach ($methodsCode as $methodName => list($reflClass, $reflMethod)) {
+			/* @var $reflClass \ReflectionClass */
+			/* @var $reflMethod \ReflectionMethod */
+			$isStaticMethod = $reflMethod->isStatic();
+			$methodName = $reflMethod->getName();
+			if ($resolver) {
+				$methodCode = $resolver($reflClass->name, $methodName);
+			} else {
+				$methodCode = null;
+			}
+			
+			if ($methodCode === null) {
+				$methodCode = $this->getMethodProxy($isStaticMethod, $methodName, $reflMethod);
+			}
+		}
 		
 		/*
 		 * Build class code.
@@ -253,21 +293,19 @@ CODE;
 		return new $className($params, $methods, $staticMethods, $properties, $staticProperties);
 	}
 	
-	private static function getAllMethodProxies($isInterface, \ReflectionClass $reflClass) {		
-		$methodsCode = [];
+	private function getAbstractMethods($isInterface, \ReflectionClass $reflClass) {
+		$methods = [];
 		
 		/* @var $reflMethod \ReflectionMethod */
 		foreach ($reflClass->getMethods() as $reflMethod) {
 			if ($isInterface || $reflMethod->isAbstract()) {
-				$isStaticMethod = $reflMethod->isStatic();
-				$methodName = $reflMethod->getName();
-				$methodsCode[$methodName] = self::getMethodProxy($isStaticMethod, $methodName, $reflMethod);
+				$methods[$methodName] = [$reflClass, $reflMethod];
 			}
 		}
 		
-		return $methodsCode;
+		return $methods;
 	}
-	
+		
 	private static function getMethodProxy($isStaticMethod, $methodName, \ReflectionFunctionAbstract $reflFunc) {
 		$method = "\t\t" . 'public ';
 		if ($isStaticMethod) $method .= 'static ';
