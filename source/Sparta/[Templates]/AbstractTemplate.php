@@ -33,25 +33,6 @@ abstract class AbstractTemplate {
 	 * @var PageLog
 	 */
 	protected $log;
-	
-	/**
-	 * TODO: This is not used much. Remove?
-	 * 
-	 * This is where, by convention, imported templates and the main view template can share data (preferably using the 
-	 * shortcut notation "$shared" instead of the also valid "$this->shared"). 
-	 * 
-	 * This is needed, because while every template has access to the view instance members, any other local variables
-	 * a template creates are scoped to that template (you can't share any custom local variables between imports, for 
-	 * example). This is intentional, in order to avoid hard to debug variable collisions between complex templates.
-	 * 
-	 * Use this as a last resort. Better ways to share data between templates:
-	 * 
-	 * - Definitions in the $tag() system (see method tag()), which are stored at the view instance level.
-	 * - Template return results.
-	 * 
-	 * @var array
-	 */
-	protected $shared = [];
 		
 	/**
 	 * @var \Closure
@@ -486,7 +467,6 @@ abstract class AbstractTemplate {
 		return [
 			'model' => & $this->model,
 			'log' => & $this->log,
-			'shared' => & $this->shared,
 			'render' => (new \ReflectionMethod($this, 'render'))->getClosure($this),
 			'import' => (new \ReflectionMethod($this, 'import'))->getClosure($this),
 			'tag' => (new \ReflectionMethod($this, 'tag'))->getClosure($this),
