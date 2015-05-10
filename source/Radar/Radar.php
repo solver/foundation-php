@@ -28,21 +28,21 @@ class Radar {
 	/**
 	 * Initializes the autoloader.
 	 * 
-	 * @param string $rootDir
-	 * A root directory that all other directories are relative to.
+	 * @param string $sourceRootDir
+	 * An absolute path to the root directory that all other source directories we'll scan are relative to.
 	 * 
-	 * @param null|string $cacheDir
-	 * A $rootDir-relative directory where Radar can save its $resourceName => $filePath map & other related caches.
+	 * @param null|string $cacheRootDir
+	 * An absolute path to the directory where Radar can save its $resourceName => $filePath map & other related caches.
 	 * This location should be writable to Radar, if you intend to use on-demand remapping. Don't prefix with a slash.
 	 * 
 	 * @param array $symbolDirs
-	 * dict<filepath: string, specification: #Specification>;
+	 * dict<dirpath: string, specification: #Specification>;
 	 * 
 	 * Optional. If you pass this parameter, you enable on-demand re-mapping. This dictionary lists directories and
 	 * assigns them to be processed by a given handler. It's recommended to generate your map once and disable on-demand
 	 * mapping on production, as some poorly written libraries may issue class_exists with autoloading on classes that
 	 * are missing during normal app operation. This could trigger a costly re-mapping operation (which still won't find
-	 * the missing class). All directories are interpreted as $rootDir-relative. Don't prefix with a slash.
+	 * the missing class). All directories are interpreted as $sourceRootDir-relative. Don't prefix with a slash.
 	 * 
 	 * #Specification: string; A string in format "handler" or "handler:settings". The settings segment is specific to
 	 * each handler, see below. 
@@ -91,14 +91,9 @@ class Radar {
 	 * 
 	 * For details on the supported options (which are quite powerful), see class PsrxConfig.
 	 */
-	public static function init($rootDir, $cacheDir, array $symbolDirs = null) {
+	public static function init($sourceRootDir, $cacheRootDir, array $symbolDirs = null) {
 		if (self::$strategy) throw new \Exception('Radar is already initialized.');
-		self::$strategy = new RadarStrategy($rootDir, $cacheDir, $symbolDirs);
-		
-		// TODO: Bench __autoload vs. spl and replace if needed.
-		spl_autoload_register(function ($class) {
-			list($found, $result) = self::$strategy->load($class);			
-		}, true, true);
+		self::$strategy = new RadarStrategy($sourceRootDir, $cacheRootDir, $symbolDirs);
 	}
 	
 	/**
@@ -162,46 +157,50 @@ class RadarStrategy {
 	 */
 	protected $loaders;
 	
-	protected $rootDir, $mappedOnce = false, $composerMap = null, $cacheDir, $symbolDirs = null;
+	protected $sourceRootDir, $mappedOnce = false, $composerMap = null, $cacheRootDir, $symbolDirs = null;
 	
 	/**
 	 * dict...; Maps symbol to files and loaders. 
 	 * - simple: dict<symbolName: string, symbolPath: string>; Handled by the built-in loader. Paths are root-relative.
 	 * - complex: dict<symbolName: string, config: #ConfigSerialized>; Special symbols handled by pluggable loaders.
-	 * - loaders: list<loaderClassName: string>; Index of integer keys to loader class names (used at #Config).
 	 * 
-	 * #ConfigSerialized: string; A PHP serialized structure, which is of type #Config after deserializing.
+	 * #ConfigSerialized: string; A PHP (JSON) serialized structure, which is of type #Config after deserializing.
 	 * 
 	 * #Config: tuple...
 	 * - symbolPathname: string; Symbol path to the source file.
-	 * - loaderIndex: int; Index pointing to a loader class (see key "loaders") to handle this symbol.
+	 * - loaderClass: string; A loader class used to handle this symbol.
 	 * - loaderParams: mixed; Arbitrary data (typically typle or dict) passed along to the loader.
 	 * 
 	 * @var array
 	 */
 	protected $map;
 	
-	public function __construct($rootDir, $cacheDir, array $symbolDirs = null) {
+	public function __construct($sourceRootDir, $cacheRootDir, array $symbolDirs = null) {
+		// TODO: Bench __autoload vs. spl and replace if needed.
+		spl_autoload_register(function ($class) {
+			list($found, $result) = $this->resolve($class, true);
+		}, true, true);
+		
 		// We use special handling for composer right now. TODO: Move this to the mapping phase to improve performance.
 		foreach ($symbolDirs as $path => $handler) {
 			if ($handler === 'composer') {
 				if ($this->composerMap === null) {
-					$this->composerMap = require $rootDir . '/' . $path . '/composer/autoload_classmap.php';
+					$this->composerMap = require $sourceRootDir . '/' . $path . '/composer/autoload_classmap.php';
 				} else {
 					throw new \Exception('You have supplied multiple "composer" directories, you can only have one.');
 				}
 			}
 		}
 		
-		$this->rootDir = $rootDir;
-		$this->cacheDir = $cacheDir;
+		$this->sourceRootDir = $sourceRootDir;
+		$this->cacheRootDir = $cacheRootDir;
 		$this->symbolDirs = $symbolDirs;
 		
 		// TRICKY: We need the mute operator to avoid a file_exists check just for first time map cache generation.
-		if (($cache = @include $cacheDir . '/cache.php') === false) {
+		if (($map = @include $cacheRootDir . '/map.php') === false) {
 			$this->mapOnce();
 		} else {
-			$this->map = $cache['map'];
+			$this->map = $map;
 		}
 	}
 	
@@ -223,48 +222,47 @@ class RadarStrategy {
 	 * @return mixed
 	 */
 	protected function resolve($symbolId, $load) {
-		$rootDir = $this->rootDir;
+		$sourceRootDir = $this->sourceRootDir;
 		
 		// Composer's map can't re-scan on demand, so native maps are more up-to-date, hence higher priority.
-		$mapSimple = $this->map['simple'];
+		$mapSimple = & $this->map['simple'];
 		
 		if (isset($mapSimple[$symbolId])) {
-			$path = $rootDir . $mapSimple[$symbolId];
+			$path = $mapSimple[$symbolId];
 			if ($this->symbolDirs) $path = $this->verifyPath($symbolId, $path);			
-			if ($path !== null) return $load ? $this->loadPath($rootDir . '/' . $path) : $rootDir . '/' . $path;
+			if ($path !== null) return $load ? $this->loadPath($sourceRootDir . '/' . $path) : $sourceRootDir . '/' . $path;
 		}
 		
 		// Native map with custom loaders (compiled code etc.).
-		$mapComplex = $this->map['complex'];
+		$mapComplex = & $this->map['complex'];
 		
 		if (isset($mapComplex[$symbolId])) {
-			list($loaderIndex, $loaderParams) = \unserialize($mapComplex[$symbolId]);
-			$loaderClass = $this->map['loaders'][$loaderIndex];
+			list($symbolPath, $loaderClass, $loaderParams) = json_decode($mapComplex[$symbolId], true);
 			$loaders = & $this->loaders;
 			
 			if (!isset($loaders[$loaderClass])) {
-				$loaders[$loaderClass] = new $loaderClass();
+				$loaders[$loaderClass] = new $loaderClass($sourceRootDir, $this->cacheRootDir);
 			}
 			
 			/* @var $loader RadarLoader */
 			$loader = $loaders[$loaderClass];
 			
 			if ($load) {
-				$result = $loader->load($symbolName, $loaderParams);
+				$result = $loader->load($symbolId, $symbolPath, $loaderParams);
 				if ($result[0] === true) return $result;
 			} else {
-				$result = $loader->find($symbolName, $loaderParams);
+				$result = $loader->find($symbolId, $symbolPath, $loaderParams);
 				if ($result !== null) return $result;
 			}
 		}
 		
 		// Composer classmaps (requires composer to be always run with option -o).
-		$composerMap = $this->composerMap;
+		$composerMap = &  $this->composerMap;
 		
 		if ($composerMap && isset($composerMap[$symbolId])) {
 			$path = $composerMap[$symbolId];
 			if ($this->symbolDirs) $path = $this->verifyPath($symbolId, $path);	
-			if ($path !== null) return $load ? $this->loadPath($rootDir . '/' . $path) : $rootDir . '/' . $path;
+			if ($path !== null) return $load ? $this->loadPath($sourceRootDir . '/' . $path) : $sourceRootDir . '/' . $path;
 		}
 		
 		/*
@@ -274,12 +272,7 @@ class RadarStrategy {
 		$didMap = $this->mapOnce();
 		
 		if ($didMap) {
-			if (isset($this->map[$symbolId])) {
-				$path = $rootDir . $this->map[$symbolId];
-				return $load ? $this->loadPath($rootDir . '/' . $path) : $rootDir . '/' . $path;
-			} else {
-				return $load ? [false, null] : null;
-			}
+			return $this->resolve($symbolId, $load);
 		} else {
 			return $load ? [false, null] : null;
 		}
@@ -306,15 +299,11 @@ class RadarStrategy {
 			$this->map = [
 				'simple' => [],
 				'complex' => [],
-				'loaders' => [],
 			];
 			
-			$import = function ($symbolPathname, $symbolId, $loaderClass = null, $loaderParams = null) {
-				var_dump($symbolPathname, $symbolId, $loaderClass, $loaderParams);
-				
-				// We need canonical paths, as we'll be comparing one with another.
-				$symbolPathname = realpath($symbolPathname); 
-				
+			$sourceRootDir = $this->sourceRootDir;
+			
+			$import = function ($symbolPathname, $symbolId, $loaderClass = null, $loaderParams = null) use ($sourceRootDir) {
 				if ($loaderClass === null) {
 					$map = & $this->map['simple'];
 					
@@ -329,20 +318,21 @@ class RadarStrategy {
 					}
 				} else {
 					$map = & $this->map['complex'];
-					$loaderConfig = serialize([$symbolPathname, $loaderClass, $loaderParams]);
+					
+					$loaderConfig = json_encode([$symbolPathname, $loaderClass, $loaderParams], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 					
 					if (isset($map[$symbolId])) {
 						// We allow overlapping discovery, but there should be exactly one handler config for one symbol
 						// name to load.
 						if ($map[$symbold] !== $loaderConfig) {
-							$existingLoaderConfig = unserialize($map[$symbolId]);
+							$existingLoaderConfig = json_decode($map[$symbolId], true);
 							throw new \Exception(
 								'Symbol "' . $symbolId . '" has been declared with differing loader config, at path "' . $symbolPathname . '" with loader "' . $loaderClass . '" and loader config ' . var_export($loaderConfig, true)
 								. ' and at path "' . $existingLoaderConfig[0] . '" with loader "' . $existingLoaderConfig[1] . '" and loader config ' . var_export($existingLoaderConfig[2], true)
 							);
 						}
 					} else {
-						$map[$symbolId] = $symbolPathname;
+						$map[$symbolId] = $loaderConfig;
 					}
 				}
 			};
@@ -356,11 +346,11 @@ class RadarStrategy {
 				if ($config[0] !== 'psrx') $badConfig($path, $config);
 				if (!isset($config[1])) $config[1] = null;
 				
-				$mapper->map($this->rootDir, $path, $config[1], $this->cacheDir . '/compiled', $import);
+				$mapper->map($this->sourceRootDir, $path, $config[1], $this->cacheRootDir . '/compiled', $import);
 			}
-									
-			if (!is_dir($this->cacheDir)) mkdir($this->cacheDir, 0777, true);
-			file_put_contents($this->cacheDir . '/map.php', '<?php return ' . var_export($this->map, true) . ';');
+
+			if (!is_dir($this->cacheRootDir)) mkdir($this->cacheRootDir, 0777, true);
+			file_put_contents($this->cacheRootDir . '/map.php', '<?php return ' . var_export($this->map, true) . ';');
 		}
 	}
 	
@@ -376,7 +366,8 @@ class RadarStrategy {
 			}, true);
 			
 			$this->mappedOnce = true;
-			$map = $this->remap();
+			$this->remap();
+			
 			return true;
 		}
 	}
@@ -386,11 +377,9 @@ class RadarStrategy {
 	 * become invalid as developers edit the code).
 	 */
 	protected function verifyPath($symbolId, $path) {
-		$rootDir = $this->rootDir;
-		
 		// File gone = stale cache. Remap.
 		// TODO: We can avoid file_exists() checks when Guardian starts throwing IncludeExceptions.
-		if (!\file_exists($rootDir . '/' . $path)) {
+		if (!\file_exists($this->sourceRootDir . '/' . $path)) {
 			// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
 			// can have the native map overlap Composer by adding to it select vendor components under development.
 			// This can be used to edit files within Composer packages (useful for editing a library in the context

@@ -25,8 +25,6 @@ class PsrxMapper {
 				}));
 			}
 			
-			var_dump($rules, $dir);
-			
 			try {
 				$iterator = new \DirectoryIterator($rootDir . '/' . $dir);
 			} catch (\RuntimeException $e) {
@@ -77,12 +75,9 @@ class PsrxMapper {
 							break;
 						
 						case 'compiled':
-							if (!is_dir($compiledDir)) mkdir($compiledDir, 0777, true);
 							$symbolPathname = $dir . '/' . $filename;
 							$symbolName = $this->getSymbolName($symbolPathname, $namespace, $dir, $base);
-							$compiledPathname = $compiledDir . '/' .  str_replace('\\', '-', $symbolName) . '.php';
-							
-							$callback($symbolPathname, $symbolName, PsrxLoader::class, [filemtime($root . '/' . $symbolPathname), $compiledPathname]);
+							$callback($symbolPathname, $symbolName, PsrxLoader::class, $ruleHandlerOptions);
 							break;
 					}
 				}

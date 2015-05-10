@@ -14,7 +14,7 @@
 namespace Solver\Radar;
 
 interface RadarLoader {
-	public function __construct($rootDir);
-	public function find($symbolName, $params = null);
-	public function load($symbolName, $params = null);
+	public function __construct($sourceRootDir, $cacheRootDir);
+	public function find($symbolId, $symbolPathname, $params = null);
+	public function load($symbolId, $symbolPathname, $params = null);
 }

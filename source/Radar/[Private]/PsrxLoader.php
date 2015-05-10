@@ -14,30 +14,52 @@
 namespace Solver\Radar;
 
 class PsrxLoader implements RadarLoader {
-	protected $rootDir;
+	protected $sourceRootDir, $cacheRootDir;
 
 	/* (non-PHPdoc)
 	 * @see \Solver\Radar\RadarLoader::__construct()
 	 */
-	public function __construct($rootDir) {
-		$this->rootDir = $rootDir;		
+	public function __construct($sourceRootDir, $cacheRootDir) {
+		$this->sourceRootDir = $sourceRootDir;		
+		$this->cacheRootDir = $cacheRootDir;
 	}
 	
 	/* (non-PHPdoc)
 	 * @see \Solver\Radar\RadarLoader::find()
 	 */
-	public function find($symbolName, $params = null) {
-		/* @var $compiler PsrxCompiler */
-		$compilerClass = $ruleHandlerOptions[0];
-		$compilerParams = $ruleHandlerOptions[1];
-		$compiler = new $compilerClass(...$compilerParams);
-		file_put_contents($compiledPathname, $compiler->compile($symbolPathname, $symbolName));
+	public function find($symbolId, $symbolPathname, $params = null) {
+		$compiledDir = $this->cacheRootDir . '/compiled';
+		$compiledPathnameBase = $compiledDir . '/' .  str_replace('\\', '-', $symbolId);
+		$compiledPathnameSource = $compiledPathnameBase . '.php';
+		$compiledPathnameMTime = $compiledPathnameBase . '.txt';
+		$sourcePathname = $this->sourceRootDir . '/' . $symbolPathname;
+		
+		if (!file_exists($sourcePathname)) return null;
+		$sourceMTime = (string) filemtime($sourcePathname);
+		
+		if (!file_exists($compiledPathnameMTime) || file_get_contents($compiledPathnameMTime) !== $sourceMTime) {
+			if (!is_dir($compiledDir)) mkdir($compiledDir, 0777, true);
+			
+			/* @var $compiler PsrxCompiler */
+			list($compilerClass, $compilerParams) = $params;
+			$compiler = new $compilerClass(...$compilerParams);
+			
+			file_put_contents($compiledPathnameSource, $compiler->compile($sourcePathname, $symbolId));
+			file_put_contents($compiledPathnameMTime, $sourceMTime);
+		}
+		
+		return $compiledPathnameSource;
 	}
 
 	/* (non-PHPdoc)
 	 * @see \Solver\Radar\RadarLoader::load()
 	 */
-	public function load($symbolName, $params = null) {
-		echo __METHOD__;
+	public function load($symbolId, $symbolPathname, $params = null) {
+		$path = $this->find($symbolId, $symbolPathname, $params);
+		if ($path == null) {
+			return [false, null];
+		} else {
+			return [true, require $path];
+		}
 	}
 }
