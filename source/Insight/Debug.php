@@ -19,14 +19,14 @@ namespace Solver\Insight;
  * TODO: This is just a skeleton to cover our most basic needs. More coming soon. Refine, optimize, document.
  */
 class Debug {
-	protected static $initialized = false, $dir, $logCallback;
+	protected static $initialized = false, $logFilepath, $logCallback;
 	
-	public static function init($dir) {
-		self::$dir = $dir;
-		if (!is_dir($dir)) mkdir($dir, 0777, true);
+	public static function init($logFilepath) {
+		self::$logFilepath = $logFilepath;
+		if (!is_dir($logFilepath)) mkdir($logFilepath, 0777, true);
 		
 		self::$logCallback = function ($event) {
-			file_put_contents(self::$dir . '/log.txt', json_encode($event) . "\n", FILE_APPEND);
+			file_put_contents(self::$logFilepath, json_encode($event) . "\n", FILE_APPEND);
 		};
 		
 		self::$initialized = true;
