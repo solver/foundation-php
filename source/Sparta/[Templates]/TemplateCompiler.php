@@ -65,6 +65,7 @@ class TemplateCompiler implements PsrxCompiler {
 		$shortMethodNames = $this->getShortMethodNames();
 		$code = '';	
 		// This is so IDEs don't report errors in the compiled files.
+		// TODO: Wrap compiled files in actual classes.
 		$code .= '<?php /* @var $this \Solver\Sparta\AbstractTemplate */ ?>';
 		
 		foreach ($tokens as $i => $token) {

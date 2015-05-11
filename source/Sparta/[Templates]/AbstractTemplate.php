@@ -393,6 +393,7 @@ abstract class AbstractTemplate {
 	 * </code>
 	 */ 
 	protected function tag($name, $params = null) {
+		// TODO: Refactor this function into smaller specialized ones; allow TemplateCompiler to call the specialized ones when a pattern is detected (performance optimization).
 		// TODO: Detect a tag left unclosed at the end of the document (currently silently does nothing).
 		
 		$tagParamCount = \func_num_args();
@@ -432,7 +433,6 @@ abstract class AbstractTemplate {
 		} else {
 			$param = false;
 		}
-		
 		
 		// Shortcut <function@param> detection.
 		if (\strpos($name, '@') !== false) {
@@ -487,27 +487,11 @@ abstract class AbstractTemplate {
 					throw new \Exception('Template function end mismatch: closing "' . $name . '", expecting to close "' . $func[0] . '".');
 				}
 				
-				$reflFunc = new \ReflectionFunction($funcs[$func[0]]);
-				
-				$params = [];
-				/* @var $reflParam \ReflectionParameter */
-				foreach ($reflFunc->getParameters() as $reflParam) {
-					$paramName = $reflParam->getName();
-					
-					if (\key_exists($paramName, $func[1])) {
-						$params[] = $func[1][$paramName];
-					} else {
-						if ($reflParam->isOptional()) {
-							$params[] = $reflParam->getDefaultValue();
-						} else {
-							throw new \Exception('Required parameter "' . $paramName . '" for template function "' . $func[0] . '" is missing.');
-						}
-					}
-				}
-				
-				// Using ReflectionFunction::invokeArgs() would run the closure without object context (PHP issue).
-				// So we're using older APIs to keep the context.
-				$result = \call_user_func_array($funcs[$func[0]], $params);
+				$funcName = $func[0];
+				$funcImpl = $funcs[$funcName];
+				$funcParamDict = $func[1];
+				$params = $this->tagGetFunctionParams($funcName, $funcImpl, $funcParamDict);
+				$result = $funcImpl(...$params);
 			}
 		}
 		
@@ -520,6 +504,28 @@ abstract class AbstractTemplate {
 		}
 		
 		return $result;
+	}
+	
+	private function tagGetFunctionParams($funcName, $funcImpl, $funcParamDict) {
+		$reflFunc = new \ReflectionFunction($funcImpl);
+		$params = [];
+		
+		/* @var $reflParam \ReflectionParameter */
+		foreach ($reflFunc->getParameters() as $reflParam) {
+			$paramName = $reflParam->getName();
+			
+			if (\key_exists($paramName, $funcParamDict)) {
+				$params[] = $funcParamDict[$paramName];
+			} else {
+				if ($reflParam->isOptional()) {
+					$params[] = $reflParam->getDefaultValue();
+				} else {
+					throw new \Exception('Required parameter "' . $paramName . '" for template function "' . $funcName . '" is missing.');
+				}
+			}
+		}
+		
+		return $params;
 	}
 	
 	/**
