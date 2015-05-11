@@ -229,8 +229,10 @@ class RadarStrategy {
 		
 		if (isset($mapSimple[$symbolId])) {
 			$path = $mapSimple[$symbolId];
-			if ($this->symbolDirs) $path = $this->verifyPath($symbolId, $path);			
-			if ($path !== null) return $load ? $this->loadPath($sourceRootDir . '/' . $path) : $sourceRootDir . '/' . $path;
+			if ($this->symbolDirs) {
+				$fullPath = $this->verifyPath($symbolId, $sourceRootDir . '/' . $path);
+				if ($fullPath !== null) return $load ? $this->loadPath($fullPath) : $fullPath;
+			}
 		}
 		
 		// Native map with custom loaders (compiled code etc.).
@@ -261,8 +263,10 @@ class RadarStrategy {
 		
 		if ($composerMap && isset($composerMap[$symbolId])) {
 			$path = $composerMap[$symbolId];
-			if ($this->symbolDirs) $path = $this->verifyPath($symbolId, $path);	
-			if ($path !== null) return $load ? $this->loadPath($sourceRootDir . '/' . $path) : $sourceRootDir . '/' . $path;
+			if ($this->symbolDirs) {
+				$fullPath = $this->verifyPath($symbolId, $path);
+				if ($fullPath !== null) return $load ? $this->loadPath($fullPath) : $fullPath;
+			}
 		}
 		
 		/*
@@ -376,18 +380,18 @@ class RadarStrategy {
 	 * Used in find() to check a path really exists, when on-demand mapping is enabled (and we expected the cache to
 	 * become invalid as developers edit the code).
 	 */
-	protected function verifyPath($symbolId, $path) {
+	protected function verifyPath($symbolId, $fullPath) {
 		// File gone = stale cache. Remap.
 		// TODO: We can avoid file_exists() checks when Guardian starts throwing IncludeExceptions.
-		if (!\file_exists($this->sourceRootDir . '/' . $path)) {
+		if (!\file_exists($fullPath)) {
 			// TRICKY: It's not a bug the native map gets remapped even when the Composer map is stale. Developers
 			// can have the native map overlap Composer by adding to it select vendor components under development.
 			// This can be used to edit files within Composer packages (useful for editing a library in the context
 			// of a specific project).
 			$this->mapOnce();
-			return isset($this->map[$symbolId]) ? $this->map[$symbolId] : null;
+			return isset($this->map[$symbolId]) ? $this->sourceRootDir . '/' . $this->map[$symbolId] : null;
 		} else {
-			return $path;
+			return $fullPath;
 		}
 	}
 }

@@ -14,25 +14,25 @@
 namespace Solver\Radar;
 
 class PsrxMapper {
-	public function map($rootDir, $dir, $namespace = null, $compiledDir, $callback) {
+	public function map($sourceRootDir, $dir, $namespace = null, $compiledDir, $callback) {
 		$configHost = static function ($cfg, $__file__) {
 			require $__file__;
 		};
 		
-		$scanDir = function ($dir, $namespace, $rules) use ($rootDir, & $scanDir, $compiledDir, $callback, $configHost) {
+		$scanDir = function ($dir, $namespace, $rules) use ($sourceRootDir, & $scanDir, $compiledDir, $callback, $configHost) {
 			$namespace = \trim($namespace, '\\');
 			
-			if (file_exists($rootDir . '/' . $dir . '/__config.php')) {
+			if (file_exists($sourceRootDir . '/' . $dir . '/__config.php')) {
 				$config = new PsrxConfig(function ($type, $name, $handler, $handlerOptions) use (& $rules) {
 					$rules[] = [$type, $name, $handler, $handlerOptions];
 				});
-				$configHost($config, $rootDir . '/' . $dir . '/__config.php');
+				$configHost($config, $sourceRootDir . '/' . $dir . '/__config.php');
 			}
 			
 			try {
-				$iterator = new \DirectoryIterator($rootDir . '/' . $dir);
+				$iterator = new \DirectoryIterator($sourceRootDir . '/' . $dir);
 			} catch (\RuntimeException $e) {
-				throw new \Exception('Invalid or unreadable directory: ' . $rootDir . '/' . $dir . '.');
+				throw new \Exception('Invalid or unreadable directory: ' . $sourceRootDir . '/' . $dir . '.');
 			}
 			
 			foreach ($iterator as $file) {
@@ -58,7 +58,7 @@ class PsrxMapper {
 						$scanDir($dir . '/' . $filename, $namespace . '\\' . $filename, $this->subsetRules($filename, $rules));
 					} else {
 						$symbolPathname = $dir . '/' . $filename;
-						$symbolName = $this->getSymbolName($symbolPathname, $namespace, $dir, $base);
+						$symbolName = $this->getSymbolName($sourceRootDir . '/' . $symbolPathname, $namespace, $dir, $base);
 							
 						// We have only one directory rule right now (aside from "ignore"), so it's a resource dir.
 						$callback($symbolPathname, $symbolName);
@@ -73,14 +73,14 @@ class PsrxMapper {
 					switch ($ruleHandler) {
 						case 'php':
 							$symbolPathname = $dir . '/' . $filename;
-							$symbolName = $this->getSymbolName($symbolPathname, $namespace, $dir, $base);
+							$symbolName = $this->getSymbolName($sourceRootDir . '/' . $symbolPathname, $namespace, $dir, $base);
 							
 							$callback($symbolPathname, $symbolName);
 							break;
 						
 						case 'compiled':
 							$symbolPathname = $dir . '/' . $filename;
-							$symbolName = $this->getSymbolName($symbolPathname, $namespace, $dir, $base);
+							$symbolName = $this->getSymbolName($sourceRootDir . '/' . $symbolPathname, $namespace, $dir, $base);
 							$callback($symbolPathname, $symbolName, PsrxLoader::class, $ruleHandlerOptions);
 							break;
 					}
@@ -117,7 +117,7 @@ class PsrxMapper {
 		// Using quick heuristics to detect & support legacy classes using underscores (vs. namespaces).
 		// TODO: Make this optional?
 		$symbolLegacyName = \str_replace('\\', '_', $symbolName);
-	
+		
 		if (is_file($pathname) && \preg_match('/(class|interface|trait)\s+' . $symbolLegacyName . '\b/si', \file_get_contents($pathname))) {
 			$symbolName = $symbolLegacyName;
 		}
