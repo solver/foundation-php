@@ -20,6 +20,7 @@
  */
  
 function tag($name, $params = null) {}
-function esc($string) {}
+function esc($value, $format = 'html') {}
+function out($value, $format = 'html') {}
 function render($templateId) {}
 function import($templateId) {}
