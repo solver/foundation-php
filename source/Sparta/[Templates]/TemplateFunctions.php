@@ -33,9 +33,9 @@ function tag($name, $params = null) {}
 function encode_html($value) {}
 
 /**
- * @see \Solver\Sparta\AbstractTemplate::encodeJs()
+ * @see \Solver\Sparta\AbstractTemplate::encodeJson()
  */
-function encode_js($value) {}
+function encode_json($value) {}
 
 /**
  * @see \Solver\Sparta\AbstractTemplate::echoRaw()
@@ -48,9 +48,9 @@ function echo_raw($value) {}
 function echo_html($value) {}
 
 /**
- * @see \Solver\Sparta\AbstractTemplate::echoJs()
+ * @see \Solver\Sparta\AbstractTemplate::echoJson()
  */
-function echo_js($value) {}
+function echo_json($value) {}
 
 /**
  * @see \Solver\Sparta\AbstractTemplate::render()

@@ -19,27 +19,7 @@ use Solver\Radar\Radar;
  * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
  * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
-abstract class AbstractTemplate {
-	/**
-	 * Allows bypassing the default escape mechanism (for doing this in templates, see out()).
-	 * 
-	 * @var bool
-	 */
-	private $autoescapeBypass = false;
-	
-	/**
-	 * Sets the autoescape format for templates (for use in templates, see setAutoEsc()).
-	 * @var string
-	 */
-	private $autoescapeFormat = 'html';
-	
-	/**
-	 * Implements autoescaping, should be passed to ob_start($here, 1);
-	 * 
-	 * @var \Closure
-	 */
-	private $autoescapeHandler;
-	
+abstract class AbstractTemplate {	
 	/**
 	 * A dict container with custom data as passed by the page controller.
 	 * 
@@ -53,6 +33,21 @@ abstract class AbstractTemplate {
 	 * @var PageLog
 	 */
 	protected $log;
+	
+	/**
+	 * Sets the autoencode format for templates. For a list of the constants and their meanings, see method
+	 * getAutoencodeHandler().
+	 *  
+	 * @var int
+	 */
+	protected $autoencodeFormat = 1;
+	
+	/**
+	 * Implements autoescaping, should be passed to ob_start($here, 1);
+	 * 
+	 * @var \Closure
+	 */
+	private $autoencodeHandler;
 		
 	/**
 	 * Execution context for the template.
@@ -160,22 +155,12 @@ abstract class AbstractTemplate {
 		// to rebind the scope to the your class.
 		$scope = $scope->bindTo($this, get_class($this));
 		$this->scope = $scope;
+				
+		$this->autoencodeHandler = $this->getAutoencodeHandler();
 		
-		$format = & $this->autoescapeFormat;
-		$bypass = & $this->autoescapeBypass;
-		
-		$this->autoescapeHandler = function ($buffer) use (& $format, & $bypass) {
-			if ($bypass) {
-				return $buffer;
-			} else {
-				if ($format === 'html') return \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
-				if ($format === 'js') return \json_encode($value, \JSON_UNESCAPED_UNICODE);
-			}
-		};
-		
-		ob_start($this->autoescapeHandler, 1);
+		\ob_start($this->autoencodeHandler, 1);
 		$result = $this->render($this->templateId);
-		ob_end_flush();
+		\ob_end_flush();
 		
 		return $result;
 	}	
@@ -248,37 +233,77 @@ abstract class AbstractTemplate {
 	 * Sets the auto-escape format for templates (by default HTML).
 	 * 
 	 * @param null|string $format
-	 * Autoescape format or null not to autoescape.
-	 * TODO: Null is subtle for disabling. Consider autoescape_on($format) autoescape_off() ?
+	 * Autoescape format or null not to autoencode.
 	 */
-	protected function autoescape($format) {
-		if ($format === null) $format = 'none';
-		$this->autoescapeFormat = $format;
+	protected function autoencode($format) {
+		static $labels = [
+			'raw' => 0,
+			'html' => 1,
+			'json' => 2,
+		];
+		
+		if (!isset($labels[$format])) throw new \Exception('Unknown encoding format "' . $format . '".');
+		$this->autoencodeFormat = $labels[$format];
 	}
 	
-	// TODO: DOCUMENT.
+	/**
+	 * Returns the given value encoded as an HTML string literal.
+	 * 
+	 * @param mixed $value
+	 * @return string
+	 */
 	protected function encodeHtml($value) {
-		return $this->__esc__($value, 'html');
+		if ($value === null) return '';
+		return \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
 	}
 	
-	// TODO: DOCUMENT.
-	protected function encodeJs($value) {
-		return $this->__esc__($value, 'js');
+	/**
+	 * Outputs the given value encoded as JSON.
+	 * 
+	 * @param mixed $value
+	 * @return string
+	 */
+	protected function encodeJson($value) {
+		return \json_encode($value, \JSON_UNESCAPED_UNICODE);
 	}
 	
-	// TODO: DOCUMENT.
+	/**
+	 * Outputs the given value as-is, bypassing the current autoencode format.
+	 * 
+	 * @param mixed $value
+	 */
 	protected function echoRaw($value) {
-		$this->__out__($value, 'none');
+		$format = & $this->autoencodeFormat;
+		$prevFormat = $format;
+		$format = 0;
+		echo $value;
+		$format = $prevFormat;
 	}
 	
-	// TODO: DOCUMENT.
+	/**
+	 * Outputs the given value encoded as an HTML string literal, bypassing the current autoencode format.
+	 * 
+	 * @param mixed $value
+	 */
 	protected function echoHtml($value) {
-		$this->__out__($value, 'html');
+		$format = & $this->autoencodeFormat;
+		$prevFormat = $format;
+		$format = 0;
+		echo \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
+		$format = $prevFormat;
 	}
 	
-	// TODO: DOCUMENT.
-	protected function echoJs($value) {
-		$this->__out__($value, 'js');
+	/**
+	 * Outputs the given value encoded as JSON, bypassing the current autoencode format.
+	 * 
+	 * @param mixed $value
+	 */
+	protected function echoJson($value) {
+		$format = & $this->autoencodeFormat;
+		$prevFormat = $format;
+		$format = 0;
+		echo \json_encode($value, \JSON_UNESCAPED_UNICODE);
+		$format = $prevFormat;
 	}
 
 	/** 
@@ -287,8 +312,8 @@ abstract class AbstractTemplate {
 	 * 
 	 * - You set parameters by name (easy to extend & add parameters for big templates, as parameter order doesn't
 	 * matter).
-	 * - You can set parameters from content, i.e. "content parameters" using the "@" syntax (see below), and autoescape
-	 * will function properly while capturing parameter content (if you try to use ob_* yourself, autoescape won't
+	 * - You can set parameters from content, i.e. "content parameters" using the "@" syntax (see below), and autoencode
+	 * will function properly while capturing parameter content (if you try to use ob_* yourself, autoencode won't
 	 * work correctly).
 	 * - The system is designed to look like HTML tags (as much as possible), hence the name, in order to be intuitive
 	 * to front-end developers.
@@ -432,8 +457,8 @@ abstract class AbstractTemplate {
 				} else {
 					// Param open.
 					$paramStack[] = $name;
-					\ob_start(); // For buffering.
-					\ob_start($this->autoescapeHandler, 1); // For autoescaping.
+					\ob_start(); // For buffering to a string.
+					\ob_start($this->autoencodeHandler, 1); // For autoescaping.
 				}
 			} else { 
 				// Param close.
@@ -443,8 +468,8 @@ abstract class AbstractTemplate {
 					throw new \Exception('Parameter end mismatch: closing "' . $name . '", expecting to close "' . $name2 . '".');
 				}
 				
-				\ob_end_flush(); // Closing autoescape handler.
-				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean();
+				\ob_end_flush(); // Closing autoencode handler.
+				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean(); // Grab from buffer.
 			}
 		} else {
 			if ($open) { 
@@ -501,7 +526,7 @@ abstract class AbstractTemplate {
 	}
 	
 	/**
-	 * Return a list of local variables to extracted into the scope of the template that'll run (optionally by
+	 * Return a list of local variables to be extracted into the scope of the template that'll run (optionally by
 	 * reference). Override in child classes to change these variables.
 	 */
 	protected function getLocalVars() {
@@ -510,58 +535,21 @@ abstract class AbstractTemplate {
 			'log' => & $this->log,
 		];
 	}
-		
-	/**
-	 * TODO: REMOVE.
-	 * 
-	 * Escapes strings for HTML (and other targets). The assumed document charset is UTF-8.
-	 * 
-	 * For HTML, this method will gracefully return an empty string if you pass null (which happens when fetching a
-	 * non-existing key from $model).
-	 * 
-	 * @param mixed $value
-	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
-	 * 
-	 * @param string $format
-	 * Optional (default = 'html'). Escape formatting, supported values: 'html', 'js', 'none'. None returns the value
-	 * unmodified, and is only included to make your code more readable when you apply escaping (or not) conditionaly.
-	 */
-	protected function __esc__($value, $format = 'html') {
-		switch ($format) {
-			case 'html':
-				if ($value === null) return '';
-				return \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
-				break;
-			
-			case 'js':
-				return \json_encode($value, \JSON_UNESCAPED_UNICODE);
-				break;
-			
-			case 'none':
-				return $value;
-				break;
-				
-			default:
-				throw new \Exception('Unknown escape format "' . $format . '".');
-		}
-	}
 	
-	/**
-	 * TODO: REMOVE.
-	 * 
-	 * Use this function to send content to the output with a specific format encoding, bypassing the auto-escape
-	 * mechanism.
-	 * 
-	 * @param mixed $value
-	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
-	 * 
-	 * @param string $format
-	 * Same formats as exposed by method esc().
-	 */
-	protected function __out__($value, $format = 'html') {
-		if ($format !== 'none') $value = $this->__esc__($value, $format);
-		$this->autoescapeBypass = true;
-		echo $value;
-		$this->autoescapeBypass = false;
+	protected function getAutoencodeHandler() {
+		$format = & $this->autoencodeFormat;
+		
+		return function ($buffer) use (& $format) {
+			switch ($format) {
+				case 0 /* raw    */:
+					return $buffer;
+				case 1 /* html   */:
+					return \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
+				case 2 /* json   */:
+					return \json_encode($value, \JSON_UNESCAPED_UNICODE);
+				default:
+					throw new \Exception('Unknown autoencode format code ' . $format . '.');
+			}
+		};
 	}
 }
