@@ -48,33 +48,16 @@ abstract class AbstractTemplate {
 	protected $log;
 		
 	/**
+	 * Execution context for the template.
+	 * 
 	 * @var \Closure
 	 */
 	private $scope;
-		
-	/**
-	 * @var \Closure
-	 */
-	private $obHandler;
 	
 	/**
 	 * @var string
 	 */
 	private $templateId;
-		
-	/**
-	 * See method getShortcuts().
-	 * 
-	 * @var array
-	 */
-	private $shortcuts;
-	
-	/**
-	 * See method render().
-	 * 
-	 * @var mixed
-	 */
-	private $temp;
 	
 	/**
 	 * See method tag().
@@ -214,7 +197,7 @@ abstract class AbstractTemplate {
 		$result = $scope($path);
 		
 		// Used if the same id is import()-ed a second time.
-		$this->renderedTemplateIds[$this->temp['templateId']] = $result;
+		$this->renderedTemplateIds[$templateId] = $result;
 
 		return $result;
 	}
@@ -225,16 +208,16 @@ abstract class AbstractTemplate {
 	 * - If this templateId was already imported (or rendered) before, it won't be imported again (think require_once).
 	 * - Any text output generated while loading the file (via echo or otherwise) will be ignored.
 	 * 
-	 * The latter is handy for importing templates that contain only definitions (functions) for re-use. Whitespace 
+	 * The latter is handy for importing templates that contain only tag definitions (functions) for re-use. Whitespace 
 	 * outside your functions will not be ignored, and any text along with it (say, HTML comments). You can freely
 	 * annotate your code in whatever format you prefer, for ex.:
 	 * 
 	 * <code>
-	 * <!-- This text won't be sent to the browser. -->
+	 * This text won't be sent to the browser.
 	 * 
-	 * <? $definition = function () { ?>
-	 * 		This text, however, will be sent if you call $definition() *after* the import.
-	 * <? } ?>
+	 * <? tag('foo', function () { ?>
+	 * 		This text, will be rendered if you call tag('foo/') *after* the import.
+	 * <? }) ?>
 	 * </code>
 	 * 
 	 * @param string $templateId
@@ -322,12 +305,12 @@ abstract class AbstractTemplate {
 	 * - The system is designed to look like HTML tags (as much as possible), hence the name, in order to be intuitive
 	 * to front-end developers.
 	 * 
-	 * In the examples below, the shortcut "$tag()" is used (generated for templates by the render/import methods), but
-	 * using "$this->tag()" has equivalent semantics.
+	 * In the examples below, the shortcut "tag()" is used (generated for templates by the render/import methods), which
+	 * for a template is the same as calling "$this->tag()".
 	 *
 	 * An example of defining a template:
 	 * <code>
-	 * <? $tag('layout', function ($title = '', $head = '', $body = '') { ?>
+	 * <? tag('layout', function ($title = '', $head = '', $body = '') { ?>
 	 *		<html>
 	 *			<head>
 	 *				<title><?= $esc($title) ?></title>
@@ -343,53 +326,53 @@ abstract class AbstractTemplate {
 	 * An example usage of the above template. You can specify a parameter inline (title), separately(bodyClass) or from
 	 * content (head, body):
 	 * <code>
-	 * <? $tag('layout', ['title' => 'Hi, world']) ?>
-	 *		<? $tag('@bodyClass/', 'css-class-name') ?>
+	 * <? tag('layout', ['title' => 'Hi, world']) ?>
+	 *		<? tag('@bodyClass/', 'css-class-name') ?>
 	 *
-	 *		<? $tag('@head') ?>
+	 *		<? tag('@head') ?>
 	 *			<style>
 	 *				body {color: red}
 	 *			</style>
-	 *		<? $tag('/@head') ?>
+	 *		<? tag('/@head') ?>
 	 *	
-	 *		<? $tag('@body') ?>
+	 *		<? tag('@body') ?>
 	 *			<p>Hi, world!</p>
-	 *		<? $tag('/@body') ?>
+	 *		<? tag('/@body') ?>
 	 *	
-	 * <? $tag('/layout') ?>
+	 * <? tag('/layout') ?>
 	 * </code>
 	 *
 	 * A shorter way to invoke a template with one content parameter:
 	 * <code>
-	 * <? $tag('layout@body') ?>
+	 * <? tag('layout@body') ?>
 	 * 		<p>Hi, world!</p>
-	 * <? $tag('/layout@body') ?>
+	 * <? tag('/layout@body') ?>
 	 * </code> 
 	 * 
 	 * A shorter way to invoke a template without any content parameters (so you can skip the closing tag):
 	 * <code>
-	 * <? $tag('layout/') ?>
+	 * <? tag('layout/') ?>
 	 * <code>
 	 * 
 	 * At the moment you're closing a "tag" you're calling the function. So that's when you can grb the return result,
 	 * if any (having a return result isn't typical for a template function and looks a bit odd; use sparingly):
 	 * <code>
-	 * <? $tag('layout', [...]) ?>
+	 * <? tag('layout', [...]) ?>
 	 *	
-	 *		<? $tag('@head') ?>
+	 *		<? tag('@head') ?>
 	 *			...
-	 *		<? $tag('/@head') ?>
+	 *		<? tag('/@head') ?>
 	 *	
-	 *		<? $tag('@body') ?>
+	 *		<? tag('@body') ?>
 	 *			...
-	 *		<? $tag('/@body') ?>
+	 *		<? tag('/@body') ?>
 	 *	
-	 * <? $result = $tag('/layout') ?>
+	 * <? $result = tag('/layout') ?>
 	 * </code>
 	 * 
 	 * It works with the short syntaxes, as well: 
 	 * <code>
-	 * <? $result = $tag('layout/', [...]) ?>
+	 * <? $result = tag('layout/', [...]) ?>
 	 * </code>
 	 */ 
 	protected function tag($name, $params = null) {
@@ -529,7 +512,7 @@ abstract class AbstractTemplate {
 	}
 	
 	/**
-	 * To allow autoescaping, we need to pass this handler when buffering output for tag parameters.
+	 * To allow autoescaping in tags, we need to pass this handler when buffering output for tag parameters.
 	 * 
 	 * However because we want the callback to be invoked immediately we can't use PHP's built-in output buffering.
 	 * 
@@ -542,12 +525,12 @@ abstract class AbstractTemplate {
 	 * We should do:
 	 * 
 	 * <code>
-	 * ob_start($handler) ... ob_end_flush(); rewind($stream); $out = stream_get_contents($stream);
+	 * ob_start($handler, 1); ... ob_end_flush(); rewind($stream); $out = stream_get_contents($stream); fclose($stream);
 	 * 
 	 * @return array
 	 * tuple...
 	 * - handler: function;
-	 * - streamHandle: resource;
+	 * - stream: resource;
 	 */
 	protected function getOutputHandler() {
 		$format = & $this->autoEscFormat;

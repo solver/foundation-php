@@ -74,7 +74,7 @@ abstract class Page {
 	 */
 	protected $log = [];
 
-	final public function __invoke(array $input) {
+	public function __invoke(array $input) {
 		try {
 			$this->input = new PageInput($input);
 			$this->model = new PageModel();
@@ -150,7 +150,7 @@ abstract class Page {
 	 *
 	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
-	final protected function render($templateId = null) {
+	protected function render($templateId = null) {
 		$this->renderWith($this->model, $this->log, $templateId);
 	}
 	
@@ -163,7 +163,7 @@ abstract class Page {
 	 * @param string $templateId
 	 * Optional (default = null). Template id, see render() for details.
 	 */
-	final protected function capture($templateId = null) {
+	protected function capture($templateId = null) {
 		return $this->captureWith($this->model, $this->log, $templateId);
 	}
 	
@@ -181,7 +181,7 @@ abstract class Page {
 	 * @param string $templateId
 	 * Optional (default = null). See render() for details.
 	 */
-	final protected function renderWith(PageModel $model, PageLog $log, $templateId = null) {
+	protected function renderWith(PageModel $model, PageLog $log, $templateId = null) {
 		if ($templateId === null) {
 			if ($this->templateDefaultId === null) {
 				throw new \Exception('Default template id resolution has been disabled. Pass an explicit template id to render/capture.');
@@ -228,7 +228,7 @@ abstract class Page {
 	 * @param string $templateId
 	 * Optional (default = null). See render() for details.
 	 */
-	final protected function captureWith(PageModel $model, PageLog $log, $templateId = null) {
+	protected function captureWith(PageModel $model, PageLog $log, $templateId = null) {
 		ob_start();
 		$this->renderWith($model, $log, $templateId);
 		return ob_get_clean();
@@ -248,7 +248,7 @@ abstract class Page {
 	 * }
 	 * </code>
 	 */
-	final protected function stop() {
+	protected function stop() {
 		throw new PageException(null, 0);
 	}
 
@@ -269,7 +269,7 @@ abstract class Page {
 	 * @param number $httpStatus
 	 * Optional (default = 0). Pass an HTTP status for the router to re-route to its error handler.
 	 */
-	final protected function stopWithStatus($httpStatus) {
+	protected function stopWithStatus($httpStatus) {
 		if ($httpStatus == 0) throw new \Exception('Invalid HTTP status.');
 		throw new PageException(null, $httpStatus);
 	}
@@ -293,7 +293,7 @@ abstract class Page {
 	 * @param int $httpStatus
 	 * Optional (default 307). Status code for the redirect.
 	 */
-	final protected function stopAndRedirect($url, $httpStatus = 307) {
+	protected function stopAndRedirect($url, $httpStatus = 307) {
 		switch ($httpStatus) {
 			case 301:
 				$httpStatus = '301 Moved Permanently';

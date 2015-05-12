@@ -27,6 +27,21 @@ use Solver\Radar\PsrxCompiler;
  * Note the output preserves the original source code lines, so error reports will give the correct line.
  */
 class TemplateCompiler implements PsrxCompiler {
+	protected static $classCache = [];
+	protected $class;
+	
+	/**
+	 * @param string $class
+	 * Default = "\Solver\Sparta\Template". Target class for compilation. This affects which function calls are 
+	 * detected as short method calls etc.
+	 * 
+	 * TODO: Compile output as actual class definitions (problem: we need to forbid inline classes, functions and 
+	 * expand "use"/"namespace" context for this).
+	 */
+	public function __construct($class = Template::class) {
+		$this->class = $class;
+	}
+	
 	/* (non-PHPdoc)
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
@@ -62,7 +77,8 @@ class TemplateCompiler implements PsrxCompiler {
 			return null;
 		};
 		
-		$shortMethodNames = $this->getShortMethodNames();
+		$accessibleMethods = $this->getAccessibleMethods();
+		
 		$code = '';	
 		// This is so IDEs don't report errors in the compiled files.
 		// TODO: Wrap compiled files in actual classes.
@@ -94,7 +110,7 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 					
 				case T_STRING:
-					if (in_array(strtolower($content), $shortMethodNames, true)) {
+					if (in_array(strtolower($content), $accessibleMethods, true)) {
 						$prevI = $prevIndex($i);
 						$nextI = $nextIndex($i);
 						
@@ -114,20 +130,30 @@ class TemplateCompiler implements PsrxCompiler {
 				default:
 					$code .= $content;
 			}
-		
 		}
 		
 		return $code;
 	}	
 	
-	/**
-	 * Override this in child classes to change methods that will be callable without an explicit "$this->" in 
-	 * templates.
-	 * 
-	 * @return array
-	 */
-	protected function getShortMethodNames() {
-		static $methods = ['tag', 'esc', 'import', 'render', 'out'];
-		return $methods;
+	protected function getAccessibleMethods() {
+		$class = $this->class;
+		
+		if (!isset(self::$classCache[$class])) {
+			$reflClass = new \ReflectionClass($class);
+			$methods = [];
+			
+			/* @var $reflMethod \ReflectionMethod */
+			foreach ($reflClass->getMethods() as $reflMethod) {
+				$methodName = $reflMethod->name;
+				
+				if (!$reflMethod->isStatic() && ($reflMethod->isPublic() || $reflMethod->isProtected()) && strpos($methodName, '__') !== 0) {
+					$methods[] = $methodName;	
+				}
+			}
+			
+			self::$classCache[$class] = $methods;
+		}	
+		
+		return self::$classCache[$class];
 	}
 }
