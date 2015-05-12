@@ -77,22 +77,50 @@ class TemplateCompiler implements PsrxCompiler {
 			return null;
 		};
 		
-		$accessibleMethods = $this->getAccessibleMethods();
+		$funcToMethod = $this->getFuncToMethod();
 		
 		$code = '';	
+		
 		// This is so IDEs don't report errors in the compiled files.
 		// TODO: Wrap compiled files in actual classes.
-		$code .= '<?php /* @var $this \Solver\Sparta\AbstractTemplate */ ?>';
+		$code .= '<?php /* @var $this ' . $this->class . ' */ ?>';
 		
 		foreach ($tokens as $i => $token) {
 			$type = $token[0];
 			$content = is_string($token) ? $token : $token[1];
 			
 			switch ($type) {
-				case T_CLOSE_TAG:			
+				// For forward compat when we compile templates as classes.
+				case T_TRAIT:			
+					throw new \Exception('Templates cannot contain a trait declaration, in file "' . $sourcePathname . '".');
+					break;
+					
+				// For forward compat when we compile templates as classes.
+				case T_INTERFACE:			
+					throw new \Exception('Templates cannot contain an interface declaration, in file "' . $sourcePathname . '".');
+					break;
+
+				// For forward compat when we compile templates as classes.					
+				case T_CLASS:	
+					$prevI = $prevIndex($i);
+					// We must allow Foo::class.
+					if ($prevI === null || $tokens[$prevI][0] !== T_DOUBLE_COLON) {		
+						throw new \Exception('Templates cannot contain a class declaration, in file "' . $sourcePathname . '".');
+					}
+					break;
+					
+				case T_CLOSE_TAG:
 					// We strip new lines here so they can be added to the next T_INLINE_HTML (PHP ignores new lines
 					// that follow a closing tag and we want to undo this).
-					$code .= preg_replace('/([\n\r]+)/', '', $content);	
+					if (preg_match('/([^\n\r]+)([\n\r]+)$/AD', $content, $matches)) {
+						$code .= $matches[1];
+						$nextI = $nextIndex($i);
+						if ($nextI === null || $tokens[$nextI][0] !== T_INLINE_HTML) {
+							$code .= '<?php $this->out(\'' . $matches[2] . '\', \'none\') ?>';	
+						}
+					} else {
+						$code .= $content;
+					}
 					break;
 					
 				case T_INLINE_HTML:
@@ -110,7 +138,9 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 					
 				case T_STRING:
-					if (in_array(strtolower($content), $accessibleMethods, true)) {
+					$funcName = strtolower($content); // We follow the case-insensitive semantics of PHP.
+					
+					if (isset($funcToMethod[$funcName])) {
 						$prevI = $prevIndex($i);
 						$nextI = $nextIndex($i);
 						
@@ -120,7 +150,8 @@ class TemplateCompiler implements PsrxCompiler {
 							$tokens[$prevI][0] !== T_OBJECT_OPERATOR &&
 							$tokens[$prevI][0] !== T_NS_SEPARATOR &&
 							$nextI !== null && $tokens[$nextI][0] === '(') {
-							$code .= '$this->';	
+							$code .= '$this->' . $funcToMethod[$funcName];	
+							break;
 						}
 					}
 					
@@ -135,7 +166,7 @@ class TemplateCompiler implements PsrxCompiler {
 		return $code;
 	}	
 	
-	protected function getAccessibleMethods() {
+	protected function getFuncToMethod() {
 		$class = $this->class;
 		
 		if (!isset(self::$classCache[$class])) {
@@ -145,9 +176,10 @@ class TemplateCompiler implements PsrxCompiler {
 			/* @var $reflMethod \ReflectionMethod */
 			foreach ($reflClass->getMethods() as $reflMethod) {
 				$methodName = $reflMethod->name;
+				$functionName = strtolower(preg_replace('/[A-Z]/', '_$0', $methodName));
 				
 				if (!$reflMethod->isStatic() && ($reflMethod->isPublic() || $reflMethod->isProtected()) && strpos($methodName, '__') !== 0) {
-					$methods[] = $methodName;	
+					$methods[$functionName] = $methodName;	
 				}
 			}
 			

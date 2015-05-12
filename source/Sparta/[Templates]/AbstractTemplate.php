@@ -279,7 +279,8 @@ abstract class AbstractTemplate {
 	}
 	
 	/**
-	 * Use this function to send content to the output bypassing the default escaping mechanism.
+	 * Use this function to send content to the output with a specific format encoding, bypassing the auto-escape
+	 * mechanism.
 	 * 
 	 * @param mixed $value
 	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
@@ -295,13 +296,14 @@ abstract class AbstractTemplate {
 	}
 
 	/**
-	 * "Tag" is a light system for registering functions as reusable blocks of content, and then calling them in a format
-	 * well suited for templates. It mimics template parser systems, without the parser overhead. There are few benefits
-	 * over plain function calls:
+	 * "Tag" is a light system for registering functions as reusable blocks of content, and then calling them in a 
+	 * format well suited for templates. There are few benefits over plain function calls:
 	 * 
 	 * - You set parameters by name (easy to extend & add parameters for big templates, as parameter order doesn't
 	 * matter).
-	 * - You can set parameters from content, i.e. "content parameters" using the "@" syntax (see below).
+	 * - You can set parameters from content, i.e. "content parameters" using the "@" syntax (see below), and autoescape
+	 * will function properly while capturing parameter content (if you try to use ob_* yourself, autoescape won't
+	 * work correctly).
 	 * - The system is designed to look like HTML tags (as much as possible), hence the name, in order to be intuitive
 	 * to front-end developers.
 	 * 
@@ -313,11 +315,11 @@ abstract class AbstractTemplate {
 	 * <? tag('layout', function ($title = '', $head = '', $body = '') { ?>
 	 *		<html>
 	 *			<head>
-	 *				<title><?= $esc($title) ?></title>
-	 *				<?= $head ?>
+	 *				<title><?= $title ?></title>
+	 *				<? out($head, 'none') ?>
 	 *			</head>
 	 *			<body>
-	 *				<?= $body ?>
+	 *				<? out($body, 'none') ?>
 	 *			</body>
 	 *		</html>
 	 * <? }) // layout ?>
