@@ -34,6 +34,13 @@ abstract class AbstractTemplate {
 	private $autoescapeFormat = 'html';
 	
 	/**
+	 * Implements autoescaping, should be passed to ob_start($here, 1);
+	 * 
+	 * @var \Closure
+	 */
+	private $autoescapeHandler;
+	
+	/**
 	 * A dict container with custom data as passed by the page controller.
 	 * 
 	 * @var PageModel
@@ -157,15 +164,16 @@ abstract class AbstractTemplate {
 		$format = & $this->autoescapeFormat;
 		$bypass = & $this->autoescapeBypass;
 		
-		$outputHandler = function ($buffer, $phase) use (& $format, & $bypass) {
+		$this->autoescapeHandler = function ($buffer) use (& $format, & $bypass) {
 			if ($bypass) {
 				return $buffer;
 			} else {
-				return $this->__esc__($buffer, $format);
+				if ($format === 'html') return \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
+				if ($format === 'js') return \json_encode($value, \JSON_UNESCAPED_UNICODE);
 			}
 		};
 		
-		ob_start($outputHandler, 1);
+		ob_start($this->autoescapeHandler, 1);
 		$result = $this->render($this->templateId);
 		ob_end_flush();
 		
@@ -423,22 +431,20 @@ abstract class AbstractTemplate {
 					}
 				} else {
 					// Param open.
-					list($handler, $stream) = $this->getOutputHandler();
-					$paramStack[] = [$name, $stream];
-					\ob_start($handler, 1);
+					$paramStack[] = $name;
+					\ob_start(); // For buffering.
+					\ob_start($this->autoescapeHandler, 1); // For autoescaping.
 				}
 			} else { 
 				// Param close.
-				list($name2, $stream) = \array_pop($paramStack);
+				$name2 = \array_pop($paramStack);
 				
 				if ($name !== null && $name2 !== $name) {
 					throw new \Exception('Parameter end mismatch: closing "' . $name . '", expecting to close "' . $name2 . '".');
 				}
 				
-				\ob_end_flush();
-				\rewind($stream);
-				$funcStack[\count($funcStack) - 1][1][$name] = \stream_get_contents($stream);
-				\fclose($stream);
+				\ob_end_flush(); // Closing autoescape handler.
+				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean();
 			}
 		} else {
 			if ($open) { 
@@ -492,44 +498,6 @@ abstract class AbstractTemplate {
 		}
 		
 		return $params;
-	}
-	
-	/**
-	 * To allow autoescaping in tags, we need to pass this handler when buffering output for tag parameters.
-	 * 
-	 * However because we want the callback to be invoked immediately we can't use PHP's built-in output buffering.
-	 * 
-	 * So instead of:
-	 * 
-	 * <code>
-	 * ob_start(); ... $out = ob_get_clean();
-	 * </code>
-	 * 
-	 * We should do:
-	 * 
-	 * <code>
-	 * ob_start($handler, 1); ... ob_end_flush(); rewind($stream); $out = stream_get_contents($stream); fclose($stream);
-	 * 
-	 * @return array
-	 * tuple...
-	 * - handler: function;
-	 * - stream: resource;
-	 */
-	protected function getOutputHandler() {
-		$format = & $this->autoescapeFormat;
-		$bypass = & $this->autoescapeBypass;
-		$stream = fopen('php://memory', 'rw');
-		
-		$handler = function ($buffer, $phase) use (& $format, & $bypass, $stream) {
-			if ($bypass) {
-				fwrite($stream, $buffer);
-			} else {
-				fwrite($stream, $this->__esc__($buffer, $format));
-			}
-			return '';
-		};
-		
-		return [$handler, $stream];
 	}
 	
 	/**

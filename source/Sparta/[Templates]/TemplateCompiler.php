@@ -29,6 +29,7 @@ use Solver\Radar\PsrxCompiler;
  * Note the output preserves the original source code lines, so error reports will give the correct line.
  */
 class TemplateCompiler implements PsrxCompiler {
+	protected static $hasShortTags = null;
 	protected static $classCache = [];
 	protected $class;
 	
@@ -48,12 +49,7 @@ class TemplateCompiler implements PsrxCompiler {
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
 	public function compile($sourcePathname, $symbolName) {
-		// Using ini_get('short_open_tags') is not reliable for some reason.
-		$hasShortTags = eval('ob_start(); ?><? ob_end_clean(); return true ?><?php ob_end_clean();'); 
-		
-		if (!$hasShortTags) {
-			throw new \Exception('Short open tags must be enabled during compilation.');
-		}
+		if (!$this->hasShortTags()) throw new \Exception('Short open tags must be enabled during compilation.');
 		
 		$tokens = token_get_all(file_get_contents($sourcePathname));
 		$tokenCount = count($tokens);
@@ -223,5 +219,14 @@ class TemplateCompiler implements PsrxCompiler {
 		}
 		
 		return strlen(preg_replace('/[^\n]/', '', $code)) + 1;
+	}
+	
+	protected function hasShortTags() {
+		if (self::$hasShortTags === null) {
+			// Using ini_get('short_open_tags') is not reliable for some reason.
+			self::$hasShortTags = (bool) eval('ob_start(); ?><? ob_end_clean(); return true ?><?php ob_end_clean();'); 
+		}
+		
+		return self::$hasShortTags;
 	}
 }
