@@ -25,13 +25,13 @@ abstract class AbstractTemplate {
 	 * 
 	 * @var bool
 	 */
-	private $autoEscBypass = false;
+	private $autoescapeBypass = false;
 	
 	/**
 	 * Sets the autoescape format for templates (for use in templates, see setAutoEsc()).
 	 * @var string
 	 */
-	private $autoEscFormat = 'html';
+	private $autoescapeFormat = 'html';
 	
 	/**
 	 * A dict container with custom data as passed by the page controller.
@@ -154,14 +154,14 @@ abstract class AbstractTemplate {
 		$scope = $scope->bindTo($this, get_class($this));
 		$this->scope = $scope;
 		
-		$format = & $this->autoEscFormat;
-		$bypass = & $this->autoEscBypass;
+		$format = & $this->autoescapeFormat;
+		$bypass = & $this->autoescapeBypass;
 		
 		$outputHandler = function ($buffer, $phase) use (& $format, & $bypass) {
 			if ($bypass) {
 				return $buffer;
 			} else {
-				return $this->esc($buffer, $format);
+				return $this->__esc__($buffer, $format);
 			}
 		};
 		
@@ -239,63 +239,41 @@ abstract class AbstractTemplate {
 	/**
 	 * Sets the auto-escape format for templates (by default HTML).
 	 * 
-	 * @param string $format
+	 * @param null|string $format
+	 * Autoescape format or null not to autoescape.
+	 * TODO: Null is subtle for disabling. Consider autoescape_on($format) autoescape_off() ?
 	 */
-	protected function setAutoEsc($format) {
-		$this->autoEscFormat = $format;
+	protected function autoescape($format) {
+		if ($format === null) $format = 'none';
+		$this->autoescapeFormat = $format;
 	}
 	
-	/**
-	 * Escapes strings for HTML (and other targets). The assumed document charset is UTF-8.
-	 * 
-	 * For HTML, this method will gracefully return an empty string if you pass null (which happens when fetching a
-	 * non-existing key from $model).
-	 * 
-	 * @param mixed $value
-	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
-	 * 
-	 * @param string $format
-	 * Optional (default = 'html'). Escape formatting, supported values: 'html', 'js', 'none'. None returns the value
-	 * unmodified, and is only included to make your code more readable when you apply escaping (or not) conditionaly.
-	 */
-	protected function esc($value, $format = 'html') {
-		switch ($format) {
-			case 'html':
-				if ($value === null) return '';
-				return \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
-				break;
-			
-			case 'js':
-				return \json_encode($value, \JSON_UNESCAPED_UNICODE);
-				break;
-			
-			case 'none':
-				return $value;
-				break;
-				
-			default:
-				throw new \Exception('Unknown escape format "' . $format . '".');
-		}
+	// TODO: DOCUMENT.
+	protected function encodeHtml($value) {
+		return $this->__esc__($value, 'html');
 	}
 	
-	/**
-	 * Use this function to send content to the output with a specific format encoding, bypassing the auto-escape
-	 * mechanism.
-	 * 
-	 * @param mixed $value
-	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
-	 * 
-	 * @param string $format
-	 * Same formats as exposed by method esc().
-	 */
-	protected function out($value, $format = 'html') {
-		if ($format !== 'none') $value = $this->esc($value, $format);
-		$this->autoEscBypass = true;
-		echo $value;
-		$this->autoEscBypass = false;
+	// TODO: DOCUMENT.
+	protected function encodeJs($value) {
+		return $this->__esc__($value, 'js');
+	}
+	
+	// TODO: DOCUMENT.
+	protected function echoRaw($value) {
+		$this->__out__($value, 'none');
+	}
+	
+	// TODO: DOCUMENT.
+	protected function echoHtml($value) {
+		$this->__out__($value, 'html');
+	}
+	
+	// TODO: DOCUMENT.
+	protected function echoJs($value) {
+		$this->__out__($value, 'js');
 	}
 
-	/**
+	/** 
 	 * "Tag" is a light system for registering functions as reusable blocks of content, and then calling them in a 
 	 * format well suited for templates. There are few benefits over plain function calls:
 	 * 
@@ -316,10 +294,10 @@ abstract class AbstractTemplate {
 	 *		<html>
 	 *			<head>
 	 *				<title><?= $title ?></title>
-	 *				<? out($head, 'none') ?>
+	 *				<? echo_raw($head) ?>
 	 *			</head>
 	 *			<body>
-	 *				<? out($body, 'none') ?>
+	 *				<? echo_raw($body) ?>
 	 *			</body>
 	 *		</html>
 	 * <? }) // layout ?>
@@ -376,10 +354,13 @@ abstract class AbstractTemplate {
 	 * <code>
 	 * <? $result = tag('layout/', [...]) ?>
 	 * </code>
+	 * 
 	 */ 
 	protected function tag($name, $params = null) {
-		// TODO: Refactor this function into smaller specialized ones; allow TemplateCompiler to call the specialized ones when a pattern is detected (performance optimization).
 		// TODO: Detect a tag left unclosed at the end of the document (currently silently does nothing).
+		// TODO: Refactor this function into smaller specialized ones; allow TemplateCompiler to call the specialized ones when a pattern is detected (performance optimization).
+		// TODO: Possible specialized methods to add? func aliases:
+	 	// tag_define() tag() tag_begin() tag_end() attr() attr_begin() attr_end().
 		
 		$tagParamCount = \func_num_args();
 		// TODO: Make this scoped (like say Java/C# imports) to the file calling $import(), allow up-scope imports if explicitly specified (i.e. "get the imports this import is including").
@@ -535,15 +516,15 @@ abstract class AbstractTemplate {
 	 * - stream: resource;
 	 */
 	protected function getOutputHandler() {
-		$format = & $this->autoEscFormat;
-		$bypass = & $this->autoEscBypass;
+		$format = & $this->autoescapeFormat;
+		$bypass = & $this->autoescapeBypass;
 		$stream = fopen('php://memory', 'rw');
 		
 		$handler = function ($buffer, $phase) use (& $format, & $bypass, $stream) {
 			if ($bypass) {
 				fwrite($stream, $buffer);
 			} else {
-				fwrite($stream, $this->esc($buffer, $format));
+				fwrite($stream, $this->__esc__($buffer, $format));
 			}
 			return '';
 		};
@@ -552,12 +533,67 @@ abstract class AbstractTemplate {
 	}
 	
 	/**
-	 * Return a list of local variables to extracted into the scope of the template that'll run (by reference).
+	 * Return a list of local variables to extracted into the scope of the template that'll run (optionally by
+	 * reference). Override in child classes to change these variables.
 	 */
 	protected function getLocalVars() {
 		return [
 			'model' => & $this->model,
 			'log' => & $this->log,
 		];
+	}
+		
+	/**
+	 * TODO: REMOVE.
+	 * 
+	 * Escapes strings for HTML (and other targets). The assumed document charset is UTF-8.
+	 * 
+	 * For HTML, this method will gracefully return an empty string if you pass null (which happens when fetching a
+	 * non-existing key from $model).
+	 * 
+	 * @param mixed $value
+	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
+	 * 
+	 * @param string $format
+	 * Optional (default = 'html'). Escape formatting, supported values: 'html', 'js', 'none'. None returns the value
+	 * unmodified, and is only included to make your code more readable when you apply escaping (or not) conditionaly.
+	 */
+	protected function __esc__($value, $format = 'html') {
+		switch ($format) {
+			case 'html':
+				if ($value === null) return '';
+				return \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
+				break;
+			
+			case 'js':
+				return \json_encode($value, \JSON_UNESCAPED_UNICODE);
+				break;
+			
+			case 'none':
+				return $value;
+				break;
+				
+			default:
+				throw new \Exception('Unknown escape format "' . $format . '".');
+		}
+	}
+	
+	/**
+	 * TODO: REMOVE.
+	 * 
+	 * Use this function to send content to the output with a specific format encoding, bypassing the auto-escape
+	 * mechanism.
+	 * 
+	 * @param mixed $value
+	 * A value to output (typically a string, but some formats, like "js" support also arrays and objects).
+	 * 
+	 * @param string $format
+	 * Same formats as exposed by method esc().
+	 */
+	protected function __out__($value, $format = 'html') {
+		if ($format !== 'none') $value = $this->__esc__($value, $format);
+		$this->autoescapeBypass = true;
+		echo $value;
+		$this->autoescapeBypass = false;
 	}
 }

@@ -14,13 +14,18 @@
 
 /*
  * This file exists only so your IDE will know how to treat short method calls (i.e. without $this->) in templates.
- * The actual implementations of the functions to follow are the identically named methods of class AbstractTemplate.
+ * The actual implementations of the functions to follow are the same-named methods of class AbstractTemplate.
  * 
- * TODO: Copy method docs to these functions.
+ * Due to naming convention differences, transformation is applied for ex. foo_bar_baz() maps to $this->fooBarBaz().
+ * 
+ * TODO: DOCUMENT.
  */
  
 function tag($name, $params = null) {}
-function esc($value, $format = 'html') {}
-function out($value, $format = 'html') {}
+function encode_html($value) {}
+function encode_js($value) {}
+function echo_raw($value) {}
+function echo_html($value) {}
+function echo_js($value) {}
 function render($templateId) {}
 function import($templateId) {}

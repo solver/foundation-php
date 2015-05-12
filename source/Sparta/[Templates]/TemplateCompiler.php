@@ -77,6 +77,7 @@ class TemplateCompiler implements PsrxCompiler {
 			return null;
 		};
 		
+		// TODO: Verify here $this->class is instanceof \Solver\Sparta\Template (we accept only this and subclasses of it).
 		$funcToMethod = $this->getFuncToMethod();
 		
 		$code = '';	
@@ -116,7 +117,7 @@ class TemplateCompiler implements PsrxCompiler {
 						$code .= $matches[1];
 						$nextI = $nextIndex($i);
 						if ($nextI === null || $tokens[$nextI][0] !== T_INLINE_HTML) {
-							$code .= '<?php $this->out(\'' . $matches[2] . '\', \'none\') ?>';	
+							$code .= '<?php $this->echoRaw(\'' . $matches[2] . '\') ?>';	
 						}
 					} else {
 						$code .= $content;
@@ -130,7 +131,7 @@ class TemplateCompiler implements PsrxCompiler {
 						$content = preg_replace('/([^\n\r]+)/', '', $tokens[$prevI][1]) . $content;
 					}
 					
-					$code .= '<?php $this->out(\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $content) . '\', \'none\') ?>';
+					$code .= '<?php $this->echoRaw(\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $content) . '\') ?>';
 					break;
 					
 				case T_OPEN_TAG:
@@ -166,6 +167,7 @@ class TemplateCompiler implements PsrxCompiler {
 		return $code;
 	}	
 	
+	// TODO: Move this method to the target class instead to it can control which methods get included and which don't.
 	protected function getFuncToMethod() {
 		$class = $this->class;
 		
