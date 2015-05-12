@@ -22,7 +22,9 @@ use Solver\Radar\PsrxCompiler;
  * - Turns on auto-escape in format 'html' by default and converts inline HTML to $this->out($inline, 'raw') to preserve
  * their content.
  * - New lines after a closed PHP tag won't be ignored, but taken into account (PHP ignores them).
- * - Converts short open tags to full tags, so it doesn't matter what the PHP.ini setting is when running a template.
+ * - Converts short open tags to full tags, so it doesn't matter what the PHP.ini setting is when running a template. It
+ * also promotes safe use of short tags by forbidding ambiguous syntax like <?xml ?>, instead you must have a space
+ * after opening a short tag: <? xml ?> or escape it if you want to output an XML directive: <?= "<?xml ?>" ?>
  * 
  * Note the output preserves the original source code lines, so error reports will give the correct line.
  */
@@ -46,11 +48,14 @@ class TemplateCompiler implements PsrxCompiler {
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
 	public function compile($sourcePathname, $symbolName) {
-		$shortOpenTags = ini_get('short_open_tags');
-		ini_set('short_open_tags', true); // We need this during tokenization to detect short tags.
-		$tokens = token_get_all(file_get_contents($sourcePathname));
-		ini_set('short_open_tags', $shortOpenTags);
+		// Using ini_get('short_open_tags') is not reliable for some reason.
+		$hasShortTags = eval('ob_start(); ?><? ob_end_clean(); return true ?><?php ob_end_clean();'); 
 		
+		if (!$hasShortTags) {
+			throw new \Exception('Short open tags must be enabled during compilation.');
+		}
+		
+		$tokens = token_get_all(file_get_contents($sourcePathname));
 		$tokenCount = count($tokens);
 		
 		$nextIndex = function ($tokenIndex) use ($tokens, $tokenCount) {
@@ -80,12 +85,13 @@ class TemplateCompiler implements PsrxCompiler {
 		// TODO: Verify here $this->class is instanceof \Solver\Sparta\Template (we accept only this and subclasses of it).
 		$funcToMethod = $this->getFuncToMethod();
 		
-		$code = '';	
+		$code = '';
 		
 		// This is so IDEs don't report errors in the compiled files.
 		// TODO: Wrap compiled files in actual classes.
 		$code .= '<?php /* @var $this ' . $this->class . ' */ ?>';
 		
+		// TODO: Add ability to count and report the line of a token after the fact on error.
 		foreach ($tokens as $i => $token) {
 			$type = $token[0];
 			$content = is_string($token) ? $token : $token[1];
@@ -93,12 +99,12 @@ class TemplateCompiler implements PsrxCompiler {
 			switch ($type) {
 				// For forward compat when we compile templates as classes.
 				case T_TRAIT:			
-					throw new \Exception('Templates cannot contain a trait declaration, in file "' . $sourcePathname . '".');
+					throw new \Exception('Templates cannot contain a trait declaration' . $this->getContext($sourcePathname, $tokens, $i));
 					break;
 					
 				// For forward compat when we compile templates as classes.
 				case T_INTERFACE:			
-					throw new \Exception('Templates cannot contain an interface declaration, in file "' . $sourcePathname . '".');
+					throw new \Exception('Templates cannot contain an interface declaration' . $this->getContext($sourcePathname, $tokens, $i));
 					break;
 
 				// For forward compat when we compile templates as classes.					
@@ -106,7 +112,9 @@ class TemplateCompiler implements PsrxCompiler {
 					$prevI = $prevIndex($i);
 					// We must allow Foo::class.
 					if ($prevI === null || $tokens[$prevI][0] !== T_DOUBLE_COLON) {		
-						throw new \Exception('Templates cannot contain a class declaration, in file "' . $sourcePathname . '".');
+						throw new \Exception('Templates cannot contain a class declaration' . $this->getContext($sourcePathname, $tokens, $i));
+					} else {
+						$code .= $content;
 					}
 					break;
 					
@@ -135,7 +143,18 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 					
 				case T_OPEN_TAG:
-					$code .= $content === '<?' ? '<?php ' : $content;
+					if ($content === '<?') {
+						$nextI = $i + 1;
+						
+						// We want to avoid situations like <?xml...
+						if (isset($tokens[$nextI]) && $tokens[$nextI][0] === T_STRING) {
+							throw new \Exception('Ambiguous short tag syntax "<?' . $tokens[$nextI][1] . '...", use a space or a new line after the short tag to disambiguate: "<? ' . $tokens[$nextI][1] . '..."' . $this->getContext($sourcePathname, $tokens, $i));
+						}
+						
+						$code .= '<?php ';
+					} else {
+						$code .= $content;
+					}
 					break;
 					
 				case T_STRING:
@@ -189,5 +208,20 @@ class TemplateCompiler implements PsrxCompiler {
 		}	
 		
 		return self::$classCache[$class];
+	}
+	
+	protected function getContext($sourcePathname, $tokens, $i) {
+		return ', in file "' . $sourcePathname . '", line ' . $this->getLineOf($tokens, $i) . '.';
+	}
+	
+	protected function getLineOf($tokens, $i) {
+		$code = '';
+		
+		foreach ($tokens as $j => $token) {
+			if ($j == $i) break;
+			$code .= is_array($token) ? $token[1] : '';
+		}
+		
+		return strlen(preg_replace('/[^\n]/', '', $code)) + 1;
 	}
 }

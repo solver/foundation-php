@@ -13,19 +13,51 @@
  */
 
 /*
- * This file exists only so your IDE will know how to treat short method calls (i.e. without $this->) in templates.
- * The actual implementations of the functions to follow are the same-named methods of class AbstractTemplate.
+ * This file won't be loaded by PHP at runtime. It exists, so your IDE will know how to treat short method calls (i.e.
+ * without $this->) in templates. The actual code invoked is a correspondingly named method of class AbstractTemplate.
  * 
- * Due to naming convention differences, transformation is applied for ex. foo_bar_baz() maps to $this->fooBarBaz().
+ * Due to naming convention differences, transformation is applied for ex. function foo_bar_baz() maps to method 
+ * AbstractTemplate::fooBarBaz().
  * 
  * TODO: DOCUMENT.
  */
  
+/**
+ * @see \Solver\Sparta\AbstractTemplate::tag()
+ */
 function tag($name, $params = null) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::encodeHtml()
+ */
 function encode_html($value) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::encodeJs()
+ */
 function encode_js($value) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::echoRaw()
+ */
 function echo_raw($value) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::echoHtml()
+ */
 function echo_html($value) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::echoJs()
+ */
 function echo_js($value) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::render()
+ */
 function render($templateId) {}
+
+/**
+ * @see \Solver\Sparta\AbstractTemplate::import()
+ */
 function import($templateId) {}
