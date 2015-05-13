@@ -19,7 +19,13 @@ use Solver\Radar\Radar;
  * A simple host for rendering templates. The reason there are separate AbstractTemplate & Template classes is to hide
  * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
-abstract class AbstractTemplate {	
+abstract class AbstractTemplate {
+	/**
+	 * We keep track of ob_start() nesting level so when we throw an exception we don't leave output buffer levels
+	 * hanging (which causes various odd side effects).
+	 */
+	protected $obLevel = 0;
+	
 	/**
 	 * A dict container with custom data as passed by the page controller.
 	 * 
@@ -134,35 +140,41 @@ abstract class AbstractTemplate {
 	 * Anything returned from the template file.
 	 */
 	public function __invoke(PageModel $model, PageLog $log) {
-		/*
-		 * Setup calling scope for this template (and embeded rendered/imported templates).
-		 */
-		
-		$this->model = $model;
-		$this->log = $log;
-		
-		$__localVars__ = $this->getLocalVars();
-		
-		/* @var $scope \Closure */
-		$scope = function ($__path__) use ($__localVars__) {
-			extract($__localVars__, EXTR_REFS);
-			return require $__path__;
+		try {
+			/*
+			 * Setup calling scope for this template (and embeded rendered/imported templates).
+			 */
 			
-		};
+			$this->model = $model;
+			$this->log = $log;
+			
+			$__localVars__ = $this->getLocalVars();
+			
+			/* @var $scope \Closure */
+			$scope = function ($__path__) use ($__localVars__) {
+				extract($__localVars__, EXTR_REFS);
+				return require $__path__;
 				
-		// Hide private properties from the scope (this class is abstract and subclassed by Template, so Template is
-		// the topmost class possible to instantiate). If you extend Template and override the methods, don't forget
-		// to rebind the scope to the your class.
-		$scope = $scope->bindTo($this, get_class($this));
-		$this->scope = $scope;
-				
-		$this->autoencodeHandler = $this->getAutoencodeHandler();
-		
-		\ob_start($this->autoencodeHandler, 1);
-		$result = $this->render($this->templateId);
-		\ob_end_flush();
-		
-		return $result;
+			};
+					
+			// Hide private properties from the scope (this class is abstract and subclassed by Template, so Template is
+			// the topmost class possible to instantiate). If you extend Template and override the methods, don't forget
+			// to rebind the scope to the your class.
+			$scope = $scope->bindTo($this, get_class($this));
+			$this->scope = $scope;
+					
+			$this->autoencodeHandler = $this->getAutoencodeHandler();
+			
+			\ob_start($this->autoencodeHandler, 1);
+			$this->obLevel += 1;
+			$result = $this->render($this->templateId);
+			\ob_end_flush();
+			$this->obLevel -= 1;
+			
+			return $result;
+		} finally {
+			while ($this->obLevel--) ob_end_clean();
+		}
 	}	
 	
 	/**
@@ -183,11 +195,25 @@ abstract class AbstractTemplate {
 		}
 		
 		if ($path === null) {
-			throw new \Exception('Template "' . $templateId . '" not found.');
+			$this->abortWithError('Template "' . $templateId . '" not found.');
 		}
 		
+		$tagFuncStackDepth = \count($this->tagFuncStack);
+		$tagParamStackDepth = \count($this->tagParamStack);
 		$scope = $this->scope;
+		
 		$result = $scope($path);
+		
+		if ($tagFuncStackDepth < \count($this->tagFuncStack)) {
+			list($func, $params) = \array_pop($this->tagFuncStack);
+			$this->abortWithError('Tag function "' . $func . '" was opened but never closed, in templateId ' . $templateId . '.');
+		}
+		
+		if ($tagFuncStackDepth < \count($this->tagParamStack)) {
+			list($func, $params) = \array_pop($this->tagFuncStack);
+			$param = \array_pop($this->tagFuncStack);
+			$this->abortWithError('Parameter "@' . $param . '" for tag function "' . $func . '" was opened but never closed, in templateId ' . $templateId . '.');
+		}
 		
 		// Used if the same id is import()-ed a second time.
 		$this->renderedTemplateIds[$templateId] = $result;
@@ -224,8 +250,13 @@ abstract class AbstractTemplate {
 		if (isset($this->renderedTemplateIds[$templateId])) return;
 		
 		\ob_start();
+		$this->obLevel += 1;
+		
 		$result = $this->render($templateId);
+		
 		\ob_end_clean();
+		$this->obLevel -= 1;
+		
 		return $result;
 	}
 	
@@ -242,7 +273,7 @@ abstract class AbstractTemplate {
 			'json' => 2,
 		];
 		
-		if (!isset($labels[$format])) throw new \Exception('Unknown encoding format "' . $format . '".');
+		if (!isset($labels[$format])) $this->abortWithError('Unknown encoding format "' . $format . '".');
 		$this->autoencodeFormat = $labels[$format];
 	}
 	
@@ -391,46 +422,48 @@ abstract class AbstractTemplate {
 	 */ 
 	protected function tag($name, $params = null) {
 		// TODO: Detect a tag left unclosed at the end of the document (currently silently does nothing).
-		// TODO: Refactor this function into smaller specialized ones; allow TemplateCompiler to call the specialized ones when a pattern is detected (performance optimization).
-		// TODO: Possible specialized methods to add? func aliases:
-	 	// tag_define() tag() tag_begin() tag_end() attr() attr_begin() attr_end().
 		
-		$tagParamCount = \func_num_args();
 		// TODO: Make this scoped (like say Java/C# imports) to the file calling $import(), allow up-scope imports if explicitly specified (i.e. "get the imports this import is including").
 		$funcStack = & $this->tagFuncStack;
 		$paramStack = & $this->tagParamStack;
 		$funcs = & $this->tagFuncs;
 		$result = null;
+		
+		/*
+		 * Interpret arguments.
+		 */
 				
+		$tagParamCount = \func_num_args();
+		
 		// Register a new template function.
 		if ($params instanceof \Closure) {
-			if (isset($funcs[$name])) throw new \Exception('Template function named "' . $name . '" was already defined.');
+			if (isset($funcs[$name])) $this->abortWithError('Tag function named "' . $name . '" was already declared.');
 			$funcs[$name] = $params;
 			return;
 		}
 		
 		// Self-closing tag <foo/>.
 		if ($name[\strlen($name) - 1] === '/') {
-			$selfClose = true;
+			$isSelfClosing = true;
 			$name = \substr($name, 0, -1);
 		} else {
-			$selfClose = false;
+			$isSelfClosing = false;
 		}
 		
 		// Closing tag </foo> vs. opening tag <foo>.
 		if ($name[0] === '/') {
-			$open = false; 
+			$isOpening = false; 
 			$name = \substr($name, 1);
 		} else {
-			$open = true;
+			$isOpening = true;
 		}
 		
 		// Function parameter tag <@foo> vs. function tag <foo>.
 		if ($name[0] === '@') {
-			$param = true; 
+			$isParam = true;
 			$name = \substr($name, 1);
 		} else {
-			$param = false;
+			$isParam = false;
 		}
 		
 		// Shortcut <function@param> detection.
@@ -442,46 +475,58 @@ abstract class AbstractTemplate {
 			$shortcutParam = null;
 		}
 		
-		if ($shortcutParam && !$open) {
+		/*
+		 * Main logic.
+		 */
+				
+		if ($shortcutParam && !$isOpening) {
 			$this->tag('/@' . $shortcutParam);
 		}
 		
-		if ($param) {
-			if ($open) {
-				if ($tagParamCount == 2) {
-					if (!$selfClose) {
-						throw new \Exception('When specifying a parameter value as a second parameter of $tag(), the parameter tag should be self-closing.');
+		if ($isParam) {
+			if ($isOpening) {
+				$lastFuncStackId = \count($funcStack) - 1;
+						
+				if ($lastFuncStackId < 0) {
+					throw new \exception('Opening parameter "@' . $name . '" without being in a tag function context.');
+				}
+				
+				if ($tagParamCount > 1) {
+					if (!$isSelfClosing) {
+						$this->abortWithError('When specifying a parameter value as a second parameter of $tag(), the parameter tag should be self-closing.');
 					} else {
-						$funcStack[\count($funcStack) - 1][1][$name] = $params;
+						$funcStack[$lastFuncStackId][1][$name] = $params;
 					}
 				} else {
 					// Param open.
 					$paramStack[] = $name;
 					\ob_start(); // For buffering to a string.
 					\ob_start($this->autoencodeHandler, 1); // For autoescaping.
+					$this->obLevel += 2;
 				}
 			} else { 
 				// Param close.
-				$name2 = \array_pop($paramStack);
+				$nameOnStack = \array_pop($paramStack);
 				
-				if ($name !== null && $name2 !== $name) {
-					throw new \Exception('Parameter end mismatch: closing "' . $name . '", expecting to close "' . $name2 . '".');
+				if ($name !== null && $nameOnStack !== $name) {
+					$this->abortWithError('Parameter end mismatch: closing "' . $name . '", expecting to close "' . $nameOnStack . '".');
 				}
 				
 				\ob_end_flush(); // Closing autoencode handler.
 				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean(); // Grab from buffer.
+				$this->obLevel -= 2;
 			}
 		} else {
-			if ($open) { 
+			if ($isOpening) { 
 				// Function call open.
-				if (!isset($funcs[$name])) throw new \Exception('Undefined template function "' . $name . '".');
+				if (!isset($funcs[$name])) $this->abortWithError('Undefined template function "' . $name . '".');
 				$funcStack[] = [$name, $params === null ? [] : $params];
 			} else { 
 				// Function call close.
 				$func = \array_pop($funcStack);
 		
 				if ($name !== null && $func[0] !== $name) {
-					throw new \Exception('Template function end mismatch: closing "' . $name . '", expecting to close "' . $func[0] . '".');
+					$this->abortWithError('Template function end mismatch: closing "' . $name . '", expecting to close "' . $func[0] . '".');
 				}
 				
 				$funcName = $func[0];
@@ -492,11 +537,11 @@ abstract class AbstractTemplate {
 			}
 		}
 		
-		if ($shortcutParam && $open) {
+		if ($shortcutParam && $isOpening) {
 			$this->tag('@' . $shortcutParam);
 		}
 		
-		if ($selfClose && !$param) {
+		if ($isSelfClosing && !$isParam) {
 			$result = $this->tag('/' . $name);
 		}
 		
@@ -504,6 +549,7 @@ abstract class AbstractTemplate {
 	}
 	
 	private function tagGetFunctionParams($funcName, $funcImpl, $funcParamDict) {
+		
 		$reflFunc = new \ReflectionFunction($funcImpl);
 		$params = [];
 		
@@ -513,13 +559,25 @@ abstract class AbstractTemplate {
 			
 			if (\key_exists($paramName, $funcParamDict)) {
 				$params[] = $funcParamDict[$paramName];
+				unset($funcParamDict[$paramName]);
 			} else {
 				if ($reflParam->isOptional()) {
 					$params[] = $reflParam->getDefaultValue();
 				} else {
-					throw new \Exception('Required parameter "' . $paramName . '" for template function "' . $funcName . '" is missing.');
+					$paramStack = & $this->tagParamStack;
+					$paramStackLastIndex = \count($paramStack) - 1;
+					
+					if ($paramStackLastIndex > -1 && $paramStack[$paramStackLastIndex] === $paramName) {
+						$this->abortWithError('Required parameter "@' . $paramName . '" for tag function "' . $funcName . '" was opened but never closed.');
+					} else {
+						$this->abortWithError('Parameter "@' . $paramName . '" for tag function "' . $funcName . '" is missing.');
+					}
 				}
 			}
+		}
+		
+		if ($funcParamDict) {
+			$this->abortWithError('One or more unknown parameters were passed to tag function "' . $funcName . '": "@' . \implode('", "@', \array_keys($funcParamDict)) . '".');
 		}
 		
 		return $params;
@@ -548,8 +606,12 @@ abstract class AbstractTemplate {
 				case 2 /* json   */:
 					return \json_encode($value, \JSON_UNESCAPED_UNICODE);
 				default:
-					throw new \Exception('Unknown autoencode format code ' . $format . '.');
+					$this->abortWithError('Unknown autoencode format code ' . $format . '.');
 			}
 		};
+	}
+	
+	protected function abortWithError($message) {
+		throw new \Exception($message);
 	}
 }

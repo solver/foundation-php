@@ -229,4 +229,17 @@ class TemplateCompiler implements PsrxCompiler {
 		
 		return self::$hasShortTags;
 	}
+	
+	private function tagNameAnalysis($name) {
+		// TODO: This method is not used right now, it analyzes tag($name) strings, possible future optimization.
+		
+		preg_match('#(/)?(@)?(\w+)(@(\w+))?(/)?$#AD', $name, $matches);
+		$open = $matches[1] === '';
+		$param = $matches[2] !== '';
+		$name = $matches[3];
+		$shortcutParam = isset($matches[5]) ? $matches[5] : null;	
+		$selfClose = isset($matches[6]);
+		
+		return [$name, $open, $param, $shortcutParam, $selfClose];
+	}
 }

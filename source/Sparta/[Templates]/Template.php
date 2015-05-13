@@ -14,8 +14,8 @@
 namespace Solver\Sparta;
 
 /**
- * This class existing to hide the private properties of the parent from templates.
+ * This class exists to hide the private properties of the parent from templates.
  * 
  * See the parent class for description.
  */
-class Template extends AbstractTemplate {}
+class Template extends AbstractTemplate implements PageView  {}
