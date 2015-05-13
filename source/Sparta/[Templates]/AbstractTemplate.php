@@ -68,6 +68,8 @@ abstract class AbstractTemplate {
 	private $templateId;
 	
 	/**
+	 * TODO: Unify all stacks, add render/import templates to the stack (will improve content reporting during errors).
+	 * 
 	 * See method tag().
 	 * 
 	 * @var array
@@ -75,6 +77,8 @@ abstract class AbstractTemplate {
 	private $tagFuncStack;
 	
 	/**
+	 * TODO: Unify all stacks, add render/import templates to the stack (will improve content reporting during errors).
+	 * 
 	 * See method tag().
 	 * 
 	 * @var array
@@ -173,6 +177,7 @@ abstract class AbstractTemplate {
 			
 			return $result;
 		} finally {
+			// During normal exit $this->obLevel is 0, so this is only for unexpected error conditions.
 			while ($this->obLevel--) ob_end_clean();
 		}
 	}	
