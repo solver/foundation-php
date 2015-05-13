@@ -284,9 +284,15 @@ abstract class AbstractTemplate {
 	 * Sets the auto-escape format for templates (by default HTML).
 	 * 
 	 * @param boolean|string $format
-	 * Autoescape format or false not to autoencode.
+	 * Autoescape format string, or false not to autoencode.
 	 */
 	protected function autoencode($format) {
+		/*
+		 * TODO: The input arguments here (mixing booleand and strings) are undesirable. We also allow one template to 
+	 	 * change the autoescape for another, instead the changes should be scoped (begin...end autoescape context) and 
+	 	 * well contained to the template that wants them (no side-effects "leaking" outside their context).
+		 */
+		
 		static $labels = [
 			'html' => 1,
 			'json' => 2,
