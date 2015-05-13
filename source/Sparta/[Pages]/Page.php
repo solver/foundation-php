@@ -45,7 +45,7 @@ abstract class Page {
 	 * 
 	 * @var null|string
 	 */
-	protected $templateDefaultId = '#\MainLayout';
+	protected $templateDefaultId = '#\MainView';
 	
 	/**
 	 * A dict of inputs as passed by the router (for details, see \Solver\Sparta\Router::dispatch()), wrapped in an 
@@ -118,10 +118,8 @@ abstract class Page {
 	 * Conventions:
 	 * 
 	 * - It's recommended to name your pages with suffix "Page", like IndexPage, ContactPage, NewsPage etc.
-	 * - There are three types of templates, and you should name them according to their intended usage.
-	 * - 1. Layout Template, produces a complete page response when called - use suffix "Layout".
-	 * - 2. Partial Template, produces a fragment of a page responce when called - use suffix "Partial".
-	 * - 3. Tags Template, passively defines one or more tags for reuse in other templates - use suffix "Tag" or "Tags".
+	 * - Templates that produce output when rendered - use suffix "View".
+	 * - Templates that passively define one or more tags for reuse in other templates - use suffix "Tag" or "Tags".
 	 * - It's recommended to put templates in a namespace named after the page they're made for (if any), without the
 	 * "Page" suffix, i.e. templates for IndexPage should be at Index\MainLayout, Index\DetailsLayout etc.
 	 *
@@ -135,18 +133,18 @@ abstract class Page {
 	 * Example resolutions (where "suffix" refers to $templateIgnoreSuffix, and "ns" refers $templateBaseNamespace).
 	 *  
 	 * With $templateIgnoreSuffix = "Page", $templateBaseNamespace = null (defaults):
-	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxLayout", resolution: "Vendor\Foo\QuxLayout".
-	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxLayout", resolution: "Vendor\Foo\Bar\QuxLayout".
+	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxView", resolution: "Vendor\Foo\QuxView".
+	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxView", resolution: "Vendor\Foo\Bar\QuxView".
 	 * 
 	 * With $templateIgnoreSuffix = null, $templateBaseNamespace = null:
-	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxLayout", resolution: "Vendor\Foo\QuxLayout".
-	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxLayout", resolution: "Vendor\Foo\BarPage\QuxLayout".
+	 * - Page = "Vendor\Foo\BarPage", template = ".\QuxView", resolution: "Vendor\Foo\QuxView".
+	 * - Page = "Vendor\Foo\BarPage", template = "#\QuxView", resolution: "Vendor\Foo\BarPage\QuxView".
 	 * 
-	 * With $templateIgnoreSuffix = "Controller", $templateBaseNamespace = "Foo\Views":
-	 * - Page = "Foo\Controllers\BarController", template = ".\QuxView", resolution: "Foo\Views\QuxView".
-	 * - Page = "Foo\Controllers\BarController", template = "#\QuxView", resolution: "Foo\Views\Bar\QuxView".
+	 * With $templateIgnoreSuffix = "Pages", $templateBaseNamespace = "Foo\Views":
+	 * - Page = "Foo\Pages\BarPage", template = ".\QuxView", resolution: "Foo\Views\QuxView".
+	 * - Page = "Foo\Pages\BarPage", template = "#\QuxView", resolution: "Foo\Views\Bar\QuxView".
 	 * 
-	 * If you pass null (or nothing) for template id, it's set to "#\MainLayout" (override via $templateDefaultId).
+	 * If you pass null (or nothing) for template id, it's set to "#\MainView" (override via $templateDefaultId).
 	 *
 	 * For a detailed description of what a "template id" is, see AbstractTemplate::__construct().
 	 */
