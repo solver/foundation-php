@@ -23,7 +23,8 @@ class Debug {
 	
 	public static function init($logFilepath) {
 		self::$logFilepath = $logFilepath;
-		if (!is_dir($logFilepath)) mkdir($logFilepath, 0777, true);
+		$dir = dirname($logFilepath);
+		if (!is_dir($dir)) mkdir($dir, 0777, true);
 		
 		self::$logCallback = function ($event) {
 			file_put_contents(self::$logFilepath, json_encode($event) . "\n", FILE_APPEND);
