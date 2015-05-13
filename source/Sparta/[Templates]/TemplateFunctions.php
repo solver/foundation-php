@@ -28,6 +28,11 @@
 function tag($name, $params = null) {}
 
 /**
+ * @see \Solver\Sparta\AbstractTemplate::autoencode()
+ */
+function autoencode($format) {}
+
+/**
  * @see \Solver\Sparta\AbstractTemplate::encodeHtml()
  */
 function encode_html($value) {}

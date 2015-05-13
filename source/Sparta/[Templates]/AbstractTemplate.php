@@ -20,6 +20,18 @@ use Solver\Radar\Radar;
  * the private members from the templates, in order to avoid a mess (only protected/public methods will be accessible).
  */
 abstract class AbstractTemplate {
+	/*
+ 	 * TODO: Once we compile to real classes we should split AbstractTemplate in two:
+ 	 * 
+ 	 * 1. AbstractTemplate, the base class for a template with only its protected API methods (for pseudo-functions).
+ 	 * 2. TemplateEngine, which contains more protected methods that can be overriden, but we don't want to expose
+ 	 * to templates themselves. 
+ 	 * 
+ 	 * Right now we keep some methods protected so they're overridable and some protected because they're template API.
+ 	 * This has to go. Also, we should consider the template API methods being public, so you can pass $this to a 
+ 	 * non-template helper and it can use the API to produce output, or define tags etc.
+ 	 */
+	
 	/**
 	 * We keep track of ob_start() nesting level so when we throw an exception we don't leave output buffer levels
 	 * hanging (which causes various odd side effects).
@@ -43,6 +55,9 @@ abstract class AbstractTemplate {
 	/**
 	 * Sets the autoencode format for templates. For a list of the constants and their meanings, see method
 	 * getAutoencodeHandler().
+	 * 
+	 * Negative values are considered same as 0. We're using negative values as a "bypass" flag without losing the
+	 * actual mode we're bypassing. The convention is to subtract 0xFFFF, then add it back, when the bypass is removed.
 	 *  
 	 * @var int
 	 */
@@ -268,18 +283,21 @@ abstract class AbstractTemplate {
 	/**
 	 * Sets the auto-escape format for templates (by default HTML).
 	 * 
-	 * @param null|string $format
-	 * Autoescape format or null not to autoencode.
+	 * @param boolean|string $format
+	 * Autoescape format or false not to autoencode.
 	 */
 	protected function autoencode($format) {
 		static $labels = [
-			'raw' => 0,
 			'html' => 1,
 			'json' => 2,
 		];
 		
-		if (!isset($labels[$format])) $this->abortWithError('Unknown encoding format "' . $format . '".');
-		$this->autoencodeFormat = $labels[$format];
+		if ($format === false) {
+			$this->autoencodeFormat = 0;
+		} else {
+			if (!isset($labels[$format])) $this->abortWithError('Unknown encoding format "' . $format . '".');
+			$this->autoencodeFormat = $labels[$format];
+		}
 	}
 	
 	/**
@@ -289,8 +307,7 @@ abstract class AbstractTemplate {
 	 * @return string
 	 */
 	protected function encodeHtml($value) {
-		if ($value === null) return '';
-		return \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
+		return $value === null ? '' : \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
 	}
 	
 	/**
@@ -309,11 +326,9 @@ abstract class AbstractTemplate {
 	 * @param mixed $value
 	 */
 	protected function echoRaw($value) {
-		$format = & $this->autoencodeFormat;
-		$prevFormat = $format;
-		$format = 0;
+		$this->autoencodeFormat -= 0xFFFF;
 		echo $value;
-		$format = $prevFormat;
+		$this->autoencodeFormat += 0xFFFF;
 	}
 	
 	/**
@@ -322,11 +337,9 @@ abstract class AbstractTemplate {
 	 * @param mixed $value
 	 */
 	protected function echoHtml($value) {
-		$format = & $this->autoencodeFormat;
-		$prevFormat = $format;
-		$format = 0;
-		echo \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
-		$format = $prevFormat;
+		$this->autoencodeFormat -= 0xFFFF;
+		echo $value === null ? '' : \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
+		$this->autoencodeFormat += 0xFFFF;
 	}
 	
 	/**
@@ -335,11 +348,9 @@ abstract class AbstractTemplate {
 	 * @param mixed $value
 	 */
 	protected function echoJson($value) {
-		$format = & $this->autoencodeFormat;
-		$prevFormat = $format;
-		$format = 0;
+		$this->autoencodeFormat -= 0xFFFF;
 		echo \json_encode($value, \JSON_UNESCAPED_UNICODE);
-		$format = $prevFormat;
+		$this->autoencodeFormat += 0xFFFF;
 	}
 
 	/** 
@@ -423,11 +434,8 @@ abstract class AbstractTemplate {
 	 * <code>
 	 * <? $result = tag('layout/', [...]) ?>
 	 * </code>
-	 * 
 	 */ 
 	protected function tag($name, $params = null) {
-		// TODO: Detect a tag left unclosed at the end of the document (currently silently does nothing).
-		
 		// TODO: Make this scoped (like say Java/C# imports) to the file calling $import(), allow up-scope imports if explicitly specified (i.e. "get the imports this import is including").
 		$funcStack = & $this->tagFuncStack;
 		$paramStack = & $this->tagParamStack;
@@ -493,14 +501,15 @@ abstract class AbstractTemplate {
 				$lastFuncStackId = \count($funcStack) - 1;
 						
 				if ($lastFuncStackId < 0) {
-					throw new \exception('Opening parameter "@' . $name . '" without being in a tag function context.');
+					$this->abortWithError('Opening parameter "@' . $name . '" without being in a tag function context.');
 				}
 				
 				if ($tagParamCount > 1) {
-					if (!$isSelfClosing) {
-						$this->abortWithError('When specifying a parameter value as a second parameter of $tag(), the parameter tag should be self-closing.');
+					// Param set directly.
+					if ($isSelfClosing) {
+						$funcStack[$lastFuncStackId][1][$name] = $params; // TODO: Check if this param already exists.
 					} else {
-						$funcStack[$lastFuncStackId][1][$name] = $params;
+						$this->abortWithError('When specifying a parameter value as a second parameter of $tag(), the parameter tag should be self-closing.');
 					}
 				} else {
 					// Param open.
@@ -518,7 +527,8 @@ abstract class AbstractTemplate {
 				}
 				
 				\ob_end_flush(); // Closing autoencode handler.
-				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean(); // Grab from buffer.
+				// TODO: Check if this param already exists.
+				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean(); // Grab param content from buffer.
 				$this->obLevel -= 2;
 			}
 		} else {
@@ -554,7 +564,6 @@ abstract class AbstractTemplate {
 	}
 	
 	private function tagGetFunctionParams($funcName, $funcImpl, $funcParamDict) {
-		
 		$reflFunc = new \ReflectionFunction($funcImpl);
 		$params = [];
 		
@@ -603,12 +612,13 @@ abstract class AbstractTemplate {
 		$format = & $this->autoencodeFormat;
 		
 		return function ($buffer) use (& $format) {
+			// Filter "raw" - no encoding.
+			if ($format <= 0) return $buffer;
+			 
 			switch ($format) {
-				case 0 /* raw    */:
-					return $buffer;
-				case 1 /* html   */:
+				case 1: // Filter "html" text node encoding.
 					return \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
-				case 2 /* json   */:
+				case 2: // Filter "json" primitive encoding.
 					return \json_encode($value, \JSON_UNESCAPED_UNICODE);
 				default:
 					$this->abortWithError('Unknown autoencode format code ' . $format . '.');

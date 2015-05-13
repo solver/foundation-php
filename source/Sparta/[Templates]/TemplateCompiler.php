@@ -54,24 +54,20 @@ class TemplateCompiler implements PsrxCompiler {
 		$tokens = token_get_all(file_get_contents($sourcePathname));
 		$tokenCount = count($tokens);
 		
-		$nextIndex = function ($tokenIndex) use ($tokens, $tokenCount) {
-			$i = $tokenIndex;
-			
+		// Finds next significant token index.
+		$nextIndex = function ($i) use ($tokens, $tokenCount) {
 			while ($i < $tokenCount - 1) {
-				$i++;
-				$type = $tokens[$i][0];
+				$type = $tokens[++$i][0];
 				if ($type !== T_COMMENT && $type !== T_DOC_COMMENT && $type !== T_WHITESPACE) return $i;
 			}
 			
 			return null;
 		};
 		
-		$prevIndex = function ($tokenIndex) use ($tokens, $tokenCount) {
-			$i = $tokenIndex;
-			
+		// Finds previous significant token index.
+		$prevIndex = function ($i) use ($tokens, $tokenCount) {
 			while ($i > 0) {
-				$i--;
-				$type = $tokens[$i][0];
+				$type = $tokens[--$i][0];
 				if ($type !== T_COMMENT && $type !== T_DOC_COMMENT && $type !== T_WHITESPACE) return $i;
 			}
 			
@@ -81,13 +77,9 @@ class TemplateCompiler implements PsrxCompiler {
 		// TODO: Verify here $this->class is instanceof \Solver\Sparta\Template (we accept only this and subclasses of it).
 		$funcToMethod = $this->getFuncToMethod();
 		
-		$code = '';
+		// The @var is so IDEs don't report errors in the compiled files. TODO: Wrap compiled files in actual classes.
+		$code = '<?php /* @var $this ' . $this->class . ' */ ?>';
 		
-		// This is so IDEs don't report errors in the compiled files.
-		// TODO: Wrap compiled files in actual classes.
-		$code .= '<?php /* @var $this ' . $this->class . ' */ ?>';
-		
-		// TODO: Add ability to count and report the line of a token after the fact on error.
 		foreach ($tokens as $i => $token) {
 			$type = $token[0];
 			$content = is_string($token) ? $token : $token[1];
@@ -95,25 +87,27 @@ class TemplateCompiler implements PsrxCompiler {
 			switch ($type) {
 				// For forward compat when we compile templates as classes.
 				case T_TRAIT:			
-					throw new \Exception('Templates cannot contain a trait declaration' . $this->getContext($sourcePathname, $tokens, $i));
+				case T_INTERFACE:					
+				case T_CLASS:	
+					if ($type === T_CLASS) {
+						// Edge case, we must allow syntax like "Foo::class".
+						if ($prevI !== null && $tokens[$prevI][0] === T_DOUBLE_COLON) {		
+							$code .= $content;
+							break;
+						}
+					}
+					throw new \Exception('Templates cannot contain a ' . $content . ' declaration' . $this->getContext($sourcePathname, $tokens, $i));
 					break;
 					
-				// For forward compat when we compile templates as classes.
-				case T_INTERFACE:			
-					throw new \Exception('Templates cannot contain an interface declaration' . $this->getContext($sourcePathname, $tokens, $i));
-					break;
-
-				// For forward compat when we compile templates as classes.					
-				case T_CLASS:	
-					$prevI = $prevIndex($i);
-					// We must allow Foo::class.
-					if ($prevI === null || $tokens[$prevI][0] !== T_DOUBLE_COLON) {		
-						throw new \Exception('Templates cannot contain a class declaration' . $this->getContext($sourcePathname, $tokens, $i));
-					} else {
-						$code .= $content;
+				// We want to prevent people from using $this. The underlying implementation of the pseudo-functions
+				// might (will) change and they might not be on $this->*() anymore, but for ex. $this->api->*().
+				// Additionally, not all protected methods are part of the official template API.
+				case T_VARIABLE:
+					if ($content === '$this') {
+						throw new \Exception('Templates cannot contain references to $this, please use the provided API functions instead' . $this->getContext($sourcePathname, $tokens, $i));
 					}
 					break;
-					
+										
 				case T_CLOSE_TAG:
 					// We strip new lines here so they can be added to the next T_INLINE_HTML (PHP ignores new lines
 					// that follow a closing tag and we want to undo this).
@@ -154,20 +148,23 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 					
 				case T_STRING:
-					$funcName = strtolower($content); // We follow the case-insensitive semantics of PHP.
+					$funcName = \strtolower($content); // We follow the case-insensitive semantics of PHP.
 					
 					if (isset($funcToMethod[$funcName])) {
 						$prevI = $prevIndex($i);
 						$nextI = $nextIndex($i);
 						
-						if (
-							$prevI !== null &&
-							$tokens[$prevI][0] !== T_DOUBLE_COLON &&
-							$tokens[$prevI][0] !== T_OBJECT_OPERATOR &&
-							$tokens[$prevI][0] !== T_NS_SEPARATOR &&
-							$nextI !== null && $tokens[$nextI][0] === '(') {
-							$code .= '$this->' . $funcToMethod[$funcName];	
-							break;
+						if ($prevI !== null && $nextI !== null) {
+							$prevType = $tokens[$prevI][0];
+							$nextType = $tokens[$nextI][0];
+							
+							if ($prevType !== T_DOUBLE_COLON &&
+								$prevType !== T_OBJECT_OPERATOR &&
+								$prevType !== T_NS_SEPARATOR &&
+								$nextType === '(') {
+								$code .= '$this->' . $funcToMethod[$funcName];	
+								break;
+							}
 						}
 					}
 					
