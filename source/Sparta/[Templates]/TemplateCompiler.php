@@ -65,7 +65,7 @@ class TemplateCompiler implements PsrxCompiler {
 		};
 		
 		// Finds previous significant token index.
-		$prevIndex = function ($i) use ($tokens, $tokenCount) {
+		$prevIndex = function ($i) use ($tokens) {
 			while ($i > 0) {
 				$type = $tokens[--$i][0];
 				if ($type !== T_COMMENT && $type !== T_DOC_COMMENT && $type !== T_WHITESPACE) return $i;
@@ -77,8 +77,9 @@ class TemplateCompiler implements PsrxCompiler {
 		// TODO: Verify here $this->class is instanceof \Solver\Sparta\Template (we accept only this and subclasses of it).
 		$funcToMethod = $this->getFuncToMethod();
 		
-		// The @var is so IDEs don't report errors in the compiled files. TODO: Wrap compiled files in actual classes.
+		// The @var is so IDEs don't report errors in the compiled files. TODO: Wrap compiled files in actual classes?
 		$code = '<?php /* @var $this ' . $this->class . ' */ ?>';
+		$prependToInlineHtml = false;
 		
 		foreach ($tokens as $i => $token) {
 			$type = $token[0];
@@ -89,8 +90,9 @@ class TemplateCompiler implements PsrxCompiler {
 				case T_TRAIT:			
 				case T_INTERFACE:					
 				case T_CLASS:	
+					// Edge case, we must allow syntax like "Foo::class".
 					if ($type === T_CLASS) {
-						// Edge case, we must allow syntax like "Foo::class".
+						$prevI = $prevIndex($i);
 						if ($prevI !== null && $tokens[$prevI][0] === T_DOUBLE_COLON) {		
 							$code .= $content;
 							break;
@@ -100,7 +102,7 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 					
 				// We want to prevent people from using $this. The underlying implementation of the pseudo-functions
-				// might (will) change and they might not be on $this->*() anymore, but for ex. $this->api->*().
+				// might (i.e. will) change and they might not be on $this->*() anymore, but for ex. $this->api->*().
 				// Additionally, not all protected methods are part of the official template API.
 				case T_VARIABLE:
 					if ($content === '$this') {
@@ -109,13 +111,18 @@ class TemplateCompiler implements PsrxCompiler {
 					break;
 										
 				case T_CLOSE_TAG:
-					// We strip new lines here so they can be added to the next T_INLINE_HTML (PHP ignores new lines
-					// that follow a closing tag and we want to undo this).
-					if (preg_match('/([^\n\r]+)([\n\r]+)$/AD', $content, $matches)) {
-						$code .= $matches[1];
+					// We detect new lines here so they can be added to the next T_INLINE_HTML (PHP ignores new lines
+					// that follow a closing tag and we want them to be respected).
+					$closeTagNewLines = substr($content, 2);
+					
+					if ($closeTagNewLines) {
+						$code .= '?>';
 						$nextI = $nextIndex($i);
-						if ($nextI === null || $tokens[$nextI][0] !== T_INLINE_HTML) {
-							$code .= '<?php $this->echoRaw(\'' . $matches[2] . '\') ?>';	
+						
+						if ($nextI !== null && $tokens[$nextI][0] == T_INLINE_HTML) {
+							$prependToInlineHtml = $closeTagNewLines; // Used by the following T_INLINE_HTML.
+						} else {
+							$code .= '<?php $this->echoRaw(\'' . $closeTagNewLines . '\') ?>';	
 						}
 					} else {
 						$code .= $content;
@@ -125,10 +132,12 @@ class TemplateCompiler implements PsrxCompiler {
 				case T_INLINE_HTML:
 					$prevI = $prevIndex($i);
 					
-					if ($prevI !== null && $tokens[$prevI][0] === T_CLOSE_TAG) {
-						$content = preg_replace('/([^\n\r]+)/', '', $tokens[$prevI][1]) . $content;
+					if ($prependToInlineHtml) {
+						$content = $prependToInlineHtml . $content;
+						$prependToInlineHtml = false;
 					}
 					
+					// TODO: Test if this str_replace has edge cases for combinations of consecutive \ and ' chars. 
 					$code .= '<?php $this->echoRaw(\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $content) . '\') ?>';
 					break;
 					
