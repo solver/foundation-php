@@ -192,7 +192,7 @@ abstract class AbstractTemplate {
 			
 			return $result;
 		} finally {
-			// During normal exit $this->obLevel is 0, so this is only for unexpected error conditions.
+			// During normal exit $this->obLevel is 0, so this is only for abnormal conditions.
 			while ($this->obLevel--) ob_end_clean();
 		}
 	}	
@@ -288,7 +288,7 @@ abstract class AbstractTemplate {
 	 */
 	protected function autoencode($format) {
 		/*
-		 * TODO: The input arguments here (mixing booleand and strings) are undesirable. We also allow one template to 
+		 * TODO: The input arguments here (mixing boolean and strings) are undesirable. We also allow one template to 
 	 	 * change the autoescape for another, instead the changes should be scoped (begin...end autoescape context) and 
 	 	 * well contained to the template that wants them (no side-effects "leaking" outside their context).
 		 */
@@ -312,7 +312,7 @@ abstract class AbstractTemplate {
 	 * @param mixed $value
 	 * @return string
 	 */
-	protected function encodeHtml($value) {
+	protected function toHtml($value) {
 		return $value === null ? '' : \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
 	}
 	
@@ -322,7 +322,7 @@ abstract class AbstractTemplate {
 	 * @param mixed $value
 	 * @return string
 	 */
-	protected function encodeJson($value) {
+	protected function toJson($value) {
 		return \json_encode($value, \JSON_UNESCAPED_UNICODE);
 	}
 	
@@ -503,17 +503,21 @@ abstract class AbstractTemplate {
 		}
 		
 		if ($isParam) {
+			$lastFuncStackId = \count($funcStack) - 1;
+				
 			if ($isOpening) {
-				$lastFuncStackId = \count($funcStack) - 1;
-						
 				if ($lastFuncStackId < 0) {
 					$this->abortWithError('Opening parameter "@' . $name . '" without being in a tag function context.');
+				}
+			
+				if (isset($funcStack[$lastFuncStackId][1][$name])) {
+					$this->abortWithError('Duplicate declaration of parameter "@' . $name . '" while calling tag function "'. $funcStack[$lastFuncStackId][0] .'".');
 				}
 				
 				if ($tagParamCount > 1) {
 					// Param set directly.
 					if ($isSelfClosing) {
-						$funcStack[$lastFuncStackId][1][$name] = $params; // TODO: Check if this param already exists.
+						$funcStack[$lastFuncStackId][1][$name] = $params;
 					} else {
 						$this->abortWithError('When specifying a parameter value as a second parameter of $tag(), the parameter tag should be self-closing.');
 					}
@@ -533,8 +537,7 @@ abstract class AbstractTemplate {
 				}
 				
 				\ob_end_flush(); // Closing autoencode handler.
-				// TODO: Check if this param already exists.
-				$funcStack[\count($funcStack) - 1][1][$name] = \ob_get_clean(); // Grab param content from buffer.
+				$funcStack[$lastFuncStackId][1][$name] = \ob_get_clean(); // Grab param content from buffer.
 				$this->obLevel -= 2;
 			}
 		} else {

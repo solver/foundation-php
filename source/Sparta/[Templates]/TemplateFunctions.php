@@ -18,10 +18,8 @@
  * 
  * Due to naming convention differences, transformation is applied for ex. function foo_bar_baz() maps to method 
  * AbstractTemplate::fooBarBaz().
- * 
- * TODO: DOCUMENT.
  */
- 
+
 /**
  * @see \Solver\Sparta\AbstractTemplate::tag()
  */
@@ -33,14 +31,14 @@ function tag($name, $params = null) {}
 function autoencode($format) {}
 
 /**
- * @see \Solver\Sparta\AbstractTemplate::encodeHtml()
+ * @see \Solver\Sparta\AbstractTemplate::toHtml()
  */
-function encode_html($value) {}
+function to_html($value) {}
 
 /**
- * @see \Solver\Sparta\AbstractTemplate::encodeJson()
+ * @see \Solver\Sparta\AbstractTemplate::toJson()
  */
-function encode_json($value) {}
+function to_json($value) {}
 
 /**
  * @see \Solver\Sparta\AbstractTemplate::echoRaw()
