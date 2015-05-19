@@ -35,7 +35,7 @@ class EndpointDispatcher {
 		if ($action === null) {
 			$log = new EndpointLog();
 			$log->error(null, 'Endpoint or action not found.', 'endpointOrActionNotFound');
-			$log->throwIfErrors(); 
+			$log->throwIfErrors();
 		}
 		
 		return $action($input);

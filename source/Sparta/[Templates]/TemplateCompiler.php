@@ -57,8 +57,8 @@ class TemplateCompiler implements PsrxCompiler {
 		// Finds next significant token index.
 		$nextIndex = function ($i) use ($tokens, $tokenCount) {
 			while ($i < $tokenCount - 1) {
-				$type = $tokens[++$i][0];
-				if ($type !== T_COMMENT && $type !== T_DOC_COMMENT && $type !== T_WHITESPACE) return $i;
+				$tokenType = $tokens[++$i][0];
+				if ($tokenType !== T_COMMENT && $tokenType !== T_DOC_COMMENT && $tokenType !== T_WHITESPACE) return $i;
 			}
 			
 			return null;
@@ -67,8 +67,8 @@ class TemplateCompiler implements PsrxCompiler {
 		// Finds previous significant token index.
 		$prevIndex = function ($i) use ($tokens) {
 			while ($i > 0) {
-				$type = $tokens[--$i][0];
-				if ($type !== T_COMMENT && $type !== T_DOC_COMMENT && $type !== T_WHITESPACE) return $i;
+				$tokenType = $tokens[--$i][0];
+				if ($tokenType !== T_COMMENT && $tokenType !== T_DOC_COMMENT && $tokenType !== T_WHITESPACE) return $i;
 			}
 			
 			return null;
@@ -82,38 +82,43 @@ class TemplateCompiler implements PsrxCompiler {
 		$prependToInlineHtml = false;
 		
 		foreach ($tokens as $i => $token) {
-			$type = $token[0];
-			$content = is_string($token) ? $token : $token[1];
+			if (isset($token[1])) {
+				$tokenType = $token[0];
+				$tokenContent = $token[1];
+			} else {				
+				$tokenType = $tokenContent = $token;
+			}
 			
-			switch ($type) {
+			switch ($tokenType) {
 				// For forward compat when we compile templates as classes.
 				case T_TRAIT:			
 				case T_INTERFACE:					
 				case T_CLASS:	
 					// Edge case, we must allow syntax like "Foo::class".
-					if ($type === T_CLASS) {
+					if ($tokenType === T_CLASS) {
 						$prevI = $prevIndex($i);
 						if ($prevI !== null && $tokens[$prevI][0] === T_DOUBLE_COLON) {		
-							$code .= $content;
+							$code .= $tokenContent;
 							break;
 						}
 					}
-					throw new \Exception('Templates cannot contain a ' . $content . ' declaration' . $this->getContext($sourcePathname, $tokens, $i));
+					throw new \Exception('Templates cannot contain a ' . $tokenContent . ' declaration' . $this->getContext($sourcePathname, $tokens, $i));
 					break;
 					
 				// We want to prevent people from using $this. The underlying implementation of the pseudo-functions
 				// might (i.e. will) change and they might not be on $this->*() anymore, but for ex. $this->api->*().
 				// Additionally, not all protected methods are part of the official template API.
 				case T_VARIABLE:
-					if ($content === '$this') {
+					if ($tokenContent === '$this') {
 						throw new \Exception('Templates cannot contain references to $this, please use the provided API functions instead' . $this->getContext($sourcePathname, $tokens, $i));
 					}
+					$code .= $tokenContent;
 					break;
 										
 				case T_CLOSE_TAG:
 					// We detect new lines here so they can be added to the next T_INLINE_HTML (PHP ignores new lines
 					// that follow a closing tag and we want them to be respected).
-					$closeTagNewLines = substr($content, 2);
+					$closeTagNewLines = substr($tokenContent, 2);
 					
 					if ($closeTagNewLines) {
 						$code .= '?>';
@@ -125,7 +130,7 @@ class TemplateCompiler implements PsrxCompiler {
 							$code .= '<?php $this->echoRaw(\'' . $closeTagNewLines . '\') ?>';	
 						}
 					} else {
-						$code .= $content;
+						$code .= $tokenContent;
 					}
 					break;
 					
@@ -133,16 +138,16 @@ class TemplateCompiler implements PsrxCompiler {
 					$prevI = $prevIndex($i);
 					
 					if ($prependToInlineHtml) {
-						$content = $prependToInlineHtml . $content;
+						$tokenContent = $prependToInlineHtml . $tokenContent;
 						$prependToInlineHtml = false;
 					}
 					
 					// TODO: Test if this str_replace has edge cases for combinations of consecutive \ and ' chars. 
-					$code .= '<?php $this->echoRaw(\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $content) . '\') ?>';
+					$code .= '<?php $this->echoRaw(\'' . str_replace(['\\', '\''], ['\\\\', '\\\''], $tokenContent) . '\') ?>';
 					break;
 					
 				case T_OPEN_TAG:
-					if ($content === '<?') {
+					if ($tokenContent === '<?') {
 						$nextI = $i + 1;
 						
 						// We want to avoid situations like <?xml...
@@ -152,12 +157,12 @@ class TemplateCompiler implements PsrxCompiler {
 						
 						$code .= '<?php ';
 					} else {
-						$code .= $content;
+						$code .= $tokenContent;
 					}
 					break;
 					
 				case T_STRING:
-					$funcName = \strtolower($content); // We follow the case-insensitive semantics of PHP.
+					$funcName = \strtolower($tokenContent); // We follow the case-insensitive semantics of PHP.
 					
 					if (isset($funcToMethod[$funcName])) {
 						$prevI = $prevIndex($i);
@@ -171,17 +176,17 @@ class TemplateCompiler implements PsrxCompiler {
 								$prevType !== T_OBJECT_OPERATOR &&
 								$prevType !== T_NS_SEPARATOR &&
 								$nextType === '(') {
-								$code .= '$this->' . $funcToMethod[$funcName];	
+								$code .= '$this->' . $funcToMethod[$funcName];
 								break;
 							}
 						}
 					}
 					
-					$code .= $content;
+					$code .= $tokenContent;
 					break;
 					
 				default:
-					$code .= $content;
+					$code .= $tokenContent;
 			}
 		}
 		
@@ -219,6 +224,7 @@ class TemplateCompiler implements PsrxCompiler {
 	protected function getLineOf($tokens, $i) {
 		$code = '';
 		
+		// TODO: Use the token's "line" field (index 2) instead.
 		foreach ($tokens as $j => $token) {
 			if ($j == $i) break;
 			$code .= is_array($token) ? $token[1] : '';
