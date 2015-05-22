@@ -38,15 +38,40 @@ class Utils {
 	 * @return array
 	 * dict...
 	 * - query: Same as $_GET.
-	 * - body: Combined $_POST and $_FILES, where files become objects of instance UploadedFile.
+	 * - body: Combined $_POST and $_FILES, where files become objects of instance UploadedFile. Supports JSON requests.
 	 * - cookies: Same as $_COOKIE.
 	 * - server: Same as $_SERVER.
 	 * - env: dict; Same as $_ENV.
 	 */
 	public static function getInputFromGlobals() {
+		// TODO: Several more standard properties under consideration:
+		// url / uri
+		// method
+		// protocol
+		// remoteIp
+		// host
+		// headers: dict<lowercaseHeaderName, stringValue>
+		// headersRaw: list<tuple {rawHeaderName; stringValue}>
+		// bodyRaw: a Closure that yields stream resource (?)
+				
+		$contentType = null;
+		
+		// Populated by Apache & other servers.
+		if (isset($_SERVER['CONTENT_TYPE'])) $contentType = $_SERVER['CONTENT_TYPE'];
+		
+		// Populated by the built-in PHP server (bug).
+		if (isset($_SERVER['HTTP_CONTENT_TYPE'])) $contentType = $_SERVER['HTTP_CONTENT_TYPE'];
+		
+		// We do strpos to cover for cases like "application/json; charset=utf-8" etc.
+		if (strpos($contentType, 'application/json') === 0) {
+			$body = json_decode(stream_get_contents(fopen('php://input', 'r')), true);
+		} else {
+			$body = $_FILES ? self::injectUploadedFiles($_POST, $_FILES) : $_POST;
+		}
+		
 		return [
 			'query' => $_GET,
-			'body' => $_FILES ? self::injectUploadedFiles($_POST, $_FILES) : $_POST,
+			'body' => $body,
 			'cookies' => $_COOKIE,
 			'server' => $_SERVER,
 			'env' => $_ENV,
@@ -60,6 +85,7 @@ class Utils {
 		return self::merge($body, $files);
 	}
 	
+	// TODO: Replace with http://www.php.net/manual/en/function.array-replace-recursive.php
 	protected static function merge($a, $b) {
 		// Implements recursive merge of two deep arrays.
 		$merge = function (& $a, $b) use (& $merge) {
