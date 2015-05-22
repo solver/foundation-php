@@ -49,9 +49,13 @@ class TemplateCompiler implements PsrxCompiler {
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
 	public function compile($sourcePathname, $symbolName) {
+		$this->compileFromString(file_get_contents($sourcePathname), $sourcePathname, $symbolName);
+	}
+	
+	public function compileFromString($source, $sourcePathname, $symbolName) {
 		if (!$this->hasShortTags()) throw new \Exception('Short open tags must be enabled during compilation.');
 		
-		$tokens = token_get_all(file_get_contents($sourcePathname));
+		$tokens = token_get_all($source);
 		$tokenCount = count($tokens);
 		
 		// Finds next significant token index.
