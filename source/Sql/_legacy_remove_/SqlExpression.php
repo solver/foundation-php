@@ -208,7 +208,7 @@ class SqlExpression {
 			
 			if(!\is_array($rule)) { // Simple equals.
 				
-				$exprList[] = $connection->quoteIdentifier($col) . ($rule === null ? ' IS NULL' : ' = ' . $connection->quoteValue($rule));
+				$exprList[] = $connection->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $connection->encodeValue($rule));
 				
 			} else {
 				
@@ -224,7 +224,7 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ($val === null ? ' IS NULL' : ' = ' . $connection->quoteValue($val));
+						$exprList[] = $connection->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $connection->encodeValue($val));
 						break;
 						
 					case '!=':
@@ -232,7 +232,7 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $connection->quoteValue($val));
+						$exprList[] = $connection->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $connection->encodeValue($val));
 						break;							
 					case '>':
 					case '<':
@@ -243,49 +243,49 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' ' . $type . ' ' . $connection->quoteValue($val);
+						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' ' . $connection->encodeValue($val);
 						break;
 						
 					case '!LIKE':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' NOT LIKE ' . $connection->quoteValue($val);
+						$exprList[] = $connection->encodeIdent($col) . ' NOT LIKE ' . $connection->encodeValue($val);
 						break;
 						
 					case '!REGEXP':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' NOT REGEXP ' . $connection->quoteValue($val);
+						$exprList[] = $connection->encodeIdent($col) . ' NOT REGEXP ' . $connection->encodeValue($val);
 						break;
 						
 					case 'IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' ' . $type . ' (' . \implode(',', $connection->quoteValue($val)) . ')';
+						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $connection->encodeValue($val)) . ')';
 						break;
 						
 					case '!IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' NOT IN (' . \implode(',', $connection->quoteValue($val)) . ')';
+						$exprList[] = $connection->encodeIdent($col) . ' NOT IN (' . \implode(',', $connection->encodeValue($val)) . ')';
 						break;
 						
 					case 'BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' ' . $type . ' ' . $connection->quoteValue($val[0]) . ' AND ' . $connection->quoteValue($val[1]);
+						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' ' . $connection->encodeValue($val[0]) . ' AND ' . $connection->encodeValue($val[1]);
 						break;
 						
 					case '!BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->quoteIdentifier($col) . ' NOT BETWEEN ' . $connection->quoteValue($val[0]) . ' AND ' . $connection->quoteValue($val[1]);
+						$exprList[] = $connection->encodeIdent($col) . ' NOT BETWEEN ' . $connection->encodeValue($val[0]) . ' AND ' . $connection->encodeValue($val[1]);
 						break;
 						
 					default: 
@@ -321,7 +321,7 @@ class SqlExpression {
 			
 		foreach ($orderExpr as $col => $mode) {
 			if($mode === 'ASC' || $mode === 'DESC') {
-				$expr[] =  $connection->quoteIdentifier($col) . ' ' . $mode;
+				$expr[] =  $connection->encodeIdent($col) . ' ' . $mode;
 			} else {
 				throw new \Exception('Invalid order mode "' . $mode . '" (expected "ASC" or "DESC").');
 			}
@@ -348,8 +348,8 @@ class SqlExpression {
 	 * An SQL expression.
 	 */
 	static public function identList(SqlConnection $connection, $identExpr) {		
-		// Taking advantage of the recursive nature of quoteIdentifier() here.
-		$identExpr = $connection->quoteIdentifier($identExpr);
+		// Taking advantage of the recursive nature of encodeIdent() here.
+		$identExpr = $connection->encodeIdent($identExpr);
 		
 		foreach ($identExpr as & $ident) {
 			$ident = $ident[0] . ' AS ' . $ident[1];

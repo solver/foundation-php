@@ -13,6 +13,6 @@
  */
 namespace Solver\Sql;
 
-class PdoMysqlConnectionPool {
+class PdoMySqlConnectionPool {
 	// TODO
 }

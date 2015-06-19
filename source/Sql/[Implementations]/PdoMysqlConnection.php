@@ -18,7 +18,7 @@ use PDOStatement;
 use PDOException;
 
 // Has bits for other databases, extract into abstract base class.
-class PdoMysqlConnection implements SqlConnection {
+class PdoMySqlConnection implements SqlConnection {
 	/**
 	 * Database type ("sqlite" or "mysql").
 	 * 
@@ -42,7 +42,7 @@ class PdoMysqlConnection implements SqlConnection {
 	protected $handle;
 	
 	/**
-	 * Stores the proper valid last insert id for MySQL. See getLastId().
+	 * Stores the proper valid last insert id for MySQL. See getLastInsertId().
 	 * 
 	 * @var int
 	 */
@@ -81,6 +81,9 @@ class PdoMysqlConnection implements SqlConnection {
 		$this->config = $config;
 	}
 	
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::open()
+	 */
 	public function open() {
 		if ($this->open) return false;
 		
@@ -119,10 +122,13 @@ class PdoMysqlConnection implements SqlConnection {
 			
 			$this->open = true;
 		} catch (PDOException $e) {
-			throw new SqlException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), null, $e);
 		}
 	}
 	
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::close()
+	 */
 	public function close() {
 		throw new \Exception('TODO'); // TODO
 	}
@@ -130,12 +136,15 @@ class PdoMysqlConnection implements SqlConnection {
 	/**
 	 * Runs a query, returns a statement.
 	 * 
+	 * @see \Solver\Sql\SqlConnection::query()
+	 * 
 	 * @param string $sql
 	 * SQL query string to execute.
 	 * 
-	 * @return PdoMysqlStatement
+	 * @return PdoMysqlResultSet
 	 */
-	public function query($sql) {		
+	public function query($sql) {
+		var_dump($sql);
 		if (!$this->open) $this->open();
 		
 		try {
@@ -146,15 +155,19 @@ class PdoMysqlConnection implements SqlConnection {
 				$this->lastId = $lastId;
 			}
 			
-			$statement = new PdoMysqlStatement($handle, $this);
+			$statement = new PdoMysqlResultSet($handle, $this);
 		} catch (PDOException $e) {
-			throw new SqlException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), null, $e);
 		}
 		
 		return $statement;
 	}
 	
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::execute()
+	 */
 	public function execute($sql) {		
+		var_dump($sql);
 		if (!$this->open) $this->open();
 		
 		try {
@@ -164,20 +177,23 @@ class PdoMysqlConnection implements SqlConnection {
 				$this->lastId = $lastId;
 			}
 		} catch (PDOException $e) {
-			throw new SqlException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), null, $e);
 		}
 		
 		return $affectedRows;
 	}
 		
-	public function getLastId() {		
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::getLastInsertId()
+	 */
+	public function getLastInsertId() {		
 		if (!$this->open) $this->open();
 		
 		if ($this->lastId === null) {
 			if ($this->type === 'sqlite') {
-				$result = $this->query('SELECT last_insert_rowid()')->fetchOne(0);
+				$result = $this->query('SELECT last_insert_rowid()')->getOne(0);
 			} else {
-				$result = $this->query('SELECT LAST_INSERT_ID()')->fetchOne(0);
+				$result = $this->query('SELECT LAST_INSERT_ID()')->getOne(0);
 			}
 			
 			$this->lastId = $result;
@@ -186,22 +202,8 @@ class PdoMysqlConnection implements SqlConnection {
 		return $this->lastId;
 	}
 	
-	/**
-	 * Quotes a value for use as an SQL literal. It has the following enhancements over the typical quote() method in
-	 * other layers:
-	 * 
-	 * - PHP null will convert to SQL NULL.
-	 * - Non-negative integers and strings which represent valid non-negative integers (unsigned 64-bit range) won't be
-	 * quoted, so they can be used, for ex. with LIMIT and OFFSET. Note that a string with leading zeroes is not 
-	 * considered a valid integer in this context.
-	 * - Passing an array will return the array with every value in it encoded.
-	 * 
-	 * @param array|string|float|int|null $value
-	 * A value, or an array of values to encode. The function works recursively, so if you have, say, an array of
-	 * strings inside the array you pass, it'll all get encoded.
-	 * 
-	 * @return string
-	 * Quoted value.
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::encodeValue()
 	 */
 	public function encodeValue($value) {
 		if (!$this->open) $this->open();
@@ -238,23 +240,10 @@ class PdoMysqlConnection implements SqlConnection {
 		}
 	}
 	
-	/**
-	 * Encodes a string (or an array of strings) as SQL identifiers. This is only required for untrusted identifier, and
-	 * identifiers containing illegal identifier characters (say, a dot).
-	 * 
-	 * @param array|string $identifier
-	 * A value, or a list of values to encode. The function works recursively, so if you have, say, an array of strings
-	 * inside the array you pass, it'll all get encoded.
-	 * 
-	 * @param bool $respectDots
-	 * Optional (default = false). If false, dots in the identifier are treated as a part of the name (no special
-	 * meaning). If true, dots will be interpreted as separators (so you can encode, say, table.column strings in one
-	 * call).
-	 * 
-	 * @return string
-	 * Quoted value.
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::encodeIdent()
 	 */
-	public function encodeIdentifier($identifier, $respectDots = false) {
+	public function encodeIdent($identifier, $respectDots = false) {
 		// TODO: Quoting identifiers doesn't need an open connection, but it needs the $this->type, so for now, as a workaround we open it.		
 		if (!$this->open) $this->open();
 		
@@ -272,7 +261,7 @@ class PdoMysqlConnection implements SqlConnection {
 					: '"' . \str_replace('"', '""', $identifier) . '"';
 					break;
 // 				case 'mssql':	
-// 					return $respectDots 
+// 					return $respectDots 2*2
 // 					? '"' . \str_replace(['"', '.'], ['""', '"."'], $identifier) . '"'
 // 					: '"' . \str_replace('"', '""', $identifier) . '"';
 // 					break;
@@ -281,53 +270,22 @@ class PdoMysqlConnection implements SqlConnection {
 			}
 		} else {		
 			foreach ($identifier as $i) {
-				$i = $this->encodeIdentifier($i);
+				$i = $this->encodeIdent($i);
 			}
 			
 			return $identifier;
 		}
-		
-
 	}
 	
-	/**
-	 * Encodes every key in the dict as an identifier, and every value as an SQL value literal, i.e. [ident => value].
-	 * 
-	 * @param array $row
-	 * A dict where the keys will be treated as SQL identifiers, and the values will be treated as SQL value literals.
-	 * 
-	 * @param bool $respectDots
-	 * See encodeIdentifier() for details.
-	 * 
-	 * @return array
-	 * Quoted dict.
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::encodeRow()
 	 */
 	public function encodeRow(array $row, $respectDots = false) {
-		return \array_combine($this->encodeIdentifier(\array_keys($row), $respectDots), $this->encodeValue(\array_values($row)));
+		return \array_combine($this->encodeIdent(\array_keys($row), $respectDots), $this->encodeValue(\array_values($row)));
 	}
 	
-	/**
-	 * Calls the given closure in an SQL transaction.
-	 * 
-	 * Note: if you want to skip the optional parameter $isolation, you can directly pass $function as a first
-	 * parameter, i.e. those two calls are equivalent:
-	 * 
-	 * <code>
-	 * $conn->callInTransaction(null, function () { ... });
-	 * $conn->callInTransaction(function () { ... });
-	 * </code>
-	 * 
-	 * @param string $isolation
-	 * Optional (default = null, which is treated as "REPEATABLE READ"). An SQL-compatible string setting the isolation
-	 * level of the transaction.
-	 * 
-	 * @param \Closure $function
-	 * Function to call within an SQL transaction. These condition will result in transaction rollback instead of a 
-	 * commit:
-	 * 
-	 * - Returning boolean false from the function. Note, this doesn't apply for "falsey" values like null, 0 or empty
-	 * string, but strictly boolean false.
-	 * - Any uncaught exception leaving the function.
+	/* (non-PHPdoc)
+	 * @see \Solver\Sql\SqlConnection::transactional()
 	 */
 	public function transactional($isolation = null, $function = null) {
 		// A bit of parameter remapping...

@@ -20,7 +20,7 @@ namespace Solver\Lab;
  */
 class EventService {
 	/**
-	 * @var \Solver\Lab\SqlConnection
+	 * @var \Solver\Sql\SqlConnection
 	 */
 	protected $sqlConn;
 	
@@ -321,7 +321,7 @@ class EventService {
 		
 		$this->sqlConn->transactional(function () use (& $row, & $extRows) {
 			$this->sqlConn->insert($this->tableName, $row);
-			$id = $this->sqlConn->getLastId();
+			$id = $this->sqlConn->getLastInsertId();
 			
 			foreach ($extRows as $extTableName => $extRow) {
 				$extRow['id'] = $id;
@@ -362,7 +362,7 @@ class EventService {
 		
 		$sql .= 'ORDER BY ' . $this->tableName . '.id ' . ($isAsc ? 'ASC' : 'DESC') . ' LIMIT ' . (int) $count;
 				
-		$rows = $this->sqlConn->query($sql)->fetchAll();
+		$rows = $this->sqlConn->query($sql)->getAll();
 		
 		foreach ($rows as & $row) {
 			$row['dateCreated'] = SqlExpression::fromDatetime($row['dateCreated']);

@@ -99,7 +99,7 @@ class SqlUtils {
 	public static function insertMany(PdoMysqlConnection $conn, $table, array $rows, $extended = false) {
 		if (empty($rows)) return;
 		
-		$tblQ = $conn->encodeIdentifier($table);
+		$tblQ = $conn->encodeIdent($table);
 		
 		if (!$extended) {		
 			// TODO: Wrap in a transaction if count($rows) > 1 (once we have nested transactions again).	
@@ -113,7 +113,7 @@ class SqlUtils {
 		// Single extended insert (cols specified for each row should match).
 		else {
 			$cols = \array_keys($rows[0]);
-			$colsQ = $conn->encodeIdentifier($cols);
+			$colsQ = $conn->encodeIdent($cols);
 			
 			// When imploded, forms the VALUES part of the query.
 			$valSeq = array();
@@ -182,8 +182,8 @@ class SqlUtils {
 	public static function updateByPrimaryKeyMany(PdoMysqlConnection $conn, $table, $pkCols, $rows) {
 		if (empty($rows)) return;
 		
-		$tblQ = $conn->encodeIdentifier($table);
-		$pkColsQ = $conn->encodeIdentifier($pkCols);
+		$tblQ = $conn->encodeIdent($table);
+		$pkColsQ = $conn->encodeIdent($pkCols);
 		
 		if (\is_array($pkCols)) {
 			foreach ($rows as $rk => $row) {
@@ -200,7 +200,7 @@ class SqlUtils {
 				}
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $conn->encodeIdentifier($rk).' = '.$rv;
+					$setArr[] = $conn->encodeIdent($rk).' = '.$rv;
 				}
 				
 				if (!$setArr) return;
@@ -220,7 +220,7 @@ class SqlUtils {
 				unset($row[$pkCols]);
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $conn->encodeIdentifier($rk) . ' = ' . $rv;
+					$setArr[] = $conn->encodeIdent($rk) . ' = ' . $rv;
 				}
 				
 				if (!$setArr) return;
@@ -245,7 +245,7 @@ class SqlUtils {
 	 * Whether to reset autoincrement to 1.
 	 */
 	public static function truncate(PdoMysqlConnection $conn, $table, $resetAutoIncrement = false) {
-		$tblQ = $conn->encodeIdentifier($table);
+		$tblQ = $conn->encodeIdent($table);
 		
 		$conn->execute('TRUNCATE TABLE ' . $tblQ);
 		
@@ -444,7 +444,7 @@ class SqlUtils {
 			
 			if(!\is_array($rule)) { // Simple equals.
 				
-				$exprList[] = $conn->encodeIdentifier($col) . ($rule === null ? ' IS NULL' : ' = ' . $conn->encodeValue($rule));
+				$exprList[] = $conn->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $conn->encodeValue($rule));
 				
 			} else {
 				
@@ -460,7 +460,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ($val === null ? ' IS NULL' : ' = ' . $conn->encodeValue($val));
+						$exprList[] = $conn->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $conn->encodeValue($val));
 						break;
 						
 					case '!=':
@@ -468,7 +468,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $conn->encodeValue($val));
+						$exprList[] = $conn->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $conn->encodeValue($val));
 						break;							
 					case '>':
 					case '<':
@@ -479,49 +479,49 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' ' . $type . ' ' . $conn->encodeValue($val);
+						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' ' . $conn->encodeValue($val);
 						break;
 						
 					case '!LIKE':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' NOT LIKE ' . $conn->encodeValue($val);
+						$exprList[] = $conn->encodeIdent($col) . ' NOT LIKE ' . $conn->encodeValue($val);
 						break;
 						
 					case '!REGEXP':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' NOT REGEXP ' . $conn->encodeValue($val);
+						$exprList[] = $conn->encodeIdent($col) . ' NOT REGEXP ' . $conn->encodeValue($val);
 						break;
 						
 					case 'IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' ' . $type . ' (' . \implode(',', $conn->encodeValue($val)) . ')';
+						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $conn->encodeValue($val)) . ')';
 						break;
 						
 					case '!IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' NOT IN (' . \implode(',', $conn->encodeValue($val)) . ')';
+						$exprList[] = $conn->encodeIdent($col) . ' NOT IN (' . \implode(',', $conn->encodeValue($val)) . ')';
 						break;
 						
 					case 'BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' ' . $type . ' ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
+						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
 						break;
 						
 					case '!BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdentifier($col) . ' NOT BETWEEN ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
+						$exprList[] = $conn->encodeIdent($col) . ' NOT BETWEEN ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
 						break;
 						
 					default: 
@@ -557,7 +557,7 @@ class SqlUtils {
 			
 		foreach ($orderExpr as $col => $mode) {
 			if($mode === 'ASC' || $mode === 'DESC') {
-				$expr[] =  $conn->encodeIdentifier($col) . ' ' . $mode;
+				$expr[] =  $conn->encodeIdent($col) . ' ' . $mode;
 			} else {
 				throw new \Exception('Invalid order mode "' . $mode . '" (expected "ASC" or "DESC").');
 			}
@@ -584,8 +584,8 @@ class SqlUtils {
 	 * An SQL expression.
 	 */
 	static public function identList(PdoMysqlConnection $conn, $identExpr) {		
-		// Taking advantage of the recursive nature of quoteIdentifier() here.
-		$identExpr = $conn->encodeIdentifier($identExpr);
+		// Taking advantage of the recursive nature of encodeIdent() here.
+		$identExpr = $conn->encodeIdent($identExpr);
 		
 		foreach ($identExpr as & $ident) {
 			$ident = $ident[0] . ' AS ' . $ident[1];

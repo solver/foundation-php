@@ -4,6 +4,7 @@ namespace Solver\Sql;
 use Solver\Base\Exception;
 
 /**
- * Exception thrown by SqlConnectionPool, SqlConnection, SqlStatement implementations.
+ * Exception thrown by SqlConnectionPool, SqlConnection, SqlResultSet implementations.
  */
-class SqlException extends Exception {}
+class SqlException extends Exception {
+}

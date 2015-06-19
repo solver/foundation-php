@@ -4,6 +4,7 @@ namespace Solver\Sql;
 /**
  * TODO: Extract standard interface from the implementation.
  */
-interface SqlConnectionPool {
-	
+interface SqlPool {
+	public function getSession();
+	public function closeSessions();
 }

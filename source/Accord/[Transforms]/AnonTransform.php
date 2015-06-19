@@ -15,9 +15,7 @@ namespace Solver\Accord;
 
 use Solver\Logging\ErrorLog;
 
-class AnonTransform implements Transform {
-	use TransformBase;
-	
+class AnonTransform implements Transform {	
 	/**
 	 * @var \Closure
 	 */

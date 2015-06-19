@@ -18,7 +18,7 @@ use PDOStatement;
 use PDOException;
 
 /**
- * This is a forward compatible subset of the full Solver\Lab\SqlConnection class, supports MySQL and SQLite for now.
+ * This is a forward compatible subset of the full Solver\Sql\SqlConnection class, supports MySQL and SQLite for now.
  */
 class SqlConnection {
 	/**
@@ -44,7 +44,7 @@ class SqlConnection {
 	protected $handle;
 	
 	/**
-	 * Stores the proper valid last insert id for MySQL. See getLastId().
+	 * Stores the proper valid last insert id for MySQL. See getLastInsertId().
 	 * 
 	 * @var int
 	 */
@@ -107,7 +107,7 @@ class SqlConnection {
 			
 			$this->open = true;
 		} catch (PDOException $e) {
-			throw new SqlConnectionException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), $e);
 		}
 	}
 	
@@ -136,7 +136,7 @@ class SqlConnection {
 	 * Optional (default = null). A list of values that will be "quoted into" the $query in place of question marks (see
 	 * quoteInto).
 	 * 
-	 * @return \Solver\Lab\SqlStatement
+	 * @return \Solver\Lab\SqlResultSet
 	 */
 	public function query($sql, array $values = null) {		
 		if (!$this->open) $this->open();
@@ -151,9 +151,9 @@ class SqlConnection {
 				$this->lastId = $lastId;
 			}
 			
-			$statement = new SqlStatement($handle, $this);
+			$statement = new SqlResultSet($handle, $this);
 		} catch (PDOException $e) {
-			throw new SqlConnectionException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), $e);
 		}
 		
 		return $statement;
@@ -171,20 +171,20 @@ class SqlConnection {
 				$this->lastId = $lastId;
 			}
 		} catch (PDOException $e) {
-			throw new SqlConnectionException($e->getMessage(), $e->getCode(), $e);
+			throw new SqlException($e->getMessage(), $e->getCode(), $e);
 		}
 		
 		return $affectedRows;
 	}
 		
-	public function getLastId() {		
+	public function getLastInsertId() {		
 		if (!$this->open) $this->open();
 		
 		if ($this->lastId === null) {
 			if ($this->type === 'sqlite') {
-				$result = $this->query('SELECT last_insert_rowid()')->fetchOne(0);
+				$result = $this->query('SELECT last_insert_rowid()')->getOne(0);
 			} else {
-				$result = $this->query('SELECT LAST_INSERT_ID()')->fetchOne(0);
+				$result = $this->query('SELECT LAST_INSERT_ID()')->getOne(0);
 			}
 			
 			$this->lastId = $result;
@@ -210,7 +210,7 @@ class SqlConnection {
 	 * @return string
 	 * Quoted value.
 	 */
-	public function quoteValue($value) {
+	public function encodeValue($value) {
 		if (!$this->open) $this->open();
 		
 		if (!\is_array($value)) {
@@ -237,7 +237,7 @@ class SqlConnection {
 			return $this->handle->quote($value);
 		} else {			
 			foreach ($value as & $v) {
-				$v = $this->quoteValue($v);
+				$v = $this->encodeValue($v);
 			}
 			unset($v);
 			
@@ -264,12 +264,12 @@ class SqlConnection {
 	 * @return string
 	 */
 	public function quoteInto($sql, array $values) {		
-		$values = $this->quoteValue($values);
+		$values = $this->encodeValue($values);
 		$sql = \explode('?', $sql);
 		$ce = \count($sql);
 		
 		if ($ce != \count($values) + 1) {
-			throw new SqlConnectionException('The number of values passed does not match the number of replace marks in the expression.');
+			throw new SqlException('The number of values passed does not match the number of replace marks in the expression.');
 		}
 		
 		$out = \reset($sql) . \reset($values) . \next($sql);
@@ -297,7 +297,7 @@ class SqlConnection {
 	 * @return string
 	 * Quoted value.
 	 */
-	public function quoteIdentifier($identifier, $respectDots = false) {
+	public function encodeIdent($identifier, $respectDots = false) {
 		// TODO: Quoting identifiers doesn't need an open connection, but it needs the $this->type, so for now, as a workaround we open it.		
 		if (!$this->open) $this->open();
 		
@@ -324,7 +324,7 @@ class SqlConnection {
 			}
 		} else {		
 			foreach ($identifier as $i) {
-				$i = $this->quoteIdentifier($i);
+				$i = $this->encodeIdent($i);
 			}
 			
 			return $identifier;
@@ -340,13 +340,13 @@ class SqlConnection {
 	 * A dict where the keys will be treated as SQL identifiers, and the values will be treated as SQL value literals.
 	 * 
 	 * @param bool $respectDots
-	 * See quoteIdentifier() for details.
+	 * See encodeIdent() for details.
 	 * 
 	 * @return array
 	 * Quoted dict.
 	 */
 	public function quoteRow(array $row, $respectDots = false) {
-		return \array_combine($this->quoteIdentifier(\array_keys($row), $respectDots), $this->quoteValue(\array_values($row)));
+		return \array_combine($this->encodeIdent(\array_keys($row), $respectDots), $this->encodeValue(\array_values($row)));
 	}
 	
 	/**
@@ -440,7 +440,7 @@ class SqlConnection {
 	public function insertMany($table, array $rows, $extended = false) {
 		if (empty($rows)) return;
 		
-		$tblQ = $this->quoteIdentifier($table);
+		$tblQ = $this->encodeIdent($table);
 		
 		if (!$extended) {		
 			// TODO: Wrap in a transaction if count($rows) > 1 (once we have nested transactions again).	
@@ -454,13 +454,13 @@ class SqlConnection {
 		// Single extended insert (cols specified for each row should match).
 		else {
 			$cols = \array_keys($rows[0]);
-			$colsQ = $this->quoteIdentifier($cols);
+			$colsQ = $this->encodeIdent($cols);
 			
 			// When imploded, forms the VALUES part of the query.
 			$valSeq = array();
 			
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
-				$row = $this->quoteValue($rows[$i]);
+				$row = $this->encodeValue($rows[$i]);
 				
 				$vals = array();
 				
@@ -471,7 +471,7 @@ class SqlConnection {
 					if (\array_key_exists($col, $row)) {
 						$vals[] = $row[$col];
 					} else {
-						throw new SqlConnectionException('Column "' . $col . '" expected but not found in row number ' . $i . '.');
+						throw new SqlException('Column "' . $col . '" expected but not found in row number ' . $i . '.');
 					}
 				}
 				
@@ -517,25 +517,25 @@ class SqlConnection {
 	public function updateByPrimaryKeyMany($table, $pkCols, $rows) {
 		if (empty($rows)) return;
 		
-		$tblQ = $this->quoteIdentifier($table);
-		$pkColsQ = $this->quoteIdentifier($pkCols);
+		$tblQ = $this->encodeIdent($table);
+		$pkColsQ = $this->encodeIdent($pkCols);
 		
 		if (\is_array($pkCols)) {
 			foreach ($rows as $rk => $row) {
-				$row = $this->quoteValue($row);
+				$row = $this->encodeValue($row);
 				
 				$setArr = array();
 				$whereArr = array();
 				
 				// TRICKY: above we escaped the id colnames in $pkColsQ so we need the keys (idk) to fetch them from the actual id-s.
 				foreach ($pkCols as $pkCol => $pkVal) {
-					if (!isset($row[$pkVal])) throw new SqlConnectionException('Primary key column "' . $pkVal . '" missing in an update row at index "' . $rk . '".');
+					if (!isset($row[$pkVal])) throw new SqlException('Primary key column "' . $pkVal . '" missing in an update row at index "' . $rk . '".');
 					$whereArr[] = $pkColsQ[$pkCol].' = '.$row[$pkVal];
 					unset($row[$pkVal]);
 				}
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $this->quoteIdentifier($rk).' = '.$rv;
+					$setArr[] = $this->encodeIdent($rk).' = '.$rv;
 				}
 				
 				if (!$setArr) return;
@@ -546,16 +546,16 @@ class SqlConnection {
 			}
 		} else {
 			foreach ($rows as $rk => $row) {
-				$row = $this->quoteValue($row);
+				$row = $this->encodeValue($row);
 				
 				$setArr = array();
 				
-				if (!isset($row[$pkCols])) throw new SqlConnectionException('Identifier "' . $pkCols . '" missing in an update row at index "' . $rk . '".');
+				if (!isset($row[$pkCols])) throw new SqlException('Identifier "' . $pkCols . '" missing in an update row at index "' . $rk . '".');
 				$where = $pkColsQ . ' = ' . $row[$pkCols];
 				unset($row[$pkCols]);
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $this->quoteIdentifier($rk) . ' = ' . $rv;
+					$setArr[] = $this->encodeIdent($rk) . ' = ' . $rv;
 				}
 				
 				if (!$setArr) return;
@@ -577,7 +577,7 @@ class SqlConnection {
 	 * Whether to reset autoincrement to 1.
 	 */
 	public function truncate($table, $resetAutoIncrement = false) {
-		$tblQ = $this->quoteIdentifier($table);
+		$tblQ = $this->encodeIdent($table);
 		
 		$this->execute('TRUNCATE TABLE ' . $tblQ);
 		

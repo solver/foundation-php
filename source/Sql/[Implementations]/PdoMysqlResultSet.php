@@ -1,6 +1,6 @@
 <?php
 /*
- * Copyright (C) 2011-2014 Solver Ltd. All rights reserved.
+ * Copyright (C) 2011-2015 Solver Ltd. All rights reserved.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
  * the License. You may obtain a copy of the License at:
@@ -11,19 +11,19 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\Sql;
 
 use PDO;
 use PDOStatement;
 
 /**
- * This is a forward compatible subset of the full Solver\Lab\SqlStatement class, supports only MySQL.
+ * This is a forward compatible subset of the full Solver\Lab\SqlResultSet class, supports only MySQL.
  * 
  * Contains and executes a single SQL query, returns results.
  * 
- * TODO: Fix PDO default buffering not to be used for fetchNext, but used for fetchAll.
+ * TODO: Fix PDO default buffering not to be used for fetchNext, but used for getAll.
  */
-class SqlStatement {
+class PdoMysqlResultSet implements SqlResultSet {
 	/**
 	 * @var \PDOStatement
 	 */
@@ -62,7 +62,7 @@ class SqlStatement {
 	 * 
 	 * Null is returned if there's no result to fetch.
 	 */
-	public function fetchOne($field = null) {		
+	public function getOne($field = null) {
 		if ($this->closed) $this->errorClosed();
 		
 		if (\is_int($field)) {
@@ -95,7 +95,7 @@ class SqlStatement {
 	 * 
 	 * An empty array is returned if there are no results to fetch.
 	 */	
-	public function fetchAll($field = null) {		
+	public function getAll($field = null) {		
 		if ($this->closed) $this->errorClosed();
 		
 		$this->closed = true;
@@ -118,7 +118,7 @@ class SqlStatement {
 					$index++;
 				}
 				
-				if ($index === null) throw new SqlConnectionException('Trying to fetch non-existent result set column "' . $field . '".');
+				if ($index === null) throw new SqlException('Trying to fetch non-existent result set column "' . $field . '".');
 			} else {
 				return [];
 			}
@@ -128,6 +128,6 @@ class SqlStatement {
 	}
 	
 	protected function errorClosed() {
-		throw new SqlConnectionException('This statement is closed.');
+		throw new SqlException('This statement is closed.');
 	}
 }
