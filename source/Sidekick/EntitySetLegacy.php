@@ -11,9 +11,11 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Lab;
+namespace Solver\SqlX;
 
 use Solver\Toolbox\ListUtils;
+use Solver\Sql\SqlConnection;
+
 /**
  * Implements an SQL-backed basic table model with optional local (in memory) cache for reads (writes are committed
  * immediately). Suitable as a helper for implementing DAL / repository classes. Avoid inheritance and prefer 
@@ -29,7 +31,7 @@ use Solver\Toolbox\ListUtils;
  * TODO: Those cache management methods are awkward. Decouple caching from the model if a practical way is found (i.e.
  * without making things more complicated than the caller simply managing their own cache array & checks).
  */
-class EntitySet {
+class EntitySetLegacy {
 	protected $encode; // (dict) => dict;
 	protected $decode; // (dict) => dict;
 	protected $encodeAll; // (list<dict>) => list<dict>;
@@ -46,7 +48,7 @@ class EntitySet {
 	protected $cache = [];
 	
 	/**
-	 * @var \Solver\Lab\SqlConnection
+	 * @var \Solver\Sql\SqlConnection
 	 */
 	protected $sqlConn;
 	
@@ -167,7 +169,7 @@ class EntitySet {
 		if (isset($entity[$this->idFieldName])) {
 			$id = $entity[$this->idFieldName];
 		} else {
-			$id = $this->sqlConn->getLastId();
+			$id = $this->sqlConn->getLastInsertId();
 			$entity[$this->idFieldName] = $id;
 		}
 		
@@ -486,7 +488,7 @@ class EntitySet {
 	 * Shortcut; used a lot.
 	 */
 	protected function qIdent($ident) {
-		return $this->sqlConn->quoteIdentifier($ident);
+		return $this->sqlConn->encodeIdent($ident);
 	}
 	
 	protected function mapAllBySqlInternal($firstOnly, $sql, $params, \Closure $map, $canonical = false) {
@@ -518,9 +520,9 @@ class EntitySet {
 		$resultSet = $sqlConn->query($sql, $params);
 		
 		if ($firstOnly) {
-			$records = [$resultSet->fetchOne()];
+			$records = [$resultSet->getOne()];
 		} else {
-			$records = $resultSet->fetchAll();
+			$records = $resultSet->getAll();
 		}
 		
 		if ($this->decodeAll) {
@@ -546,7 +548,7 @@ class EntitySet {
 		if ($count == 0) return null;
 			
 		list($tableNameQ, $idFieldNameQ) = $this->qIdent([$this->tableName, $this->idFieldName]);
-		$idListQ = $this->sqlConn->quoteValue($idList);
+		$idListQ = $this->sqlConn->encodeValue($idList);
 		
 		$sql = "SELECT * FROM $tableNameQ WHERE ";
 		
@@ -563,7 +565,7 @@ class EntitySet {
 	
 	public function getAllByExampleInternal($example, $forUpdate, $single) {
 		$sqlConn = $this->sqlConn;
-		$tableQ = $sqlConn->quoteIdentifier($this->tableName);
+		$tableQ = $sqlConn->encodeIdent($this->tableName);
 		
 		$example = $this->encode ? $this->encode->__invoke($example) : $example;
 		
