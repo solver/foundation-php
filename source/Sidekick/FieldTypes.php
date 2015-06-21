@@ -13,6 +13,7 @@
  */
 namespace Solver\Sidekick;
 
+use Solver\SqlX\SqlUtils;
 // TODO: Verify $name, $internalName are composite or simple as their method requires.
 class FieldTypes {
 	public static function jsonCol($name, $internalName = null) {
@@ -80,6 +81,24 @@ class FieldTypes {
 		};
 		
 		return [$name, $internalName, $transform, $transform];
+	}
+	
+	/**
+	 * Timestamp integer on PHP's side, DATETIME string on SQL's side.
+	 */
+	public static function timestampToDateTimeCol($name, $internalName = null) {
+		return [
+			$name,
+			$internalName,
+			function ($valueList, $composite) {
+				if ($composite) self::errorNoComposite($valueList);
+				return array_map(function ($value) { return SqlUtils::toDatetime($value); }, $valueList);
+			},
+			function ($valueList, $composite) {
+				if ($composite) self::errorNoComposite($valueList);
+				return array_map(function ($value) { return SqlUtils::fromDatetime($value); }, $valueList);
+			}
+		];
 	}
 	
 	// TODO: Add support for per-column codecs.

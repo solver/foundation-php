@@ -13,87 +13,17 @@
  */
 namespace Solver\Sidekick;
 
-// TODO: Add HAVING clause, GROUP clause, and primitive outer/left/right/inner JOIN (by matching two fields: including expression fields).
-// TODO: Maybe add FORCE and IGNORE INDEX options (maybe no need to have the indexes on the schema as it'll be caught at the server anyway).
 class QueryStatement extends AbstractStatement {
+	use QueryTrait;
 	use WhereTrait;
 	use OrderTrait;
 	
-	protected $forUpdate = false;
-	protected $forShare = false;
-	protected $distinct = false;
-	protected $distinctRow = false;
-	
-	protected $selectFields = null;
-	
-	protected $limit = 0;
-	protected $offset = 0;
+	protected $finalize;
 	
 	public function __construct(\Closure $finalize) {
 		$this->finalize = $finalize;
 	}
-	
-	function forUpdate($enable = true) {
-		if ($enable) {
-			$this->forShare = false;
-			$this->forUpdate = true;
-		} else {
-			$this->forUpdate = false;
-		}
 		
-		return $this;
-	}
-	
-	function forShare($enable = true) {
-		if ($enable) {
-			$this->forUpdate = false;
-			$this->forShare = true;
-		} else {
-			$this->forShare = false;
-		}
-		
-		return $this;
-	}
-	
-	function distinct($enable = true) {
-		$this->distinct = true;
-		
-		return $this;
-	}
-	
-	function distinctRow($enable = true) {
-		$this->distinctRow = true;
-		
-		return $this;
-	}
-	
-	function select($fields) {
-		// Passing ["foo"] is a shortcut for ["foo" => null].
-		foreach ($fields as $k => $v) {
-			if (is_int($k)) {
-				unset($fields[$k]);
-				$fields[$v] = null;
-			}	
-		}
-		
-		if ($this->selectFields) {
-			// TODO: Detect collisions and throw on them.
-			$this->selectFields += $fields;
-		} else {
-			// TODO: Detect non-scalar values here, or elsewhere.
-			$this->selectFields = $fields;
-		}
-		
-		return $this;
-	}
-
-	function range($limit, $offset = 0) {
-		$this->limit = 0;
-		$this->offset = 0;
-		
-		return $this;
-	}
-	
 	function getOne($col = null) {
 		return $this->finalize->__invoke($this->render(), false, $col);
 	}

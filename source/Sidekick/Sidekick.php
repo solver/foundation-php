@@ -16,6 +16,8 @@ namespace Solver\Sidekick;
 use Solver\Sql\SqlConnection;
 use Solver\SqlX\SqlUtils;
 
+// TODO: Consider a function like EntitySet's combined SELECT FOR UPDATE + UPDATE combo:  mapByPK($pk, ($currentEntityState) => $newEntityState).
+// queryAndUpdate('Foo')->select()->where()->execute($mapper);
 class Sidekick {
 	protected $schema;
 	
@@ -40,8 +42,9 @@ class Sidekick {
 	}
 	
 	function update($tableName) {
-		return new UpdateStatement(function ($stmt) use ($tableName) {
-			$tableSchema = $this->getTableSchema($tableName);
+		$tableSchema = $this->getTableSchema($tableName);
+		
+		return new UpdateStatement(function ($stmt) use ($tableSchema) {
 			$conn = $this->conn;
 			
 			if ($stmt['whereFields']) {
@@ -70,57 +73,17 @@ class Sidekick {
 	}
 	
 	function query($tableName) {
-		return new QueryStatement(function ($stmt, $getAll, $column) use ($tableName) {
-			$tableSchema = $this->getTableSchema($tableName);
-			$conn = $this->conn;
-
-			$sql = 'SELECT ';
-			if ($stmt['distinct']) $sql .= 'DISTINCT ';
-			if ($stmt['distinctRow']) $sql .= 'DISTINCTROW ';
-			
-			if ($stmt['selectFields']) {
-				// TODO: Support expressions.
-				$selects = [];
-				$selectFields = $this->mapFieldNames(true, $tableSchema, $stmt['selectFields']);
-				foreach ($selectFields as $k => $v) {
-					$selects[] = $conn->encodeIdent($k);
-				}
-				$sql .= implode(', ', $selects) . ' ';
-			} else {
-				$sql .= '* ';
-			}
-			
-			$sql .= 'FROM ' . $conn->encodeIdent($tableSchema['internalName']) . ' ';
-			
-			if ($stmt['whereFields']) {
-				$sql .= 'WHERE ' . $this->getWhereClause($tableSchema, $stmt['whereFields']) . ' ';
-			}
-			
-			if ($stmt['orderFields']) {
-				$sql .= 'ORDER BY ' . SqlUtils::orderBy($conn, $stmt['orderFields']);
-			}
-			
-			if ($stmt['limit']) {
-				$sql .= 'LIMIT ' . $conn->encodeValue($stmt['limit']) . ' ';
-				if ($stmt['offset']) {
-					$sql .= 'OFFSET ' . $conn->encodeValue($stmt['offset']) . ' ';
-				}
-			}
-			
-			if ($stmt['forShare']) {
-				$sql .= 'LOCK IN SHARE MODE ';
-			}
-			
-			if ($stmt['forUpdate']) {
-				$sql .= 'FOR UPDATE ';
-			}
+		$tableSchema = $this->getTableSchema($tableName);
+		
+		return new QueryStatement(function ($stmt, $getAll, $column) use ($tableSchema) {
+			$resultset = $this->queryInternal($tableSchema, $stmt);
 			
 			if ($getAll) {
-				$rows = $conn->query($sql)->getAll($column);
+				$rows = $resultset->getAll($column);
 				
 				return $this->mapRows(false, $tableSchema, $rows);
 			} else {
-				$row = $conn->query($sql)->getOne($column);
+				$row = $resultset->getOne($column);
 				
 				if ($row === null) {
 					return null;
@@ -131,26 +94,31 @@ class Sidekick {
 		});
 	}
 	
-	function encodeRows($tableName, $rows) { // TODO: Decide if we need mapping exposed to the public via this method.
-		return $this->mapRows(true, $this->getTableSchema($tableName), $rows);
+	function queryAndUpdateByPK($tableName) {
+		$tableSchema = $this->getTableSchema($tableName);
+		
+		// TODO: Wrap in a nested transaction here when SqlConnection support them (again).
+		return new QueryAndUpdateByPKStatement(function ($stmt, $mapper) use ($tableName, $tableSchema) {
+			// We'll be updating so we force this without making the user do it manually.
+			$stmt['forShare'] = false;
+			$stmt['forUpdate'] = true;
+			
+			// TODO: The get/update loop should stream results for a large number of results, to avoid going out of RAM.
+			$rows = $this->queryInternal($tableSchema, $stmt)->getAll();
+			
+			foreach ($resultset as $row) {
+				$this->updateByPK($tableName, $mapper($row));
+			}
+			
+			return count($resultset);
+		});
 	}
-	
-	function decodeRows($tableName, $rows) { // TODO: Decide if we need mapping exposed to the public via this method.
-		return $this->mapRows(false, $this->getTableSchema($tableName), $rows);
-	}
-	
-	function encodeFieldNames($tableName, $fieldNames) { // TODO: Decide if we need mapping exposed to the public via this method.
-		return $this->mapFieldNames(true, $this->getTableSchema($tableName), $fieldNames);
-	}
-	
-	function decodeFieldNames($tableName, $fieldNames) { // TODO: Decide if we need mapping exposed to the public via this method.
-		return $this->mapFieldNames(false, $this->getTableSchema($tableName), $fieldNames);
-	}
-	
+		
 	function delete($tableName) {
-		return new DeleteStatement(function ($stmt) use ($tableName) {
+		$tableSchema = $this->getTableSchema($tableName);
+			
+		return new DeleteStatement(function ($stmt) use ($tableSchema) {
 			$conn = $this->conn;
-			$tableSchema = $this->getTableSchema($tableName);
 			
 			$whereClause = [];
 			
@@ -166,6 +134,52 @@ class Sidekick {
 		});
 	}
 	
+	protected function queryInternal($tableSchema, $statement) {
+		$conn = $this->conn;
+
+		$sql = 'SELECT ';
+		if ($stmt['distinct']) $sql .= 'DISTINCT ';
+		if ($stmt['distinctRow']) $sql .= 'DISTINCTROW ';
+		
+		if ($stmt['selectFields']) {
+			// TODO: Support expressions.
+			$selects = [];
+			$selectFields = $this->mapFieldNames(true, $tableSchema, $stmt['selectFields']);
+			foreach ($selectFields as $k => $v) {
+				$selects[] = $conn->encodeIdent($k);
+			}
+			$sql .= implode(', ', $selects) . ' ';
+		} else {
+			$sql .= '* ';
+		}
+		
+		$sql .= 'FROM ' . $conn->encodeIdent($tableSchema['internalName']) . ' ';
+		
+		if ($stmt['whereFields']) {
+			$sql .= 'WHERE ' . $this->getWhereClause($tableSchema, $stmt['whereFields']) . ' ';
+		}
+		
+		if ($stmt['orderFields']) {
+			$sql .= 'ORDER BY ' . SqlUtils::orderBy($conn, $stmt['orderFields']);
+		}
+		
+		if ($stmt['limit']) {
+			$sql .= 'LIMIT ' . $conn->encodeValue($stmt['limit']) . ' ';
+			if ($stmt['offset']) {
+				$sql .= 'OFFSET ' . $conn->encodeValue($stmt['offset']) . ' ';
+			}
+		}
+		
+		if ($stmt['forShare']) {
+			$sql .= 'LOCK IN SHARE MODE ';
+		}
+		
+		if ($stmt['forUpdate']) {
+			$sql .= 'FOR UPDATE ';
+		}
+		
+		return $conn->query($sql);
+	}
 	protected function splitRowByPK($tableSchema, $row) {
 		if ($tableSchema['primaryKey'] === null) throw new \Exception('The operation cannot be performed as table ' . $tableSchema['name'] . ' has no defined primary key column(s).');
 		// TODO: Support composite PK.

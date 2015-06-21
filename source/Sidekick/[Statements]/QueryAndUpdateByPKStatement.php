@@ -13,8 +13,18 @@
  */
 namespace Solver\Sidekick;
 
-abstract class AbstractCommandStatement extends AbstractStatement {
-	function execute() {
-		return $this->finalize->__invoke($this->render());
+class QueryAndUpdateByPKStatement extends AbstractStatement {
+	use QueryTrait;
+	use WhereTrait;
+	use OrderTrait;
+	
+	protected $finalize;
+	
+	public function __construct(\Closure $finalize) {
+		$this->finalize = $finalize;
+	}
+		
+	function execute(\Closure $mapper) {
+		return $this->finalize->__invoke($this->render(), $mapper);
 	}
 }
