@@ -49,7 +49,7 @@ class TemplateCompiler implements PsrxCompiler {
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
 	public function compile($sourcePathname, $symbolName) {
-		$this->compileFromString(file_get_contents($sourcePathname), $sourcePathname, $symbolName);
+		return $this->compileFromString(file_get_contents($sourcePathname), $sourcePathname, $symbolName);
 	}
 	
 	public function compileFromString($source, $sourcePathname, $symbolName) {
