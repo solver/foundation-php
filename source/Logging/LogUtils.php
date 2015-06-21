@@ -47,8 +47,8 @@ class LogUtils {
 			
 			$regex = '%(' . \implode('|', \array_reverse(\array_keys($map))) . ')(?|$()()|(\.?)(.*))%AD';
 							
-			foreach ($sourceLog->getEvents() as $events) {				
-				$path = $events['path'];
+			foreach ($sourceLog->getEvents() as $event) {				
+				$path = $event['path'];
 				
 				// Null and empty string are semantically equivalent for a path (null is the canonical value for it).
 				if ($path === null) $path = '';
@@ -61,11 +61,11 @@ class LogUtils {
 
 				if ($path === '') $path = null;
 				
-				$destinationLog->log($events['type'], $path, $events['message'], $events['code'], $events['details']);
+				$destinationLog->log($event);
 			}
 		} else {
-			foreach ($sourceLog->getEvents() as $events) {
-				$destinationLog->log($events['type'], $events['path'], $events['message'], $events['code'], $events['details']);
+			foreach ($sourceLog->getEvents() as $event) {
+				$destinationLog->log($event);
 			}
 		}
 	}
