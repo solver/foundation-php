@@ -173,7 +173,6 @@ abstract class AbstractTemplate {
 			$scope = function ($__path__) use ($__localVars__) {
 				extract($__localVars__, EXTR_REFS);
 				return require $__path__;
-				
 			};
 					
 			// Hide private properties from the scope (this class is abstract and subclassed by Template, so Template is
