@@ -255,7 +255,7 @@ class StringFormat implements Format {
 	 * 
 	 * @return self
 	 */
-	public function isEqualTo(array $input, $displayListInMessage = false) {
+	public function isEqualTo($input, $displayListInMessage = false) {
 		$this->functions[] = static function ($value, & $errors, $path) use ($input, $displayListInMessage) {
 			if ($value === (string) $input) return $value;
 			
