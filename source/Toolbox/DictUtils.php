@@ -68,7 +68,7 @@ class DictUtils {
 	public static function pick(array $dict, ...$keys) {
 		$out = [];
 		
-		foreach ($keys as $key) if (isset($key[$dict]) || \key_exists($key, $dict)) {
+		foreach ($keys as $key) if (isset($dict[$key]) || \key_exists($key, $dict)) {
 			$out[$key] = $dict[$key];
 		}
 		
@@ -85,7 +85,7 @@ class DictUtils {
 	 * A blacklist of key names to omit.
 	 */
 	public static function omit(array $dict, ...$keys) {
-		foreach ($keys as $key) if (isset($key[$dict]) || \key_exists($key, $dict)) {
+		foreach ($keys as $key) if (isset($dict[$key]) || \key_exists($key, $dict)) {
 			unset($dict[$key]);
 		}
 		
@@ -145,7 +145,7 @@ class DictUtils {
 			$group = [];
 			
 			foreach ($keys as $key) {
-				if (isset($key[$dict]) || \key_exists($key, $dict)) {
+				if (isset($dict[$key]) || \key_exists($key, $dict)) {
 					$group[$key] = $dict[$key];
 					unset($dict[$key]);
 				}
