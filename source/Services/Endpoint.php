@@ -33,4 +33,9 @@ interface Endpoint {
 	 * Endpoint instance, method as a closure, or null if the name does not resolve to either. 
 	 */
 	public function resolve($name);
+	
+	// TODO: Add support of this method for parametric endpoints (allows the endpoint to act as a constructor returning
+	// and endpoint, as normal methods can't return endpoints). In URI's those parameters should be matrix parameters.
+	// Change metrix params to always be a dictionary; if name not specified uses default name. Lists via commas tho?
+	//public function with($context);
 }

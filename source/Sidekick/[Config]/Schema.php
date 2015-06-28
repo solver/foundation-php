@@ -17,6 +17,9 @@ class Schema {
 	protected $tables = [];
 	protected $rels = [];
 	
+	// TODO: Add ability to add global expressions which automatically resolve in every table (this also means you can't use this expression name in a table, or the table overrides the global - pick one). Maybe best is allow override with explicit $override = true parameter to avoid errors.
+	// function addExpression($name, $sqlExpression) {}
+	
 	function addTable(Table $table) {
 		$tableData = $table->render();		
 		$this->tables[$tableData['name']] = $tableData;

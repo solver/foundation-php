@@ -28,7 +28,6 @@ class Dispatcher {
 	 * - [301, $url]
 	 * - [404]
 	 * 
-	 * 
 	 * @param callable|string $fallback
 	 * Optional. Either any callable or a string class name of a callable class to invoke. Called when a controller 
 	 * throws an exception, or the router can't resolve to a controller (404).
@@ -36,12 +35,14 @@ class Dispatcher {
 	 * If you don't specify a fallback, or if the fallback itself throws an exception, that exception will be thrown 
 	 * out and left to the dispatcher client to handle.
 	 * 
-	 * 
 	 * @param callable $factory
 	 * ($className: string) => function; If specified, any time a route returns a "$pageCallable" as a string class
 	 * name, it won't instantiate it directly but give the class name to this factory to construct it and return it.
 	 * This gives you the chance to inject the necessary dependencies for the handler. The factory also applies if you
 	 * pass a string for your error handler.
+	 * 
+	 * TODO: The factory should move to the router in prep for moving to a Trampolined loop as a dispatcher, but we need
+	 * to resolve the issue of how to create the fallback (which also needs the factory).
 	 */
 	public function __construct(callable $router, $fallback = null, $factory = null) {
 		$this->router = $router;
