@@ -14,7 +14,7 @@ class RouteFormatter {
 	public static function webToPhp($route) {
 		foreach ($route as & $seg) {
 			// Validate, replace with null if invalid.
-			if (preg_match('/[a-z](-[a-z0-9]+)*$/AD', $seg)) {
+			if (preg_match('/[a-z]+(-[a-z0-9]+)*$/AD', $seg)) {
 				if (strpos($seg, '-') !== false) {
 					$seg = explode('-', $seg);
 					
