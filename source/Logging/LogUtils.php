@@ -46,7 +46,7 @@ class LogUtils {
 			foreach ($mapKeys as & $val) $val = \preg_quote($val, '%'); 
 			
 			$regex = '%(' . \implode('|', \array_reverse(\array_keys($map))) . ')(?|$()()|(\.?)(.*))%AD';
-							
+				
 			foreach ($sourceLog->getEvents() as $event) {				
 				$path = $event['path'];
 				
@@ -56,10 +56,12 @@ class LogUtils {
 				if (\preg_match($regex, $path, $matches)) {
 					$replacement = $map[$matches[1]];
 					if ($replacement === '') $path = $matches[3];
-					else $path = $replacement . ($matches[3] === '' ? '' : '.') . $matches[3];
+					else $path = $replacement . $matches[2]  . $matches[3];
 				}
 
 				if ($path === '') $path = null;
+				
+				$event['path'] = $path;
 				
 				$destinationLog->log($event);
 			}
