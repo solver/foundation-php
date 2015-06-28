@@ -18,7 +18,7 @@ use Solver\Lab\ParamValidator;
 /**
  * A barebones router.
  */
-class Router {
+class SimpleRouter implements Router {
 	/**
 	 * @var array
 	 */
@@ -36,16 +36,16 @@ class Router {
 	 * - path: string;
 	 * - call: string|closure; A class name of a callable (__invoke) class, or a function to call.
 	 * - tail: bool; tailLength: int; tailLengthMax
-	 * - tail: boolean = false; If enabled, the router will parse path segments after the route as parameters (and puts
-	 * them in $input['t']).
+	 * - tail: boolean = false; If enabled, the router will parse path segments after the route as a parameter (and puts
+	 * it under $input['router']['tail'] as a list of string segments).
 	 * - tailLength: null|int = null; If specified, sets a limit on the exact length the tail can be for this route to
 	 * match (i.e. how many path segments). By default there's no limit.
 	 * - tailLengthMax: null|int = null; If specified, sets a limit on how long the tail can be for this route to match
 	 * (i.e. how many path segments). By default there's no limit.
 	 * - tailLengthMin: null|int = null; If specified, sets a limit on how short the tail can be for this route to match
 	 * (i.e. how many path segments). By default there's no limit.
-	 * - vars: null|dict = null; If present, it'll be added to $input under key "vars". You can use this feature to pass
-	 * custom data to controllers.
+	 * - vars: null|dict = null; If present, it'll be added to $input under key "router". You can use this feature to
+	 * pass custom data to controllers.
 	 * - head?: Reserved for future use. TODO: Add this for use with multi-lingual sites ex. foo.com/en-us/page.
 	 */
 	public function __construct(array $config) {
@@ -60,31 +60,8 @@ class Router {
 		$this->config =  $config;
 	}
 	
-	/**
-	 * Expects a map of inputs and returns modified inputs and the matching route callback. See Dispatcher for details
-	 * on the expected return format.
-	 * 
-	 * @param array $input
-	 * A map with the following keys (as applicable depending on the running context):
-	 * 
-	 * - query			= $_GET:		HTTP request query fields.
-	 * - body			= $_POST:		HTTP request body fields (also has $_FILES entries, see class InputFromGlobals).
-	 * - cookies 		= $_COOKIE:		Cookie variables. 
-	 * - server			= $_SERVER:		Server environment variables. 
-	 * - env			= $_ENV:		OS environment variables.
-	 * 
-	 * If you just want to prepare the above array from PHP's globals, simply use InputFromGlobals::get().
-	 * 
-	 * The router will add the following keys when passing the above input to a controller:
-	 * 
-	 * - request.path	= A server neutral way to read the path (sans query string) for the current request.
-	 * 
-	 * The router may also add these keys when passing the above input to a controller:
-	 * - tail			= "Tail" path parameters as a list of strings, if any.
-	 * - vars			= "Vars" added from the route (if key "vars" is specified in the route configuration).
-	 * 
-	 * @return array
-	 * dict: See Dispatcher for details on the expected return format.
+	/* (non-PHPdoc)
+	 * @see \Solver\Sparta\Router::__invoke()
 	 */
 	public function __invoke(array $input) {
 		// As a reminder, here are some reasons why trailing slashes are preferable for user-facing URLs.
@@ -145,7 +122,7 @@ class Router {
 						if (isset($route['tailLengthMax']) && $length > $route['tailLengthMax']) continue;
 					}
 					
-					$input['tail'] = $tail;
+					$input['router']['tail'] = $tail;
 					$handler = $route;
 					break;
 				}
@@ -158,7 +135,10 @@ class Router {
 		}
 
 		if ($handler === null) return [404];
-		if (isset($handler['vars'])) $input['vars'] = $handler['vars'];
+		if (isset($handler['router'])) {
+			if (isset($input['router'])) $input['router'] += $handler['router'];
+			else $input['router'] = $handler['router'];
+		}
 			
 		return [200, $handler['call'], $input];
 	}
