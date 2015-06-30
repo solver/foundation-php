@@ -19,6 +19,8 @@ use Solver\Toolbox\CollectionUtils;
  * A convenient interface for reading & manipulating information from deeply nested arrays, often coming from untrusted
  * sources, with unverified structure (i.e. provides safe behavior in case of missing keys etc., avoiding the need for
  * heavy isset() use & common data format checks).
+ * 
+ * TODO: Remove $default everywhere (covered well enough by PHP7's null coalescence operator) $x->get('a', 'b') becomes $x->get('a') ?? 'b';
  */
 class DataBox {
 	/**
