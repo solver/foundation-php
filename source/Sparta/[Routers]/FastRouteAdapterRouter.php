@@ -49,7 +49,7 @@ class FastRouteAdapterRouter implements Router {
 	/* (non-PHPdoc)
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
-	public function __invoke($input) {
+	public function __invoke(array $input) {
 		$routeInfo = $this->dispatcher->dispatch(
 			$input['server']['REQUEST_METHOD'],
 			$input['server']['REQUEST_URI']

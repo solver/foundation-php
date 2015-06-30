@@ -39,5 +39,5 @@ interface Router {
 	 * @return array
 	 * dict: See Dispatcher for details on the expected return format.
 	 */
-	public function __invoke();
+	public function __invoke(array $input);
 }

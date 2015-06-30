@@ -26,14 +26,14 @@ class ChainRouter implements Router {
 	 * @param Router[] ...$routers
 	 * ($routeCollection: FastRoute\RouteCollector) => void;
 	 */
-	public function __construct(Router ...$router) {
+	public function __construct(Router ...$routers) {
 		$this->routers = $routers;
 	}
 	
 	/* (non-PHPdoc)
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
-	public function __invoke($input) {
+	public function __invoke(array $input) {
 		$routers = $this->routers;
 		
 		foreach ($routers as $router) {
