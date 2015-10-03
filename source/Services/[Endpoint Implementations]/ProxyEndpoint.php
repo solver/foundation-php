@@ -2,7 +2,9 @@
 namespace Solver\Services;
 
 /**
- * Allows you to intercept the resolution of methods and sub-endpoints on an endpoint.
+ * TODO: Does this need updates due to adding endpoint-returning actions?
+ * 
+ * Allows you to intercept the resolution of actions and sub-endpoints on an endpoint.
  * 
  * This allows you to decorate / wrap / override endpoint methods and properties, and add cross-cutting functionality
  * that would be harder to implement by overriding every endpoint's method manually.

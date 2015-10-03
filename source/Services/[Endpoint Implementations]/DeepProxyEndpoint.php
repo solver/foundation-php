@@ -2,6 +2,8 @@
 namespace Solver\Services;
 
 /**
+ * TODO: Does this need updates due to adding endpoint-returning actions?
+ * 
  * A variation of EndpointProxy {@see \Solver\Services\EndpointProxy}.
  * 
  * This implementation will automatically proxy endpoints deeper into the given root endpoints, so you can cover a 
