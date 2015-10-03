@@ -9,13 +9,15 @@ namespace Solver\Services;
  */
 class EndpointDispatcher {
 	/**
-	 * Tries to find a method for the given route and returns it. Returns null if no matching method is found.
+	 * Invokes the specified leaf action (by routing through every branch endpoint and action) and returns the results.
 	 * 
-	 * @param \solver\Lab\Endpoint $endpoint
+	 * @param \Solver\Services\Endpoint $endpoint
 	 * Endpoint instance to begin the resolution from.
 	 * 
 	 * @param array $route
 	 * list<string>; List of string segments to resolve to an action (for example a URL split by path separator).
+	 * 
+	 * TODO: Update to reflect the new optional params each segment may have.
 	 * 
 	 * @param array|null $input
 	 * Input to pass to the method.

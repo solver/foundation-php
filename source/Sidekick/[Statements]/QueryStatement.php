@@ -15,15 +15,13 @@ namespace Solver\Sidekick;
 
 class QueryStatement extends AbstractStatement {
 	use QueryTrait;
-	use WhereTrait;
-	use OrderTrait;
 	
 	protected $finalize;
 	
 	public function __construct(\Closure $finalize) {
 		$this->finalize = $finalize;
 	}
-		
+	
 	function getOne($col = null) {
 		return $this->finalize->__invoke($this->render(), false, $col);
 	}

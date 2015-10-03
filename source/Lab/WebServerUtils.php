@@ -27,12 +27,21 @@ class WebServerUtils {
 	 * @param string $url
 	 * Request URI.
 	 * 
+	 * @param int|null $expires
+	 * Optional. Set to number of seconds, to send caching header that'll keep the resource in cache for that period of
+	 * time.
+	 * 
 	 * @return boolean
-	 * True if file was found and served. False if no file was found (and served).
+	 * True if file was found and served. False if no file was found (and served). 
 	 */
-	public static function serveStaticFile($publicRoot, $url) {
+	public static function serveStaticFile($publicRoot, $url, $expires = null) {
 		$file = $publicRoot . parse_url($url, PHP_URL_PATH);
 		
+		// Security: disallow traversing the whole file system by using relative paths (..).
+		if (preg_match('@(^|/|\\\\)\.\.($|/|\\\\)@', $url)) {
+			return false;
+		}
+				 
 		if (file_exists($file) && !is_dir($file)) {
 			if (preg_match('/\.(\w+)$/iD', $file, $matches)) {
 				$extension = $matches[1];
@@ -50,6 +59,10 @@ class WebServerUtils {
 			} else {
 				$fi = new \finfo(FILEINFO_MIME_TYPE);
 				$mime = $fi->file($file);
+			}
+			
+			if ($expires !== null) {
+				\header('Expires: ' . gmdate('D, d M Y H:i:s \G\M\T', \time() + $expires));
 			}
 			
 			\header('Content-Type: ' . $mime);

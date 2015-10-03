@@ -19,8 +19,6 @@ trait QueryTrait {
 	use WhereTrait;
 	use OrderTrait;
 	
-	protected $finalize;
-	
 	protected $forUpdate = false;
 	protected $forShare = false;
 	protected $distinct = false;
@@ -30,10 +28,6 @@ trait QueryTrait {
 	
 	protected $limit = 0;
 	protected $offset = 0;
-	
-	public function __construct(\Closure $finalize) {
-		$this->finalize = $finalize;
-	}
 	
 	function forUpdate($enable = true) {
 		if ($enable) {
@@ -94,13 +88,5 @@ trait QueryTrait {
 		$this->offset = 0;
 		
 		return $this;
-	}
-	
-	function getOne($col = null) {
-		return $this->finalize->__invoke($this->render(), false, $col);
-	}
-	
-	function getAll($col = null) {
-		return $this->finalize->__invoke($this->render(), true, $col);
 	}
 }

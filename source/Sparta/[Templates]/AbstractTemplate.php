@@ -146,6 +146,12 @@ abstract class AbstractTemplate {
 	public function __construct($templateId, \Closure $resolver = null) {
 		$this->templateId = $templateId;
 		$this->resolver = $resolver;
+		
+		// Enables an "emergency" decoding of buffered output on exit so Fatal Errors will be printed in a readable way. 
+		// FIXME: This hack won't be needed in PHP7 due to "Error" exceptions. Remove when we go PHP7+.
+		register_shutdown_function(function () {
+ 			$this->autoencodeFormat = 911;
+		});
 	}
 	
 	/**
@@ -192,7 +198,7 @@ abstract class AbstractTemplate {
 			return $result;
 		} finally {
 			// During normal exit $this->obLevel is 0, so this is only for abnormal conditions.
-			while ($this->obLevel--) ob_end_clean();
+			while ($this->obLevel--) ob_end_flush();
 		}
 	}	
 	
@@ -343,7 +349,7 @@ abstract class AbstractTemplate {
 	 */
 	protected function echoHtml($value) {
 		$this->autoencodeFormat -= 0xFFFF;
-		echo $value === null ? '' : \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
+		echo $value === null ? '' : \htmlspecialchars($value, \ENT_QUOTES, 'UTF-8');
 		$this->autoencodeFormat += 0xFFFF;
 	}
 	
@@ -627,7 +633,12 @@ abstract class AbstractTemplate {
 				case 1: // Filter "html" text node encoding.
 					return \htmlspecialchars($buffer, \ENT_QUOTES, 'UTF-8');
 				case 2: // Filter "json" primitive encoding.
-					return \json_encode($value, \JSON_UNESCAPED_UNICODE);
+					return \json_encode($buffer, \JSON_UNESCAPED_UNICODE);
+				case 911: // A special format enabled on shutdown, which unescapes content in order to show error
+						  // dumps in a readable way. This ugly hack won't be needed in PHP7 with "Error" exceptions.
+						  // FIXME: Remove this when we go PHP7+.
+					for ($i = 4; $i--;) $buffer = html_entity_decode($buffer, ENT_QUOTES, 'UTF-8');
+					return $buffer;
 				default:
 					$this->abortWithError('Unknown autoencode format code ' . $format . '.');
 			}

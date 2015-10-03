@@ -177,7 +177,7 @@ class Mailer {
 		/*
 		 * Ready to send.
 		 */
-
+		
 		$mailer = new \Swift_Mailer($this->transport);
 		return $mailer->send($this->message, $failedRecipientsOut) > 0;
 	}

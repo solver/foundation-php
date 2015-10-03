@@ -16,6 +16,7 @@ namespace Solver\Sql;
 use PDO;
 use PDOStatement;
 use PDOException;
+use Solver\Insight\Debug;
 
 // Has bits for other databases, extract into abstract base class.
 class PdoMySqlConnection implements SqlConnection {
@@ -143,9 +144,12 @@ class PdoMySqlConnection implements SqlConnection {
 	 * 
 	 * @return PdoMysqlResultSet
 	 */
-	public function query($sql) {
-		var_dump($sql);
+	public function query($sql, $x = 123) { if ($x !== 123) throw new \Exception('Using legacy query(..., params). No longer supported.');
 		if (!$this->open) $this->open();
+		
+		if (Debug\LOG && $log = Debug::getLog(__METHOD__)) {
+			$log->addInfo('SQL query: ' . $sql);
+		}
 		
 		try {
 			$handle = $this->handle->query($sql);
@@ -166,9 +170,12 @@ class PdoMySqlConnection implements SqlConnection {
 	/* (non-PHPdoc)
 	 * @see \Solver\Sql\SqlConnection::execute()
 	 */
-	public function execute($sql) {		
-		var_dump($sql);
+	public function execute($sql, $x = 123) { if ($x !== 123) throw new \Exception('Using legacy execute(..., params). No longer supported.');
 		if (!$this->open) $this->open();
+		
+		if (Debug\LOG && $log = Debug::getLog(__METHOD__)) {
+			$log->addInfo('SQL command: ' . $sql);
+		}
 		
 		try {
 			$affectedRows = $this->handle->exec($sql);

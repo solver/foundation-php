@@ -99,7 +99,7 @@ abstract class Page {
 					$e->getTraceAsString()
 				));
 				
-				throw new PageException(null, 500, $e);
+				throw new PageException(null, 500, null, $e);
 			}
 		}
 	}

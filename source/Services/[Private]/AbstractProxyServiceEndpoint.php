@@ -6,6 +6,8 @@ namespace Solver\Services;
  * change without warning.
  */
 trait AbstractProxyEndpoint {
+	use DynamicEndpoint;
+	
 	/** @var \Solver\Services\Endpoint */
 	protected $endpoint;
 	

@@ -14,7 +14,7 @@
 namespace Solver\Sparta;
 
 /**
- * Runs the given routers one by one until a match is found (non-404 response).
+ * Runs a list of routers by running them one by one until a match is found (non-404 response). That match is returned.
  */
 class ChainRouter implements Router {
 	/**

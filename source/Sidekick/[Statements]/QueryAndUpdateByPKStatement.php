@@ -15,8 +15,6 @@ namespace Solver\Sidekick;
 
 class QueryAndUpdateByPKStatement extends AbstractStatement {
 	use QueryTrait;
-	use WhereTrait;
-	use OrderTrait;
 	
 	protected $finalize;
 	

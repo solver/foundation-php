@@ -32,7 +32,7 @@ class ListUtils {
 	 * @param array $list
 	 */
 	public static function first(array $list) {
-		return $list ? $list[0] : null;
+		return isset($list[0]) ? $list[0] : null;
 	}
 
 	public static function last(array $list) {

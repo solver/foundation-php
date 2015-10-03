@@ -17,6 +17,16 @@ namespace Solver\Sparta;
  * Simple adapter for nikic/fast-route.
  * 
  * This adapter doesn't require FastRoute's functions.php to be loaded in order to function.
+ * 
+ * Accepted handler formats:
+ * 
+ * #ClassName: string; Handler class.
+ * 
+ * #Closure: function; Any Closure instance to act as a handler.
+ * 
+ * #Extended: tuple... 
+ * - call: #ClassName|#Closure; Handler
+ * - vars: dict; A dictionary of "default" parameters to merge (FastRoute doesn't support this, so the adapter adds it).
  */
 class FastRouteAdapterRouter implements Router {
 	/**
@@ -50,19 +60,31 @@ class FastRouteAdapterRouter implements Router {
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
 	public function __invoke(array $input) {
+		$method = $input['server']['REQUEST_METHOD'];
+		// We strip query params, if any as FastRoute doesn't (so a path won't match if it has query params).
+		$uri = explode('?', $input['server']['REQUEST_URI'])[0];
+		
 		$routeInfo = $this->dispatcher->dispatch(
-			$input['server']['REQUEST_METHOD'],
-			$input['server']['REQUEST_URI']
+			$method,
+			$uri
 		);
 		
 		switch ($routeInfo[0]) {
 		    case \FastRoute\Dispatcher::NOT_FOUND:
+		        return [404];
+		        
 		    case \FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
 		        return [404];
 		        
 		    case \FastRoute\Dispatcher::FOUND:
 		        $handler = $routeInfo[1];
-		        $input['vars'] = $routeInfo[2];
+		        $input['router'] = $routeInfo[2];
+		        
+		        if (is_array($handler)) {
+		        	$input['router'] += $handler[1];
+		        	$handler = $handler[0];
+		        }
+		        
 		        return [200, $handler, $input];
 		}
 	}

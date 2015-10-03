@@ -33,6 +33,8 @@ class FuncUtils {
 	 * #Result
 	 */
 	public static function once($producer) {
+		$result = null;
+		
 		return function () use (& $producer, & $result) {
 			if ($producer) {
 				$result = $producer();

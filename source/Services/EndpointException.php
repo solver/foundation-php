@@ -29,10 +29,20 @@ class EndpointException extends \Exception {
 	 * TRICKY: As a special type of exception this one has no message/code etc. Instead it acts as a proxy for the
 	 * errors contained in the log passed here.
 	 * 
+	 * Typically you wouldn't instantiate this type of exception directly, but you'd construct it indirectly when you
+	 * throw an error through an EndpointLog ($log->errorAndThrow(); $log->throwIfErrors());
+	 * 
+	 * However direct construction is permissible, when you need to pass another exception as the $previous parameter.
+	 *  
 	 * @param EndpointLog $log
 	 */
-	public function __construct(EndpointLog $log) {
-		parent::__construct();		
+	public function __construct(EndpointLog $log, \Exception $previous = null) {
+		if ($previous) {
+			parent::__construct(null, null, $previous);
+		} else {
+			parent::__construct();
+		}
+		
 		$this->log = $log;
 	}
 	
@@ -43,6 +53,11 @@ class EndpointException extends \Exception {
 		return $this->log;
 	}
 	
+	/**
+	 * TODO: Do we need this? Move it of the class, possibly in a Utils class.
+	 * 
+	 * @deprecated
+	 */
 	public function getLogMessages() {
 		$messages = [];
 		

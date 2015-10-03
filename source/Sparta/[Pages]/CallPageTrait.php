@@ -28,6 +28,7 @@ trait CallPageTrait {
 	 * latter protected/private).
 	 * - The action should not begin with double underscore (reserved for PHP's special methods).
 	 * - The action should be not be called "main" (method "main" is part of the controller interface).
+	 * - If the action contains dashes they're converted to camelcase like so: "foo-bar-baz" becomes "fooBarBaz".
 	 * 
 	 * @param string $inputPath
 	 * Input path to read the value from. Typical examples include "tail.0" (URL actions), "body.action" (form actions).
@@ -108,6 +109,14 @@ trait CallPageTrait {
 	private function callInternal($value) {
 		if ($value === null || $value === 'main') return false;
 		if (isset($value[1]) && $value[0] === '_' && $value[1] === '_') return false;
+		
+		$value = explode('-', $value);
+		
+		for ($i = 1, $m = count($value); $i < $m; $i++) {
+			$value[$i] = ucfirst($value[$i]);
+		} 
+		
+		$value = implode('', $value);
 		
 		$class = new \ReflectionClass(\get_class($this));
 			

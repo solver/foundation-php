@@ -13,7 +13,7 @@
  */
 namespace Solver\Sidekick;
 
-use Solver\Lab\SqlConnection;
+use Solver\Sql\SqlConnection;
 use Solver\SqlX\SqlUtils;
 
 class InExpr implements Expr {
@@ -25,7 +25,7 @@ class InExpr implements Expr {
 	
 	public function getTransformed($transform) {
 		$clone = clone $this;
-		$clone->valueList = $transform($valueList);
+		$clone->valueList = $transform($clone->valueList, false);
 		return $clone;
 	}
 	

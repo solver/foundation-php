@@ -4,9 +4,10 @@ namespace Solver\Services;
 use Solver\Lab\Properties;
 
 /**
- * Provides a generic implementation of needed facilities for a service endpoint (see \Solver\Services\Endpoint).
+ * Implements resolve() by reading the statically declared public properties and methods of your class (it skips over
+ * constructors, destructors and other magic methods by ignoring any method that starts with a double underscore).
  */
-trait SimpleEndpoint {
+trait StaticEndpoint {
 	use Properties;
 	
 	/**

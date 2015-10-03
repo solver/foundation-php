@@ -55,6 +55,9 @@ class DictFormat implements Format {
 	 * Allows keys which are specified neither as required nor optional to be extracted. Be careful with this option,
 	 * this means you have no control over which keys end up in your filtered data.
 	 * 
+	 * TODO: Add bool flag (false by default) which allows the given format to receive tuple [$key, $val] instead of just $val.
+	 * Requires consideration about how to interpret the error message paths coming back from that tuple into the dict.
+	 * 
 	 * return $this
 	 */
 	public function addRest(Format $format = null) {
@@ -111,7 +114,7 @@ class DictFormat implements Format {
 			$this->importErrors($log, $errors);
 			return null;
 		} else {
-			return $selected;
+			return $value;
 		}
 	}
 }

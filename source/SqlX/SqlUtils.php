@@ -46,7 +46,7 @@ class SqlUtils {
 	 * 
 	 * @return string
 	 */
-	public function encodeInto(PdoMysqlConnection $conn, $sql, array $values) {		
+	public static function encodeInto(PdoMysqlConnection $conn, $sql, array $values) {		
 		$values = $conn->encodeValue($values);
 		$sql = \explode('?', $sql);
 		$ce = \count($sql);

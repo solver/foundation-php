@@ -24,7 +24,7 @@ trait Properties {
 	 * 
 	 * @var array
 	 */
-	private $solverLabProperties;
+	protected $solverLabProperties;
 	
 	/**
 	 * Registers a property for handling with get/set. The property handlers will only fire if the variable is not set

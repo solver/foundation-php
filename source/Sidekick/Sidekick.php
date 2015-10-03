@@ -16,8 +16,6 @@ namespace Solver\Sidekick;
 use Solver\Sql\SqlConnection;
 use Solver\SqlX\SqlUtils;
 
-// TODO: Consider a function like EntitySet's combined SELECT FOR UPDATE + UPDATE combo:  mapByPK($pk, ($currentEntityState) => $newEntityState).
-// queryAndUpdate('Foo')->select()->where()->execute($mapper);
 class Sidekick {
 	protected $schema;
 	
@@ -38,7 +36,7 @@ class Sidekick {
 		// support also deep update and deep delete before that, for consistency.
 		// TODO: Validate cols given.
 		$rows = $this->mapRows(true, $tableSchema, $rows);
-		SqlUtils::insertMany($conn, $tableSchema['internalName'], $rows, true);
+		SqlUtils::insertMany($this->conn, $tableSchema['internalName'], $rows, true);
 	}
 	
 	function update($tableName) {
@@ -105,12 +103,13 @@ class Sidekick {
 			
 			// TODO: The get/update loop should stream results for a large number of results, to avoid going out of RAM.
 			$rows = $this->queryInternal($tableSchema, $stmt)->getAll();
+			$rows = $this->mapRows(false, $tableSchema, $rows);
 			
-			foreach ($resultset as $row) {
+			foreach ($rows as $row) {
 				$this->updateByPK($tableName, $mapper($row));
 			}
 			
-			return count($resultset);
+			return count($rows);
 		});
 	}
 		
@@ -122,19 +121,20 @@ class Sidekick {
 			
 			$whereClause = [];
 			
-			if ($smt['whereFields']) {
+			if ($stmt['whereFields']) {
 				$whereSql = $this->getWhereClause($tableSchema, $stmt['whereFields']);
 			} else {
 				// To avoid deleting full tables by accident. Might remove this.
 				throw new \Exception('Delete statements must have a defined "where" clause.');
 			}
 			
-			$sql = 'DELETE FROM ' . $this->conn->quoteIdent($tableSchema['internalName']) . ' WHERE ' . $whereSql;
+			$sql = 'DELETE FROM ' . $this->conn->encodeIdent($tableSchema['internalName']) . ' WHERE ' . $whereSql;
+
 			return $conn->execute($sql);
 		});
 	}
 	
-	protected function queryInternal($tableSchema, $statement) {
+	protected function queryInternal($tableSchema, $stmt) {
 		$conn = $this->conn;
 
 		$sql = 'SELECT ';
@@ -332,8 +332,11 @@ class Sidekick {
 			if ($encoding) $transform = $this->getTransformWithExprSupport($transform);
 			
 			if (!$transform) {
+				if (!isset($transRowsIn[$colOrColGroup])) continue;
+					
 				// Note that groups always have a transform, so we're sure this one is not a group.
 				$transRowsOut[$colOrColGroup] = $transRowsIn[$colOrColGroup];
+				unset($transRowsIn[$colOrColGroup]);
 			} else {
 				if ($isComposite) {					
 					$hasAll = true;
@@ -371,7 +374,10 @@ class Sidekick {
 		}
 
 		if ($transRowsIn) {
-			throw new \Exception('Undeclared fields: "' . implode('", "', array_keys($transRowsIn)) . '".');	
+			$exName = $tableSchema['name'];
+			$inName = $tableSchema['internalName'];
+			if ($exName !== $inName) $name = $exName . ' (' . $inName . ')'; else $name = $exName;
+			throw new \Exception('Undeclared fields for table "' . $name . '": "' . implode('", "', array_keys($transRowsIn)) . '".');	
 		}
 		
 		$outputRows = [];
@@ -386,7 +392,7 @@ class Sidekick {
 	}
 	
 	protected function getTransformWithExprSupport($transform) {
-		return function ($in, $composite) use ($transform) {
+		return $transform === null ? null : function ($in, $composite) use ($transform) {
 			if (!$in) return $in;
 			
 			if ($composite) {

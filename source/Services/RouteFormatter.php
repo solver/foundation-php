@@ -9,6 +9,12 @@ namespace Solver\Services;
  * 
  * - Web: ['foo-bar', 'baz-qux', 'qux']
  * - PHP: ['fooBar', 'barBaz', 'qux']
+ * 
+ * @deprecated
+ *  
+ * We're no longer re-mapping endpoint names for API purposes. It only makes sense if the URL is user-facing. For this
+ * purpose we'll create a more comprehensive solution (probably rolled into Workspace). This class is left for reference
+ * purposes.
  */
 class RouteFormatter {
 	public static function webToPhp($route) {

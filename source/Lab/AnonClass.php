@@ -299,7 +299,7 @@ CODE;
 		/* @var $reflMethod \ReflectionMethod */
 		foreach ($reflClass->getMethods() as $reflMethod) {
 			if ($isInterface || $reflMethod->isAbstract()) {
-				$methods[$methodName] = [$reflClass, $reflMethod];
+				$methods[$reflMethod->name] = [$reflClass, $reflMethod];
 			}
 		}
 		
