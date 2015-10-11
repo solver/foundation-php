@@ -40,6 +40,7 @@ class CollectionUtils {
 	 */
 	static public function splitKeys(array $array, $delim = '.') {
 		$out = [];
+		$topKey = null;
 		
 		// TODO: Optimization opportunity?
 		foreach ($array as $key => $item) {

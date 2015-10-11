@@ -13,6 +13,11 @@ namespace Solver\Logging;
  * have to return false from hasErrors(), even if the error() method has been called.
  */
 class NullLog implements StatusLog {
+	/**
+	 * Disallow direct construction. This is a singleton. Use static method get() instead.
+	 */
+	protected function __construct() {}
+	
 	public static function get() {
 		static $i; return $i ?: $i = new self();
 	}
