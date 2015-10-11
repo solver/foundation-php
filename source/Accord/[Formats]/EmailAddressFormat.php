@@ -35,6 +35,8 @@ class EmailAddressFormat implements Format {
 		return $value;
 		
 		badEmail:
+		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 		$log->error($path, 'Please fill in a valid email address.');
 		return null;
 	}

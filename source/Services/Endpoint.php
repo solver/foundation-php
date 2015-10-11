@@ -31,7 +31,7 @@ interface Endpoint {
 	 * easier to port a service to a language where such collisions are not allowed (Java, C#, etc).
 	 * 
 	 * Make sure to check the provided reusable implementation for possible different approaches to implementing this
-	 * interface: SimpleEndpoint, ProxyEndpoint & DeepProxyEndpoint, EmptyEndpoint etc. 
+	 * interface: StaticEndpoint, ProxyEndpoint & DeepProxyEndpoint, EmptyEndpoint etc. 
 	 *  
 	 * @param string $name
 	 * Name of a public property or a method.

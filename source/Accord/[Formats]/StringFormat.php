@@ -317,6 +317,8 @@ class StringFormat implements Format {
 			if (\is_int($value) || \is_float($value) || \is_bool($value)) {
 				$value = (string) $value;
 			} else {
+				if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 				$log->error($path, 'Please provide a string.');
 				return null;
 			}

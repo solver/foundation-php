@@ -51,7 +51,7 @@ class TempLog implements ErrorLog {
 	 * @see \Solver\Logging\Log::log()
 	 */
 	public function log(array $event) {
-		if ($event['type'] !== 'error') LogException::throwBadFormat($type);
+		if ($event['type'] !== 'error') LogException::throwBadFormat($event['type']);
 		$this->errors[] = [$event['path'], $event['message'], $event['code'], $event['details']];
 	}
 }

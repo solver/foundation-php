@@ -51,6 +51,7 @@ class IntersectFormat implements Format {
 		$subValues = [];
 		
 		foreach ($this->formats as $i => $format) {
+			$errors = null;
 			$tempLog = new TempLog($errors);
 			$subValue = $format->apply($value, $tempLog, $path);
 			
@@ -58,10 +59,16 @@ class IntersectFormat implements Format {
 				$this->importErrors($log, $errors);
 				$errors = [];
 			} else {
-				if (is_array($value)) {
+				if (is_array($subValue)) {
 					$subValues[$i] = $subValue;
 				} else {
-					throw new \Exception('Subformats in an IntersectFormat should return arrays (subformat at index ' . $i . ').');
+					if ($subValue instanceof ValueBox) $subValue = $subValue->getValue();
+					
+					if (is_array($subValue)) {
+						$subValues[$i] = $subValue;
+					} else {
+						throw new \Exception('Subformats in an IntersectFormat should return arrays (subformat at index ' . $i . ').');
+					}
 				}
 			}
 		}

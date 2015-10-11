@@ -36,7 +36,7 @@ class ListFormat implements Format {
 	public function hasLength($length) {
 		$this->functions[] = function ($value, & $errors, $path) use ($length) {
 			if (\count($value) < $length) {
-				$noun = $min == 1 ? 'item' : 'items';
+				$noun = $length == 1 ? 'item' : 'items';
 				$errors[] = [$path, "Please provide a list with exactly $length $noun."];
 				return null;
 			} else {
@@ -121,10 +121,13 @@ class ListFormat implements Format {
 	
 	public function apply($value, ErrorLog $log, $path = null) {
 		if (!\is_array($value)) {
+			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 			$log->error($path, 'Please provide a list.');
 			return null;
 		}
 		
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		$itemFormat = $this->itemFormat;
 		$filtered = [];

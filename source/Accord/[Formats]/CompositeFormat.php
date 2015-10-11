@@ -45,6 +45,7 @@ class CompositeFormat implements Format {
 	}
 	
 	public function apply($value, ErrorLog $log, $path = null) {
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		
 		foreach ($this->formats as $i => $format) {

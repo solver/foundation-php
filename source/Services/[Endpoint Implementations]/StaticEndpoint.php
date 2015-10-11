@@ -1,17 +1,17 @@
 <?php
 namespace Solver\Services;
 
-use Solver\Lab\Properties;
-
 /**
  * Implements resolve() by reading the statically declared public properties and methods of your class (it skips over
  * constructors, destructors and other magic methods by ignoring any method that starts with a double underscore).
+ * 
+ * NOTE: You can combine this trait with DynamicEndpoint to provide hybrid static/dynamic resolution. Alias this trait's
+ * resolve() as a protected method under another name, for ex. resolveStatic(), then implement your own resolve(), which
+ * delegates to resolveStatic() and falls back to dynamic resolution on a miss (or vice versa).
  */
 trait StaticEndpoint {
-	use Properties;
-	
 	/**
-	 * Resolves public properties (including getter ones created via defineEndpointProperty or defineProperty) that are
+	 * Resolves public properties (including getters created via \Solver\Lab\Properties::defineProperty) that are
 	 * endpoints, and any public methods except magic methods (leading double underscore).
 	 * 
 	 * @param string $name
@@ -38,9 +38,9 @@ trait StaticEndpoint {
 		 * Attempt to resolve as a getter property from trait Solver\Lab\Properties.
 		 */
 		
-		if (!isset($this->solverLabProperties[$name]['get'])) goto noGetter;
+		if (!isset($this->Solver_Lab_Properties_map[$name]['get'])) goto noGetter;
 		
-		$property = $this->solverLabProperties[$name]['get']();
+		$property = $this->Solver_Lab_Properties_map[$name]['get']->__invoke();
 		if (!$property instanceof Endpoint) goto noGetter;
 		
 		return $property;
@@ -69,31 +69,5 @@ trait StaticEndpoint {
 		 */
 		
 		return null;
-	}
-	
-	/**
-	 * Creates a read-only property that's instantiated lazily on first access via the passed $factory closure.
-	 * 
-	 * In order to expose this property in IDEs, create it as an unititialized public property in your class, this
-	 * method will unset it, so the getter gets triggered instead.
-	 * 
-	 * @param string $name
-	 * Name for this property.
-	 * 
-	 * @param \Closure $factory
-	 * A closure that must return a Endpoint instance (the factory is invoked no more than once, no need to cache
-	 * the instance inside the factory, this is taken care of for you).
-	 */
-	protected function defineEndpointProperty($name, \Closure $factory) {
-		if (property_exists($this, $name)) {
-			unset($this->{$name});
-		}
-		
-		$instance = null;
-			
-		$this->defineProperty($name, function () use (& $instance, $factory) {
-			if ($instance === null) $instance = $factory();
-			return $instance;
-		}, false);
 	}
 }

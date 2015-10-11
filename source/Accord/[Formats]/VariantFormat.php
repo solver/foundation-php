@@ -85,6 +85,8 @@ class VariantFormat implements Format {
 		
 		// Variants must be collections (dict, list, tuple).
 		if (!is_array($value)) {
+			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 			$log->error($path, 'Please fill in a valid value.'); // TODO: More specific error?
 			return null;
 		}
@@ -106,6 +108,7 @@ class VariantFormat implements Format {
 			return null;
 		}
 		
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		$output = $this->formats[$value[$tagField]]->apply($value, $tempLog, $path);
 		

@@ -54,21 +54,30 @@ class FuncUtils {
 	 * Basic:
 	 * 
 	 * - toClosure($closure): If you pass a closure instance, it's returned unmodified.
-	 * - toClosure($object): Object, which must implement magic method __invoke.
+	 * - toClosure($object): Closure from an object with magic method __invoke.
 	 * - toClosure('functionName'): Closure from a function.
 	 * 
-	 * Static methods (all variations produce the return result):
+	 * Static methods (all produce the same result):
 	 * 
 	 * - toClosure('ClassName', 'methodName')
 	 * - toClosure('ClassName::methodName')
 	 * - toClosure(['ClassName', 'methodName'])
 	 * 
-	 * Instance methods (all variations produce the return result):
+	 * Instance methods (all produce the same result):
 	 * 
 	 * - toClosure($object, 'methodName')
 	 * - toClosure([$object, 'methodName'])
 	 * 
-	 * If you need support for PHP's callable formats, see getClosureFromCallable().
+	 * EXPERIMENTAL: Constructors, for creating factory closures that point to a constructor. Works also for classes
+	 * with no explicit constructor (all produce the same result). Note that this is distinct from passing an object as
+	 * first argument and "__construct" as second (which would link to the __construct method of a specific instance, 
+	 * and not construct a new object).
+	 * 
+	 * - toClosure('ClassName', '__construct')
+	 * - toClosure('ClassName::__construct')
+	 * - toClosure(['ClassName', '__construct'])
+	 *  
+	 * TODO: Don't throw, but return null when an $object with no __invoke() is given (and other invalid situations).
 	 * 
 	 * @param mixed $a
 	 * The parameter is overloaded, see usage examples in the method description.
@@ -86,16 +95,34 @@ class FuncUtils {
 			if (is_object($a)) return (new \ReflectionMethod($a, '__invoke'))->getClosure($a) ?: null;
 			
 			if (is_string($a)) {
-				if (strpos($a, '::')) return (new \ReflectionMethod(...explode('::', $a)))->getClosure() ?: null;
-				else return (new \ReflectionFunction($a))->getClosure() ?: null;
+				if (strpos($a, '::')) {
+					list($a, $b) = \explode('::', $a);
+					goto methods;
+				} else {
+					return (new \ReflectionFunction($a))->getClosure() ?: null;
+				}
 			}
 			
-			if (!is_array($a)) return null;
+			if (is_array($a)) return null;
 			
 			list($a, $b) = $a;
 		}
 		
-		if (is_string($a)) return (new \ReflectionMethod($a, $b))->getClosure() ?: null;
-		else return (new \ReflectionMethod($a, $b))->getClosure($a) ?: null;
+		methods:
+		
+		if (is_string($a)) {
+			if ($b === '__construct') {
+				// FIXME: This solution is experimental, and it should be tested extensively with various combinations
+				// of by-ref, by-value and variadic arguments. Seems to work in basic tests. Nothing else works in
+				// PHP, reflection doesn't provide a working solution. Also test in both PHP 5.6 and 7.x.
+				// Also test of modifying not-by-ref params in the constructor affects semantics, passing array keys not
+				// by-ref turns them into reference etc.
+				return function (& ...$params) use ($a) { return new $a(...$params); };
+			} else {
+				return (new \ReflectionMethod($a, $b))->getClosure() ?: null;
+			}
+		} else {
+			return (new \ReflectionMethod($a, $b))->getClosure($a) ?: null;
+		}
 	}
 }

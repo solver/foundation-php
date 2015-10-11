@@ -147,7 +147,7 @@ class FluentUrlCodec {
 	 * @throws \Exception
 	 * Throws if the URL doesn't match the correct Workspace "stack" format.
 	 */
-	public static function decode($url, $maxLength = 2048) {
+	public static function decode($url) {
 		static $readValue, $error;
 				
 		if ($readValue === null) {
@@ -156,6 +156,8 @@ class FluentUrlCodec {
 			};
 			
 			$readValue = function ($source, $length, $pos, $debug, $root = false) use (& $readValue, $error) {
+				if ($pos == $length) return [$root ? [''] : '', $pos];
+				
 				$firstChar = $source[$pos];
 				
 				// Collection.

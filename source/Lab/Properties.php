@@ -20,11 +20,11 @@ namespace Solver\Lab;
  */
 trait Properties {
 	/**
-	 * A map of registered properties (long name as typical in traits to avoid collisions).
+	 * A map of registered properties (the ugly long name is necessary in traits to avoid property name collisions).
 	 * 
 	 * @var array
 	 */
-	protected $solverLabProperties;
+	protected $Solver_Lab_Properties_map;
 	
 	/**
 	 * Registers a property for handling with get/set. The property handlers will only fire if the variable is not set
@@ -64,7 +64,7 @@ trait Properties {
 			throw new \Exception('Cannot create property "'. $name . '" with forbidden both access and modification.');
 		}
 		
-		if (isset($this->solverLabProperties[$name])) {
+		if (isset($this->Solver_Lab_Properties_map[$name])) {
 			throw new \Exception('Cannot create property "'. $name . '" as it already exists.');
 		}
 		
@@ -144,12 +144,12 @@ trait Properties {
 			throw new \Exception('Invalid setter specification.');
 		}
 				
-		$this->solverLabProperties[$name] = $property;
+		$this->Solver_Lab_Properties_map[$name] = $property;
 	}
 	
 	public function __set($name, $value) {
-		if (isset($this->solverLabProperties[$name])) {
-			$this->solverLabProperties[$name]['set']($value, $name);
+		if (isset($this->Solver_Lab_Properties_map[$name])) {
+			$this->Solver_Lab_Properties_map[$name]['set']($value, $name);
 		}
 		
 		// Emulate the default behavior, which allows dynamic properties.
@@ -160,8 +160,8 @@ trait Properties {
 	}
 	
 	public function __get($name) {
-		if (isset($this->solverLabProperties[$name])) {
-			return $this->solverLabProperties[$name]['get']($name);
+		if (isset($this->Solver_Lab_Properties_map[$name])) {
+			return $this->Solver_Lab_Properties_map[$name]['get']($name);
 		}
 		
 		// Emulate the default behavior, which will result in the standard PHP Notice.

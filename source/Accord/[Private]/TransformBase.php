@@ -41,6 +41,7 @@ trait TransformBase {
 	 * Transformed value (or null).
 	 */
 	protected function applyFunctions($functions, $value, $log, $path) {
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		
 		foreach ($functions as $function) {

@@ -73,14 +73,18 @@ class DictFormat implements Format {
 		static $TYPE_DEFAULT = 2;
 		
 		if (!\is_array($value)) {
+			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 			$log->error($path, 'Please provide a dict.');
 			return null;
 		}
 		
 		$selected = [];
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		
 		foreach ($this->fields as $field) {
+			/* @var $field Format */
 			list($name, $format, $type) = $field;
 			$exists = \key_exists($name, $value);
 			

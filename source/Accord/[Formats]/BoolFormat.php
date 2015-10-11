@@ -52,6 +52,8 @@ class BoolFormat implements Format {
 				break;
 		}
 		
+		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 		$log->error($path, 'Please provide a valid boolean.');
 		null;
 	}

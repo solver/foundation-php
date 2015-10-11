@@ -208,6 +208,8 @@ class NumberFormat implements Format {
 		}
 		
 		error:
+		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+		
 		$log->error($path, 'Please provide a number.');
 		return null;
 	}

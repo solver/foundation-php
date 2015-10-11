@@ -66,6 +66,7 @@ class UnionFormat implements Format {
 	}
 	
 	public function apply($value, ErrorLog $log, $path = null) {
+		$errors = null;
 		$tempLog = new TempLog($errors);
 		$formatMaxIndex = \count($this->formats) - 1;
 		

@@ -23,6 +23,8 @@ use Solver\Logging\ErrorLog;
 class NullFormat implements Format {
 	public function apply($value, ErrorLog $log, $path = null) {
 		if ($value !== null) {
+			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+			
 			// If added first in a UnionFormat, this awkward message won't be seen.
 			$log->error($path, 'Please provide a null value.');
 			return null;
