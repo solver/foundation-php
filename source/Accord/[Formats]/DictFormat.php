@@ -13,13 +13,15 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\ActionUtils as AU;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * TODO: Add subset($dictFormat, ...$fields) or similar: an ability to create a partial clone only of selected fields.
  */
-class DictFormat implements Format {
-	use TransformBase;
+class DictFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $fields = [];
 	protected $rest = false;
@@ -67,58 +69,88 @@ class DictFormat implements Format {
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		static $TYPE_REQUIRED = 0;
 		static $TYPE_OPTIONAL = 1;
 		static $TYPE_DEFAULT = 2;
 		
-		if (!\is_array($value)) {
-			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+		if (!\is_array($input)) {
+			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			$log->error($path, 'Please provide a dict.');
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a dict.');
+			$output = null;
 			return null;
 		}
 		
-		$selected = [];
-		$errors = null;
-		$tempLog = new TempLog($errors);
+		$success = true;
+		$output = [];
 		
 		foreach ($this->fields as $field) {
 			/* @var $field Format */
 			list($name, $format, $type) = $field;
-			$exists = \key_exists($name, $value);
+			
+			// Isset is faster so we try that and fall back to key_exists for null values. 
+			// TODO: Should we just ignore nulls? Or make it an option?
+			$exists = isset($input[$name]) || \key_exists($name, $input);
 			
 			if ($exists) {
-				$fieldValue = $value[$name];
-				unset($value[$name]);
-				$selected[$name] = $format ? $format->apply($fieldValue, $tempLog, $path === null ? $name : $path . '.' . $name) : $fieldValue;		
+				$subInput = $input[$name];
+				unset($input[$name]);
+				
+				if ($format) {
+					$subPath = $path;
+					$subPath[] = $name;
+					
+					if ($format instanceof FastAction) {
+						$success = $success && $format->fastApply($subInput, $output[$name], $mask, $events, $subPath);
+					} else {
+						$success = $success && AU::emulateFastApply($format, $subInput, $output[$name], $mask, $events, $subPath);
+					}
+				} else {
+					$output[$name] = $subInput;
+				}
 			} else {
 				switch ($type) {
 					case $TYPE_REQUIRED:
 						// Missing fields are a dict-level error (don't add $name to the $path in this case).
-						$errors[] = [$path, 'Please provide required field "' . $name . '".'];
+						if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide required field "' . $name . '".');
+						$success = false;
 						break;
+						
 					case $TYPE_DEFAULT:
-						$selected[$name] = $field[3];
+						$output[$name] = $field[3];
 						break;
 				}
 			}
 		}
 		
 		if ($this->rest) {
-			if ($this->restFormat) foreach ($value as $fieldName => $fieldValue) {
-				$value[$fieldName] = $format->apply($fieldValue, $tempLog, $path === null ? $fieldName : $path . '.' . $fieldName);
+			if ($this->restFormat) {
+				if ($format instanceof FastAction) {
+					foreach ($input as $subName => $subInput) {
+						$subPath = $path;
+						$subPath[] = $subName;
+						$success = $success && $format->fastApply($subInput, $output[$subName], $mask, $events, $subPath);
+					}
+				} else {
+					foreach ($input as $subName => $subInput) {
+						$subPath = $path;
+						$subPath[] = $subName;
+						$success = $success && AU::emulateFastApply($format, $subInput, $output[$subName], $mask, $events, $subPath);
+					}
+				}
+			} else {
+				$output += $input;
 			}
-			$value = $selected + $value;
 		} else {
-			$value = $selected;
+			if ($mask & SL::WARNING_FLAG) ITU::warningTo($events, $path, 'One or more fields were ignored: "' . implode('", "', array_keys($input)) . '".');
 		}
 		
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
+		if ($success) {
+			return true;
 		} else {
-			return $value;
+			$output = null;
+			return false;
 		}
 	}
 }

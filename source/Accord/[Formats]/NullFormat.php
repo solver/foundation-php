@@ -13,23 +13,30 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * This format validates only if the value is null.
  * 
- * This is useful in combination with UnionFormat, in order to create values which can optionally be null.
+ * This is useful in combination with OrFormat, in order to create values which can optionally be null.
+ * 
+ * TODO: Consider removing this?
  */
-class NullFormat implements Format {
-	public function apply($value, ErrorLog $log, $path = null) {
-		if ($value !== null) {
-			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+class NullFormat implements Format, FastAction {
+	use ApplyViaFastApply;
+	
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if ($input !== null) {
+			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			// If added first in a UnionFormat, this awkward message won't be seen.
-			$log->error($path, 'Please provide a null value.');
-			return null;
+			// If added first in a OrFormat, this awkward message won't be seen.
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a null value.');
+			$output = null;
+			return true;
 		} else {
-			return $value;
+			$output = null;
+			return false;
 		}
 	}
 }

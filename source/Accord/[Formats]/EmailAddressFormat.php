@@ -13,7 +13,8 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 use Solver\Toolbox\StringUtils;
 
 /**
@@ -21,23 +22,31 @@ use Solver\Toolbox\StringUtils;
  * 
  * Whitespace is automatically trimmed.
  */
-class EmailAddressFormat implements Format {	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_string($value)) goto badEmail;
+class EmailAddressFormat implements Format, FastAction {	
+	use ApplyViaFastApply;
+	
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if (!\is_string($input)) {			
+			if ($input instanceof ToValue) {
+				return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+			} else {
+				goto badEmail;
+			}
+		}
 		
-		$value = StringUtils::trim($value);
+		$output = StringUtils::trim($input);
 		
 		// TODO: This is RFC 5322 check, verify it's RFC 6530 compliant: http://en.wikipedia.org/wiki/Email_address#Internationalization
-		if ($value === '' || (\strlen($value) > 320 || !\preg_match('/^[\w%.\'!#$&*+\/=?^`{|}~-]{1,64}@(?:(?:\d+\.){3}\d+|(?:[a-z\d][a-z\d-]+)+(?:\.[a-z\d][a-z\d-]+)+)$/iD', $value))) {
+		if ($output === '' || (\strlen($output) > 320 || !\preg_match('/^[\w%.\'!#$&*+\/=?^`{|}~-]{1,64}@(?:(?:\d+\.){3}\d+|(?:[a-z\d][a-z\d-]+)+(?:\.[a-z\d][a-z\d-]+)+)$/iD', $output))) {
 			goto badEmail;
 		}
 		
-		return $value;
+		return true;
 		
 		badEmail:
-		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
 			
-		$log->error($path, 'Please fill in a valid email address.');
+		if ($mask && SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please fill in a valid email address.');
+		$output = null; 
 		return null;
 	}
 }

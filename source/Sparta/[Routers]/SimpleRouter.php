@@ -60,7 +60,8 @@ class SimpleRouter implements Router {
 		$this->config =  $config;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
 	public function __invoke(array $input) {

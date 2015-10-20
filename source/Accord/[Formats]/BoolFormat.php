@@ -13,7 +13,8 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * Returns a PHP boolean value if the input can be interpreted as boolean.
@@ -34,27 +35,43 @@ use Solver\Logging\ErrorLog;
  * 
  * TODO: add isTrue() and isFalse().
  */
-class BoolFormat implements Format {	
-	public function apply($value, ErrorLog $log, $path = null) {
-		switch (\gettype($value)) {
+class BoolFormat implements Format, FastAction {
+	use ApplyViaFastApply;
+	
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		switch (\gettype($input)) {
 			case 'boolean':
-				return $value;
+				$output = $input; 
+				return true;
 			
 			case 'integer':
 			case 'double':
-				if ($value == 0) return false;
-				if ($value == 1) return true;
+				if ($input == 0) {
+					$output = false;
+					return true;
+				}
+				if ($input == 1) {
+					$output = true;
+					return true;
+				}
 				break;
 				
 			case 'string':
-				if ($value === '' || $value === '0' || $value === 'false') return false;
-				if ($value === '1' || $value === 'true') return true;
+				if ($input === '' || $input === '0' || $input === 'false') { 
+					$output = false; 
+					return true;
+				}
+				if ($input === '1' || $input === 'true') {
+					$output = true;
+					return true;
+				}
 				break;
 		}
 		
-		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
-			
-		$log->error($path, 'Please provide a valid boolean.');
-		null;
+		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+		
+		if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a valid boolean.');		
+		$output = null; 
+		return false;
 	}
 }

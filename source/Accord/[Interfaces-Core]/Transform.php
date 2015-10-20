@@ -13,33 +13,30 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
-
 /**
- * Interface for "transforms", which take a value, and produce a transformed value.
+ * Interface for "transform" actions, which take a value, and produce a transformed value deterministically.
  * 
  * You must respect the following contract:
  * 
- * - "MUST": Following this rule is mandatory.
- * - "SHOULD": Following this rule is highly recommended, but you're allowed to make necessary exceptions.
- * - "MAY": Denotes an action or a rule that is allowed and you may follow, but it's not a specific recommendation.
+ * - A Transform abides by the rules listed for interface NoEffect: no side-effects. See NoEffect for more info.
  * 
- * - A Transform has two outcomes. Success, in which the transformed value is returned without logging errors. Failure, 
- * in which null is returned and one or more errors are logged. A Transform MUST choose one of those two outcomes for
- * a specific $input when apply() is called and it MUST NOT mix those two modes.
+ * - A Transform MUST be deterministic, i.e. it must always produce the same output if given the same inputs. You can't
+ * have a filtering step which is pseudo-random, for example. If you need non-deterministic behavior, implement
+ * Action instead of Transform.
+ * 
+ * - A Transform SHOULD be pure, i.e. it should not explicitly access global settings, configuration, state, I/O to
+ * affect its output or behavior. The goal is to create Transforms that behave predictably and are configured explicity
+ * through their constructor and methods. If you need explicitly impure behavior, implement Action instead of Transform.
  * 
  * - A Transform object MUST be clonable ($tfm = clone $tfm). Clones are shallow: passed-in object references won't be
  * cloned, but any internal state MUST be cloned. If your Transform creates a mutable stateful object internally, which
  * is part of its logical state, that MUST be cloned appropriately as well to preserve the intended clone semantics.
  * 
- * - A Transform SHOULD produce no semantically observable side-effects, for ex. changing global settings, mutating
- * objects accessible outside the transform, writing to files etc.
- * 
- * - A Transform MUST support nullary constructors (constructors without required parameters).
+ * - A Transform MUST support nullary constructors (constructors without required parameters). TODO: Reconsider?
  * 
  * - A Transform's constructor MUST NOT be the only way to configure it. Instead you SHOULD prefer configuration
  * methods. The constructor MAY accept optional arguments as a shortcut for common configuration setup, as long as
- * an equivalent configuration can be achieved otherwise.
+ * an equivalent configuration can be achieved otherwise. TODO: Reconsider?
  * 
  * - A Transform MAY provide methods that configure the filters and validation tests performed on a transformed value.
  * 
@@ -48,29 +45,11 @@ use Solver\Logging\ErrorLog;
  * 
  * - A Transform filter-only method SHOULD begin with a 2nd person imperative mood verb: "trim", "normalize", "map"; 
  * or begin with "to" ("toSomething" being short for "convertToSomething"): "toNumber", "toUpper". You SHOULD avoid
- * filter methods starting with "apply", in order to avoid confusion with the Transform::apply() method.
+ * filter methods starting with "apply" & "attempt", in order to avoid confusion with these Action inherited methods.
  * 
  * - A Transform test-only method name SHOULD preferably use the "is", "has" prefixes followed by a noun or adjective.
  * When these prefixes are unsuitable, the method name SHOULD prefer a 3rd person indicative mood verb. For negative
  * tests, replace "is" with "isNot", "has" with "hasNo", and prepend "not" in other cases. Examples: "isMin", "isOneOf",
  * "isNotOneOf", "hasLength", "hasNoPunctuation", "equals", "notEquals", "matchesRegex", "notMatchesRegex". 
  */
-interface Transform {
-	/**
-	 * Returns a transformed version of the given value, or logs one or more errors and returns null, if the value can't
-	 * be processed by this transform.
-	 * 
-	 * @param mixed $value
-	 * Value to transform.
-	 * 
-	 * @param \Solver\Logging\ErrorLog $log
-	 * If extracting properly formatted data from the given value fails, errors will be logged here.
-	 * 
-	 * @param string $path
-	 * Default null. An optional base path to log the errors at. 
-	 * 
-	 * @return null|mixed
-	 * Transformed value, or null if the transform couldn't be perform on this input value.
-	 */
-	public function apply($value, ErrorLog $log, $path = null);
-}
+interface Transform extends Action, NoEffect {}

@@ -16,7 +16,8 @@ namespace Solver\Radar;
 class PsrxLoader implements RadarLoader {
 	protected $sourceRootDir, $cacheRootDir;
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Radar\RadarLoader::__construct()
 	 */
 	public function __construct($sourceRootDir, $cacheRootDir) {
@@ -24,7 +25,8 @@ class PsrxLoader implements RadarLoader {
 		$this->cacheRootDir = $cacheRootDir;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Radar\RadarLoader::find()
 	 */
 	public function find($symbolId, $symbolPathname, $params = null) {
@@ -51,7 +53,8 @@ class PsrxLoader implements RadarLoader {
 		return $compiledPathnameSource;
 	}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Radar\RadarLoader::load()
 	 */
 	public function load($symbolId, $symbolPathname, $params = null) {

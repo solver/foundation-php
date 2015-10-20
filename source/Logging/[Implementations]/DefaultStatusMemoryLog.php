@@ -15,32 +15,44 @@ namespace Solver\Logging;
 
 // TODO: Optimization opportunities.
 class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemoryLog {
-	public function __construct() {
-		parent::__construct(new DefaultMemoryLog());
+	/**
+	 * We re-declare this parent property to assign it a proper type (we know it's this type as we configure the 
+	 * parent constructor with it).
+	 * 
+	 * @var DefaultMemoryLog
+	 */
+	protected $log;
+	
+	public function __construct($mask = 15) {
+		parent::__construct(new DefaultMemoryLog(), $mask);
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\ErrorMemoryLog::getErrors()
 	 */
 	public function getErrors() {
 		return $this->log->getEvents(['error']);
 	}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\ErrorMemoryLog::hasErrors()
 	 */
 	public function hasErrors() {
 		return $this->log->hasEvents(['error']);
 	}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
 	public function getEvents($types = null) {
 		return $this->log->getEvents($types);
 	}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
 	public function hasEvents($types = null) {

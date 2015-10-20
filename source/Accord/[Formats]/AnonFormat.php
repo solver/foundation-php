@@ -13,4 +13,4 @@
  */
 namespace Solver\Accord;
 
-class AnonFormat extends AnonTransform implements Format {}
+class AnonFormat extends AnonAction implements Format {}

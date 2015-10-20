@@ -107,42 +107,42 @@ class EndpointDispatcher2 {
 	}
 		
 	protected function segmentNotFound($chain, $errorAtIndex) {
-		(new EndpointLog())->errorAndThrow(
-			$this->getRoutePath($chain, $errorAtIndex), 
+		(new EndpointLog())->error(
+			$this->getRoutePath($chain, $errorAtIndex),
 			'Segment not found.', 
 			'dispatcher.segmentNotFound');
 	}
 	
 	protected function endpointResultExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->errorAndThrow(
+		(new EndpointLog())->error(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Branch action returned data, endpoint expected.', 
 			'dispatcher.endpointResultExpected');		
 	}
 	
 	protected function dataResultExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->errorAndThrow(
+		(new EndpointLog())->error(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Leaf action returned an endpoint, data expected.', 
 			'dispatcher.dataResultExpected');		
 	}
 		
 	protected function actionExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->errorAndThrow(
+		(new EndpointLog())->error(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			$errorAtIndex == $maxIndex ? 'Leaf is not an action.' : 'Cannot pass parameters to a branch endpoint, action expected.', 
 			'dispatcher.actionExpected');		
 	}
 	
 	protected function segmentFailed(EndpointLog $log, $chain, $errorAtIndex, $maxIndex) {
-		$log->errorAndThrow(
+		$log->error(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			$errorAtIndex == $maxIndex ? 'Leaf returned errors.' : 'Branch returned errors.', 
 			'dispatcher.segmentFailed');		
 	}
 	
 	protected function paramFilterFailed(EndpointLog $log, $chain, $errorAtIndex, $maxIndex) {
-		$log->errorAndThrow(
+		$log->error(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Parameter filter returned errors.', 
 			'dispatcher.paramFilterFailed');		

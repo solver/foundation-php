@@ -40,6 +40,8 @@ class Guardian {
 		if (!\extension_loaded('intl')) throw new \Exception('This code requires extension "intl".');
 		if (!\extension_loaded('iconv')) throw new \Exception('This code requires extension "iconv".');
 		if (!\extension_loaded('mbstring')) throw new \Exception('This code requires extension "mbstring".');
+		if (!\extension_loaded('intl')) throw new \Exception('This code requires extension "intl".');
+		if (!\extension_loaded('gmp')) throw new \Exception('This code requires extension "gmp".');
 		
 		/*
 		 * Fix common config problems.

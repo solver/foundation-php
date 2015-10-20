@@ -13,7 +13,9 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\ActionUtils as AU;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * A variant is an implementation of a "tagged union" type, for dictionaries where a specific field is designated to 
@@ -22,14 +24,14 @@ use Solver\Logging\ErrorLog;
  * Variants are able to directly select the correct subformat by matching the provided values for the tag field. This
  * results in better performance and improved error reporting (the errors from the correct subtype get reported if the
  * input invalidates) compared to untagged unions, but it has a limitation: it requires subformats to return a
- * collection (PHP array) so the tag field can be addressed by name (dict), or index (list, tuple). UnionFormat
+ * collection (PHP array) so the tag field can be addressed by name (dict), or index (list, tuple). OrFormat
  * implements an untagged union and has no limitation on the value format.
  * 
  * TODO: Allow one subformat with no tagged value (i.e. the lack of a tag selects that subformat), thus making the tag
  * field optional (it's by default required).
  */
-class VariantFormat implements Format {	
-	use TransformBase;
+class VariantFormat implements Format, FastAction {	
+	use ApplyViaFastApply;
 	
 	protected $tagFieldName = null;
 	protected $mergeTagInOutput;
@@ -66,7 +68,7 @@ class VariantFormat implements Format {
 	 *  
 	 * @param Format $format
 	 * @throws \Exception
-	 * @return \Solver\Lab\UnionFormat
+	 * @return \Solver\Lab\OrFormat
 	 */
 	public function add($tagValue, Format $format) {
 		if (!is_scalar($tagValue)) throw new \Exception('Tag values must be scalar (integer, int, or a float with an integer value).');
@@ -76,48 +78,68 @@ class VariantFormat implements Format {
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		$tagField = $this->tagFieldName;
 		
 		if ($tagField === null) {
+			// Developer mistake, misconfigured format.
 			throw new \Exception('You must set the tag field name via tag() before you extract.');
 		}
 		
 		// Variants must be collections (dict, list, tuple).
-		if (!is_array($value)) {
-			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+		if (!is_array($input)) {
+			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			$log->error($path, 'Please fill in a valid value.'); // TODO: More specific error?
-			return null;
+			// TODO: More specific error?
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please fill in a valid value.');
+			$output = null;
+			return false;
 		}
 		
 		// The tag field must be present.
-		if (!key_exists($tagField, $value)) {
-			if ((string) $tagField === (string) (int) $tagField) {
-				$msg = 'Please provide required index "' . $tagField . '".';
-			} else {
-				$msg = 'Please provide required field "' . $tagField . '".';
+		if (!key_exists($tagField, $input)) {
+			if ($mask & SL::ERROR_FLAG) {
+				if ((string) $tagField === (string) (int) $tagField) {
+					$message = 'Please provide required index "' . $tagField . '".';
+				} else {
+					$message = 'Please provide required field "' . $tagField . '".';
+				}
+				
+				ITU::errorTo($events, $path, $message);
 			}
-			$log->error($path, $msg);
-			return null;
+			
+			$output = null;
+			return false;
 		}
 		
 		// The value must match our registered type tags.
-		if (!isset($this->formats[$value[$tagField]])) {
-			$log->error($path . '.' . $this->tagFieldName, 'Please fill in a valid value.'); // TODO: More specific error?
-			return null;
+		if (!isset($this->formats[$input[$tagField]])) {
+			if ($mask & SL::ERROR_FLAG) {
+				$subPath = $path;
+				$subPath[] = $this->tagFieldName;
+				
+				// TODO: More specific error?
+				ITU::errorTo($events, $subPath, 'Please fill in a valid value.');
+			}
+			
+			$output = null;
+			return false;
 		}
 		
-		$errors = null;
-		$tempLog = new TempLog($errors);
-		$output = $this->formats[$value[$tagField]]->apply($value, $tempLog, $path);
+		$format = $this->formats[$input[$tagField]];
 		
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
+		if ($format instanceof FastAction) {
+			$success = $format->fastApply($input, $output, $mask, $events, $path);
 		} else {
-			if ($this->mergeTagInOutput) $output += [$this->tagFieldName => $value[$this->tagFieldName]];
-			return $output;
+			$success = AU::emulateFastApply($format, $input, $output, $mask, $events, $path);
+		}
+		
+		if ($success) {
+			// TODO: Check if we're overriding existing field and error if not identical value?
+			if ($this->mergeTagInOutput) $output[$this->tagFieldName] = $input[$this->tagFieldName];
+			return true;
+		} else {
+			return false;
 		}
 	}
 }

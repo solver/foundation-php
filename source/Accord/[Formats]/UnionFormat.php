@@ -13,7 +13,9 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\ActionUtils as AU;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * Tests the given formats in sequence, until one of them successfully validates the value. You get back the output from
@@ -29,8 +31,8 @@ use Solver\Logging\ErrorLog;
  * For these reasons unions are optimal for simple values (like scalars), while for dictionaries, it's always preferable
  * to use the more explicit and performant VariantFormat where applicable. VariantFormat implements a "tagged union".
  */
-class UnionFormat implements Format {
-	use TransformBase;
+class OrFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $formats = [];
 	protected $error = null;
@@ -45,12 +47,12 @@ class UnionFormat implements Format {
 	}
 			
 	/**
-	 * TODO: Figure out a better way to design this method.
+	 * TODO: Figure out a better way to design this method. Also it no longer is in sync that we have non-error events.
 	 * 
-	 * Calling this method sets an error that will be reported for the format if it fails, *instead* of the errors of
+	 * Calling this method sets an error that will be reported for the format if it fails, *instead* of the events of
 	 * the last sub-format that has failed.
 	 * 
-	 * The path of the error will be the one passed to apply().
+	 * The path of the error will be the one passed to apply()/fastApply().
 	 * 
 	 * @param \Solver\Lab\Format $error
 	 * null | dict... Pass null to revert back to the default behavior if you have previously set an error.
@@ -65,34 +67,32 @@ class UnionFormat implements Format {
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		$errors = null;
-		$tempLog = new TempLog($errors);
-		$formatMaxIndex = \count($this->formats) - 1;
-		
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		foreach ($this->formats as $i => $format) {
-			$subValue = $format->apply($value, $tempLog, $path);
+			$subEvents = [];
 			
-			if ($errors) {
-				if ($i == $formatMaxIndex) {
-					if ($this->error) {
-						$error = $this->error + ['message' => null, 'code' => null, 'details' => null];
-						$log->error($path, $error['message'], $error['code'], $error['details']);
-					} else {
-						$this->importErrors($log, $errors);
-						$errors = [];
-					}
-					
-					return null;
-				} else {
-					$errors = [];
-				}
+			if ($format instanceof FastAction) {
+				$success = $format->fastApply($input, $output, $mask, $subEvents, $path);
 			} else {
-				$value = $subValue;
-				break;
+				$success = AU::emulateFastApply($format, $input, $output, $mask, $subEvents, $path);
+			}
+			
+			if ($success) {
+				ITU::mergeTo($events, $subEvents);
+				return true;
 			}
 		}
 		
-		return $value;
+		if ($this->error) {
+			if ($mask & SL::ERROR_FLAG) {
+				$error = $this->error;
+				if ($path) $error[$path] = $path;
+				$events[] = $error;
+			}
+		} else {
+			ITU::mergeTo($events, $subEvents);
+		}
+		
+		return false;
 	}
 }

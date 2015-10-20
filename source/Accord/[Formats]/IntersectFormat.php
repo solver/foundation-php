@@ -13,7 +13,7 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Accord\ActionUtils as AU;
 
 /**
  * Extracts the value from each given sub-format (via add()) and combines the result into a single output.
@@ -26,10 +26,10 @@ use Solver\Logging\ErrorLog;
  * 
  * TODO: Allow scalars where all sub-formats must have the same output and no errors for the result to be valid?
  * TODO: Allow arrays with overlapping values as long as the values are the same?
- * TODO: Add useError() like UnionFormat.
+ * TODO: Add useError() like OrFormat.
  */
-class IntersectFormat implements Format {
-	use TransformBase;
+class AndFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	/**
 	 * @var Format[]
@@ -45,40 +45,46 @@ class IntersectFormat implements Format {
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		$formatMaxIndex = \count($this->formats) - 1;
 		
-		$subValues = [];
+		$output = [];
+		$success = true;
 		
 		foreach ($this->formats as $i => $format) {
-			$errors = null;
-			$tempLog = new TempLog($errors);
-			$subValue = $format->apply($value, $tempLog, $path);
+			$subOutput = null;
 			
-			if ($errors) {
-				$this->importErrors($log, $errors);
-				$errors = [];
+			if ($format instanceof FastAction) {
+				$subSuccess = $format->fastApply($input, $subOutput, $mask, $events, $path);
 			} else {
-				if (is_array($subValue)) {
-					$subValues[$i] = $subValue;
+				$subSuccess = AU::emulateFastApply($format, $input, $subOutput, $mask, $events, $path);
+			}
+			
+			if ($subSuccess) {
+				if (is_array($subOutput)) {
+					// TODO: Add validation checks for non-overlapping keys?
+					$output += $subOutput;
 				} else {
-					if ($subValue instanceof ValueBox) $subValue = $subValue->getValue();
+					if ($subOutput instanceof ToValue) $subOutput = $subOutput->toValue();
 					
-					if (is_array($subValue)) {
-						$subValues[$i] = $subValue;
+					if (is_array($subOutput)) {
+						// TODO: Add validation checks for non-overlapping keys?
+						$output += $subOutput;
 					} else {
-						throw new \Exception('Subformats in an IntersectFormat should return arrays (subformat at index ' . $i . ').');
+						// Considered a dev mistake so we throw root Exception instead of consider it an action error.
+						throw new \Exception('Subformats in an AndFormat should return arrays (subformat at index ' . $i . ').');
 					}
 				}
 			}
+			
+			$success = $success && $subSuccess;
 		}
 		
-		if ($errors) return null;
-		
-		// TODO: Add validation checks for non-overlapping keys?
-		$value = [];
-		foreach ($subValues as $subValue) $value += $subValue;
-		
-		return $value;
+		if ($success) {
+			return true;
+		} else {
+			$output = null;
+			return false;
+		}
 	}
 }

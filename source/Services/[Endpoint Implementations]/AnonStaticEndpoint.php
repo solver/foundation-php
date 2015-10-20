@@ -14,7 +14,8 @@ class AnonStaticEndpoint implements Endpoint {
 		$this->members = $members;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Services\Endpoint::resolve()
 	 */
 	public function resolve($name) {

@@ -2,39 +2,51 @@
 namespace Solver\Services;
 
 /**
- * A service "endpoint" in this context is the interfacing component of a service, which exposes its public API and is
- * designed to be used both locally, and exposed remotely over a network (for ex. HTTP).
+ * A service "endpoint" in this package is an object which can resolve names to other endpoints ("child endpoints") or 
+ * actions. Child endpoints are also often exposed for native callers as properties, and actions as methods (which may
+ * be dynamically resolved, or actual class properties or methods, depending on the implementation).
  * 
- * A service exposes one or more endpoints.
+ * An endpoint is the interfacing component of a service, which exposes its public API and is* designed to be used both
+ * locally, and exposed remotely over a network (for ex. HTTP).
  * 
- * A client uses a service by instantiating the service class (the root endpoint) and accessing any other endpoints
- * provided by it (exposed as public properties), and not by instantiating them directly.
+ * Endpoints shouldn't be instantiated directly, but access only through its respective service/module object.
+ * 
+ * Actions returned by an endpoint can be any generic Action implementation (see \Solver\Accord\Action), with the
+ * following additional constraints:
+ * 
+ * - The input and output of an endpoint Action MUST consist entirely out of value types (null, PHP scalars, PHP
+ * array) and objects that implement \Solver\Accord\ToValue.
+ * - The root of an input and output of an endpoint Action MUST be either null or a composite (PHP array), or an 
+ * object that implements \Solver\Accord\ToValue, which resolves to a composite. 
+ * - An endpoint action MUST not make a semantic distinction between an input/output value set to null, and a value that
+ * is missing (either at the root, or nested at a deeper level). Preferably null shouldn't be used, except at the root.
+ * - And endpoint action MAY also return a child endpoint. This allows for fluent service APIs that chain endpoints and
+ * actions in a sequence. Avoid creating endpoint-returning actions which are slow or produce side-effects. Chaining 
+ * should operate like function currying in functional languages. This also means actions should avoid returning
+ * endpoints which are not local to the action returning them (i.e. don't make a fluent chain "distributed"). Keep
+ * side-effects, heavy input and heavy processing for leaf actions.
+ * 
+ * These restrictions are designed to ensure best behavior and compatibility of endpoint actions on the network (as the
+ * primary purpose of an endpoint is that it can be transparently accessed localy or remotely with the same semantics),
+ * which implies serializable and well defined input/output, and clear interpretation of said input/output.
  */
 interface Endpoint {
 	/**
-	 * Returns one of two types of members based on the passed name:
+	 * Returns one of:
 	 * 
-	 * - A public property holding a Endpoint instance.
-	 * - A method (as a Closure instance) which takes a dict (or nothing) and return a dict (or nothing) or throws a
-	 * EndpointException on error.
+	 * - An instance of Endpoint (a child endpoint of the current endpoint).
+	 * - An instance of Action (\Solver\Accord\Action).
 	 * - Null if the name doesn't resolve to either of the above.
-	 * - NEW: Now it's correct behavior for an action to optionally return an endpoint. This allows fluent service APIs. 
-	 * Avoid creating endpoint-returning actions which are slow or produce side-effects. This includes returning 
-	 * endpoints which are not local to the action returning them (i.e. don't make a fluent chain "distributed"). Keep
-	 * side-effects, heavy input and heavy processing for leaf actions!
 	 * 
-	 * Some reasons for encapsulating this logic as an interface method, instead of relying directly on reflection:
+	 * Note that because endpoints and actions share a namespace at their parent endpoint, it's impossible to have 
+	 * a child action and a child endpoint with the same name (unlike PHP which allows methods and properties with the
+	 * same name).
 	 * 
-	 * - It allows a service to expose "virtual" members which reflection won't see (for ex. __get & __call).
-	 * - Allows a service to choose not to expose certain public members (like public magic methods).
-	 * - By having one method for resolving properties and methods, it disallows name collision between them, making it
-	 * easier to port a service to a language where such collisions are not allowed (Java, C#, etc).
-	 * 
-	 * Make sure to check the provided reusable implementation for possible different approaches to implementing this
-	 * interface: StaticEndpoint, ProxyEndpoint & DeepProxyEndpoint, EmptyEndpoint etc. 
+	 * Make sure to check the provided reusable implementations for possible different approaches to implementing this
+	 * interface: StaticEndpoint, DynamicEndpoint, ProxyEndpoint & DeepProxyEndpoint, EmptyEndpoint etc. 
 	 *  
 	 * @param string $name
-	 * Name of a public property or a method.
+	 * Name of a child endpoint or a child action.
 	 * 
 	 * @return \Solver\Services\Endpoint|\Closure|null
 	 * Endpoint instance, method as a closure, or null if the name does not resolve to either.
@@ -49,9 +61,4 @@ interface Endpoint {
 	 * parameters for the dynamic part).
 	 */
 	public function resolve($name);
-	
-	// TODO: Add support of this method for parametric endpoints (allows the endpoint to act as a constructor returning
-	// and endpoint, as normal methods can't return endpoints). In URI's those parameters should be matrix parameters.
-	// Change metrix params to always be a dictionary; if name not specified uses default name. Lists via commas tho?
-	//public function with($context);
 }

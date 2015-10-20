@@ -56,7 +56,8 @@ class FastRouteAdapterRouter implements Router {
         $this->dispatcher = new $options['dispatcher']($routeCollector->getData());
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
 	public function __invoke(array $input) {

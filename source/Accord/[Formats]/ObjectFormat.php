@@ -13,41 +13,50 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
- * If the input value is a PHP object (of any kind) it's returned unmodified.
+ * If the input value is a PHP object, it's returned unmodified. Methods are provided to enforce the object type(s).
  * 
  * TODO: Consider isNotInstanceOf, isInstanceOfAll, isInstanceOfAny variations etc.
  */
-class ObjectFormat implements Format {
-	use TransformBase;
+class ObjectFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $functions = [];
-	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_object($value)) {
-			$log->error($path, 'Please provide a valid object.');
-			return null;
-		}	
-	
-		if ($this->functions) {
-			return $this->applyFunctions($this->functions, $value, $log, $path);
-		} else {
-			return $value;
-		}
+
+	public function __construct($className = null) {
+		if ($className !== null) $this->isInstanceOf($className);
 	}
 	
 	public function isInstanceOf($className) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($className) {
-			if (!$value instanceof $className) {
-				$errors[] = [$path, 'Please provide an instance of ' . $className. '.'];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($className) {
+			if (!$input instanceof $className) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide an instance of ' . $className. '.');
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
 		return $this;
+	}
+	
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if (!\is_object($input)) {
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a valid object.');
+			$output = null;
+			return false;
+		}	
+	
+		if ($this->functions) {
+			return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
+		} else {
+			$output = $input;
+			return true;
+		}
 	}
 }

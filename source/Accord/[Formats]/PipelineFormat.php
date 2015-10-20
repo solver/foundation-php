@@ -11,26 +11,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Logging;
+namespace Solver\Accord;
 
-class DelegatingErrorLog implements ErrorLog {
-	protected $log;
+// TODO: Document. This is a Format version of PipelineAction. See PipelineAction.
+class PipelineFormat extends PipelineAction implements Format {
+	public function __construct(Format ...$formats) {
+		if ($formats) $this->actions = $formats;
+	}
 	
-	public function __construct(Log $log) {
-		$this->log = $log;
-	}
-
-	/* (non-PHPdoc)
-	 * @see \Solver\Logging\ErrorLog::error()
+	/**
+	 * Adds a new format to the pipeline.
+	 * 
+	 * @param Format $format 
+	 * @return self
 	 */
-	public function error($path, $message, $code = null, array $details = null) {
-		$this->log->log(['type' => 'error', 'path' => $path, 'message' => $message, 'code' => $code, 'details' => $details]);
+	public function add(Format $format) {
+		$this->actions[] = $format;
+		return $this;
 	}
-
-	/* (non-PHPdoc)
-	 * @see \Solver\Logging\EventLog::log()
-	 */
-	public function log(array $event) {
-		$this->log->log($event);
-	}	
 }

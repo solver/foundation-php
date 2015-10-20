@@ -29,7 +29,8 @@ class InExpr implements Expr {
 		return $clone;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sidekick\Expr::render()
 	 */
 	public function render(SqlConnection $conn, $columnName) {

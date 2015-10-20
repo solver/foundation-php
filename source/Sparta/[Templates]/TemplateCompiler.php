@@ -45,7 +45,8 @@ class TemplateCompiler implements PsrxCompiler {
 		$this->class = $class;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Radar\PsrxCompiler::compile()
 	 */
 	public function compile($sourcePathname, $symbolName) {

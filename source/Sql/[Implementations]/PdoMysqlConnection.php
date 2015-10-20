@@ -82,7 +82,8 @@ class PdoMySqlConnection implements SqlConnection {
 		$this->config = $config;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::open()
 	 */
 	public function open() {
@@ -127,7 +128,8 @@ class PdoMySqlConnection implements SqlConnection {
 		}
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::close()
 	 */
 	public function close() {
@@ -167,7 +169,8 @@ class PdoMySqlConnection implements SqlConnection {
 		return $statement;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::execute()
 	 */
 	public function execute($sql, $x = 123) { if ($x !== 123) throw new \Exception('Using legacy execute(..., params). No longer supported.');
@@ -190,7 +193,8 @@ class PdoMySqlConnection implements SqlConnection {
 		return $affectedRows;
 	}
 		
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::getLastInsertId()
 	 */
 	public function getLastInsertId() {		
@@ -209,7 +213,8 @@ class PdoMySqlConnection implements SqlConnection {
 		return $this->lastId;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::encodeValue()
 	 */
 	public function encodeValue($value) {
@@ -247,7 +252,8 @@ class PdoMySqlConnection implements SqlConnection {
 		}
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::encodeIdent()
 	 */
 	public function encodeIdent($identifier, $respectDots = false) {
@@ -284,14 +290,16 @@ class PdoMySqlConnection implements SqlConnection {
 		}
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::encodeRow()
 	 */
 	public function encodeRow(array $row, $respectDots = false) {
 		return \array_combine($this->encodeIdent(\array_keys($row), $respectDots), $this->encodeValue(\array_values($row)));
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sql\SqlConnection::transactional()
 	 */
 	public function transactional($isolation = null, $function = null) {

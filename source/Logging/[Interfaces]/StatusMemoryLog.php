@@ -14,5 +14,8 @@
 namespace Solver\Logging;
 
 // TODO: Document.
-interface StatusMemoryLog extends ErrorMemoryLog, StatusLog {
+// TODO: Consider method getLastError().
+interface StatusMemoryLog extends MemoryLog, StatusLog {
+	function hasErrors();
+	function getErrors();
 }

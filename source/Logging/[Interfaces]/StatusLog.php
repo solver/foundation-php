@@ -14,20 +14,38 @@
 namespace Solver\Logging;
 
 // TODO: Document.
-interface StatusLog extends ErrorLog {
-	const TYPE_INFO = 'info';
-	const TYPE_SUCCESS = 'success';
-	const TYPE_WARNING = 'warning';	
+interface StatusLog extends Log {
+	const ERROR_LABEL = 'error';
+	const WARNING_LABEL = 'warning';
+	const INFO_LABEL = 'info';
+	const SUCCESS_LABEL = 'success';
 	
+	const ERROR_FLAG = 1;
+	const WARNING_FLAG = 2;
+	const INFO_FLAG = 4;
+	const SUCCESS_FLAG = 8;
 	
 	/**
-	 * Represents a neutral (neither positive, nor negative) information message.
+	 * Returns the bit flag mask for the event types the log will record. See the *_FLAG constants.
 	 * 
-	 * @param string $path
-	 * A path can be specified to demonstrate the location of origin for an event. Set to null if not applicable.
+	 * Reading the value from this method and implementing it by not passing events of the masked out types should be
+	 * considered an optional optimization. Even if masked out types are added to the log, they'll be silently ignored.
+	 * 
+	 * The recommended default mask level for logs is 15 (i.e. 0b1111, all four major types), but implementations may
+	 * choose a different default.
+	 * 
+	 * @return int
+	 */
+	function getMask();
+	
+	/**
+	 * Represents a negative event that altered the control flow of an operation, i.e. it failed to complete properly.
+	 * 
+	 * @param array $path
+	 * Default null. A path can be specified as a list of strings, to demonstrate the location of origin for an event.
 	 * 
 	 * @param string $message
-	 * A human readable message describing the event. If you pass code (next argument), you can set the message to null.
+	 * Default null. A human readable message describing the event.
 	 * 
 	 * @param string $code
 	 * Default null. Machine readable event code. If you set the message to null, you must pass a non-null code.
@@ -37,35 +55,16 @@ interface StatusLog extends ErrorLog {
 	 * 
 	 * @throws LogException
 	 */
-	function info($path, $message, $code = null, array $details = null);
-	
-	/**
-	 * Represents a positive event, usually signifying the successful completion of an operation in progress.
-	 * 
-	 * @param string $path
-	 * A path can be specified to demonstrate the location of origin for an event. Set to null if not applicable.
-	 * 
-	 * @param string $message
-	 * A human readable message describing the event. If you pass code (next argument), you can set the message to null.
-	 * 
-	 * @param string $code
-	 * Default null. Machine readable event code. If you set the message to null, you must pass a non-null code.
-	 * 
-	 * @param array $details
-	 * Default null. A dictionary with machine readable event context (arbitrary variables describing the event).
-	 * 
-	 * @throws LogException
-	 */
-	function success($path, $message, $code = null, array $details = null);
+	function error($path = null, $message = null, $code = null, array $details = null);	
 	
 	/**
 	 * Represents a non-critical negative event, foreshadowing a possible problem.
 	 * 
-	 * @param string $path
-	 * A path can be specified to demonstrate the location of origin for an event. Set to null if not applicable.
+	 * @param array $path
+	 * Default null. A path can be specified as a list of strings, to demonstrate the location of origin for an event.
 	 * 
 	 * @param string $message
-	 * A human readable message describing the event. If you pass code (next argument), you can set the message to null.
+	 * Default null. A human readable message describing the event.
 	 * 
 	 * @param string $code
 	 * Default null. Machine readable event code. If you set the message to null, you must pass a non-null code.
@@ -75,5 +74,43 @@ interface StatusLog extends ErrorLog {
 	 * 
 	 * @throws LogException
 	 */
-	function warning($path, $message, $code = null, array $details = null);
+	function warning($path = null, $message = null, $code = null, array $details = null);
+	
+	/**
+	 * Represents a neutral (neither positive, nor negative) information message.
+	 * 
+	 * @param array $path
+	 * Default null. A path can be specified as a list of strings, to demonstrate the location of origin for an event.
+	 * 
+	 * @param string $message
+	 * Default null. A human readable message describing the event.
+	 * 
+	 * @param string $code
+	 * Default null. Machine readable event code. If you set the message to null, you must pass a non-null code.
+	 * 
+	 * @param array $details
+	 * Default null. A dictionary with machine readable event context (arbitrary variables describing the event).
+	 * 
+	 * @throws LogException
+	 */
+	function info($path = null, $message = null, $code = null, array $details = null);
+	
+	/**
+	 * Represents a positive event, usually signifying the successful completion of an operation in progress.
+	 * 
+	 * @param array $path
+	 * Default null. A path can be specified as a list of strings, to demonstrate the location of origin for an event.
+	 * 
+	 * @param string $message
+	 * Default null. A human readable message describing the event.
+	 * 
+	 * @param string $code
+	 * Default null. Machine readable event code. If you set the message to null, you must pass a non-null code.
+	 * 
+	 * @param array $details
+	 * Default null. A dictionary with machine readable event context (arbitrary variables describing the event).
+	 * 
+	 * @throws LogException
+	 */
+	function success($path = null, $message = null, $code = null, array $details = null);
 }

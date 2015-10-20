@@ -11,10 +11,22 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Logging;
+namespace Solver\Accord;
 
-// TODO: Document.
-interface ErrorMemoryLog extends MemoryLog, ErrorLog {
-	function hasErrors();
-	function getErrors();
+// TODO: Document. This is a Transform version of PipelineAction. See PipelineAction.
+class PipelineTransform extends PipelineAction implements Transform {
+	public function __construct(Transform ...$transforms) {
+		if ($transforms) $this->actions = $transforms;
+	}
+			
+	/**
+	 * Adds a new transform to the pipeline.
+	 * 
+	 * @param Transform $transform 
+	 * @return self
+	 */
+	public function add(Transform $transform) {
+		$this->actions[] = $transform;
+		return $this;
+	}
 }

@@ -23,15 +23,15 @@ namespace Solver\Accord;
  * 		->isEmpty();
  * </code>
  * 
- * This is useful when a field can either be left blank, or have a specific format, as used with UnionFormat:
+ * This is useful when a field can either be left blank, or have a specific format, as used with OrFormat:
  * 
  * <code>
- * $blankOrEmailFormat = (new UnionFormat)
+ * $blankOrEmailFormat = (new OrFormat)
  * 		->add(new BlankStringFormat)
  * 		->add(new EmailAddressFormat);
  * </code>
  */
-class BlankStringFormat extends StringFormat implements Format {
+class BlankStringFormat extends StringFormat {
 	public function __construct() {
 		// TODO: Reimplement this via apply() for extra speed, instead of using StringFormat configuration?
 		$this->trim()->isEmpty();

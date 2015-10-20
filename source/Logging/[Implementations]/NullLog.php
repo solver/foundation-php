@@ -2,7 +2,10 @@
 namespace Solver\Logging;
 
 /**
- * A Null Object implementation compatible with Log / ErrorLog / StatusLog.
+ * A Null Object implementation compatible with Log / StatusLog.
+ * 
+ * TODO: Separate this into NullLog and NullStatusLog? Probably not, we can have one for all interfaces, as long as they
+ * don't collide.
  * 
  * It does nothing and is stateless. You can pass it where a log is required when you don't need the log entries.
  * 
@@ -22,29 +25,42 @@ class NullLog implements StatusLog {
 		static $i; return $i ?: $i = new self();
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
+	 * @see \Solver\Logging\StatusLog::getMask()
+	 */
+	public function getMask() {
+		return 0;
+	}
+	
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::info()
 	 */
-	public function info($path, $message, $code = null, array $details = null) {}
+	public function info($path = null, $message = null, $code = null, array $details = null) {}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::success()
 	 */
-	public function success($path, $message, $code = null, array $details = null) {}
+	public function success($path = null, $message = null, $code = null, array $details = null) {}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::warning()
 	 */
-	public function warning($path, $message, $code = null, array $details = null) {}
+	public function warning($path = null, $message = null, $code = null, array $details = null) {}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\ErrorLog::error()
 	 */
-	public function error($path, $message, $code = null, array $details = null) {}
+	public function error($path = null, $message = null, $code = null, array $details = null) {}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event) {}
+	public function log(array $event, array ...$events) {}
 
 }

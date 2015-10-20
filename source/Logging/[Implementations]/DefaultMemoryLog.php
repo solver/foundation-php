@@ -17,17 +17,28 @@ class DefaultMemoryLog implements MemoryLog {
 	private $has = []; // TODO: Can be replaced with a bitmask.
 	private $events = [];
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event) {
+	public function log(array $event, array ...$events) {
 		$type = $event['type'];
 		if (!isset($this->has[$type])) $this->has[$type] = true;
-		if ($event['message'] === null && $event['code'] === null) LogException::throwNullMessageAndCode();
-		$this->events[] = $event;
+		
+		if ($events) {
+			foreach ($events as $event) {
+				$type = $event['type'];
+				if (!isset($this->has[$type])) $this->has[$type] = true;
+			}
+			
+			array_push($this->events, $event, ...$events);
+		} else {
+			$this->events[] = $event;
+		}
 	}	
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
 	public function getEvents($types = null) {
@@ -54,7 +65,8 @@ class DefaultMemoryLog implements MemoryLog {
 		}
 	}
 
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
 	public function hasEvents($types = null) {

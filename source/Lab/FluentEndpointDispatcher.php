@@ -142,14 +142,14 @@ class FluentEndpointDispatcher {
 	}
 	
 	protected function errorInvalidFluentUrl($chain, $message) {
-		(new EndpointLog())->errorAndThrow(
+		(new EndpointLog())->error(
 			$this->getRouteString($chain), 
 			'The request URL format is invalid.' . ($message ? ' ' . $message : ''),
 			'dispatcher.badRequest');
 	}
 	
 	protected function errorConflictingInputs($chain) {
-		(new EndpointLog())->errorAndThrow(
+		(new EndpointLog())->error(
 			$this->getRouteString($chain), 
 			'The request contains conflicting leaf parameter sources.',
 			'dispatcher.badRequest');

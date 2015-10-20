@@ -2,6 +2,8 @@
 namespace Solver\Services;
 
 /**
+ * FIXME: Remove and rename EndpointDispatcher2 to EndpointDispatcher.
+ * 
  * A simple router that will traverse service endpoints and either return a closure of the method to call, or null if
  * there's no method at the endpoint chain for that route.
  * 
@@ -37,7 +39,6 @@ class EndpointDispatcher {
 		if ($action === null) {
 			$log = new EndpointLog();
 			$log->error(null, 'Endpoint or action not found.', 'endpointOrActionNotFound');
-			$log->throwIfErrors();
 		}
 		
 		return $action($input);

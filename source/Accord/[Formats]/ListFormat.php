@@ -13,13 +13,16 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\ActionUtils as AU;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * TODO: PHPDoc.
+ * TODO: Add warning for skipped "rest" indexes (like in DictFormat).
  */
-class ListFormat implements Format {
-	use TransformBase;
+class ListFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $functions = [];
 	protected $itemFormat = null;
@@ -34,13 +37,15 @@ class ListFormat implements Format {
 	}
 	
 	public function hasLength($length) {
-		$this->functions[] = function ($value, & $errors, $path) use ($length) {
-			if (\count($value) < $length) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
+			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				$errors[] = [$path, "Please provide a list with exactly $length $noun."];
-				return null;
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with exactly $length $noun.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -48,13 +53,15 @@ class ListFormat implements Format {
 	}
 	
 	public function hasLengthMin($length) {
-		$this->functions[] = function ($value, & $errors, $path) use ($length) {
-			if (\count($value) < $length) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
+			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				$errors[] = [$path, "Please provide a list with at least $length $noun."];
-				return null;
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with at least $length $noun.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -62,13 +69,15 @@ class ListFormat implements Format {
 	}
 	
 	public function hasLengthMax($length) {
-		$this->functions[] = function ($value, & $errors, $path) use ($length) {
-			if (\count($value) > $length) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
+			if (\count($input) > $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				$errors[] = [$path, "Please provide a list with at most $length $noun."];
-				return null;
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with at most $length $noun.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -92,13 +101,15 @@ class ListFormat implements Format {
 	}
 	
 	public function isEmpty() {
-		$this->functions[] = function ($value, & $errors, $path) {
-			if (\count($value) == 0) {
-				// A list with isEmpty() test will typically be 1st item in a UnionFormat, where this message will be
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if (\count($input) == 0) {
+				// A list with isEmpty() test will typically be 1st item in a OrFormat, where this message will be
 				// never seen.
-				$errors[] = [$path, "Please provide an empty list."];
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide an empty list.");
+				$output = null;
 				return false;
 			} else {
+				$output = $input;
 				return true;
 			}
 		};
@@ -107,11 +118,13 @@ class ListFormat implements Format {
 	}
 	
 	public function isNotEmpty() {
-		$this->functions[] = function ($value, & $errors, $path) {
-			if (\count($value) == 0) {
-				$errors[] = [$path, "Please provide a list with one or more items."];
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if (\count($input) == 0) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with one or more items.");
+				$output = null;
 				return false;
 			} else {
+				$output = $input;
 				return true;
 			}
 		};
@@ -119,40 +132,50 @@ class ListFormat implements Format {
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_array($value)) {
-			if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if (!\is_array($input)) {
+			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			$log->error($path, 'Please provide a list.');
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a list.');
+			$output = null;
 			return null;
 		}
 		
-		$errors = null;
-		$tempLog = new TempLog($errors);
 		$itemFormat = $this->itemFormat;
-		$filtered = [];
+		$output = [];
+		$success = false;
 				
 		// We require a sequential, zero based list, anything else is ignored. The PHP array order of the keys in the
 		// input, however is irrelevant (the return value will be sorted by key order anyway).
 		for ($i = 0;; $i++) {
-			if (\key_exists($i, $value)) {
-				$filtered[$i] = $itemFormat 
-					? $itemFormat->apply($value[$i], $tempLog, $path === null ? $i : $path . '.' . $i) 
-					: $value[$i];
+			// We isset and fall back to key_exists (slower) for null checks.
+			// TODO: Option to ignore null item values?
+			if (isset($input[$i]) || \key_exists($i, $input)) {
+				if ($itemFormat) {
+					$itemPath = $path;
+					$itemPath[] = $i;
+					if ($itemFormat instanceof FastAction) {
+						$success = $success && $itemFormat->fastApply($input, $output, $mask, $events, $itemPath);
+					} else {
+						$success = $success && AU::emulateFastApply($itemFormat, $input, $output, $mask, $events, $itemPath);
+					}
+				} else {
+					$output[$i] = $input[$i];
+				}
 			} else {
 				break;
 			}
 		}
 		
-		if ($errors) {
-			$this->importErrors($log, $errors);
-			return null;
-		} else {
+		if ($success) {
 			if ($this->functions) {
-				return $this->applyFunctions($this->functions, $value, $log, $path);
+				return ITU::fastApplyFunctions($this->functions, $output, $output, $mask, $events, $path);
 			} else {
-				return $value;
+				return true;
 			}
+		} else {
+			$output = null;
+			return false;
 		}
 	}
 }

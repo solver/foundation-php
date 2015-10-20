@@ -13,15 +13,16 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 use Solver\Toolbox\StringUtils;
 use Solver\Toolbox\RegexUtils;
 
 /**
  * A format class for UTF8 encoded strings.
  */
-class StringFormat implements Format {
-	use TransformBase;
+class StringFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $functions = [];
 	
@@ -31,8 +32,9 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function normalize($form = StringUtils::NFC) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($form) {
-			return StringUtils::normalize($value, $form);
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($form) {
+			$output = StringUtils::normalize($input, $form);
+			return true;
 		};
 		
 		return $this;
@@ -42,8 +44,9 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function trim() {
-		$this->functions[] = static function ($value, & $errors, $path) {
-			return StringUtils::trim($value);
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			$output = StringUtils::trim($input);
+			return true;
 		};
 		
 		return $this;
@@ -53,8 +56,9 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function toUpper() {
-		$this->functions[] = static function ($value, & $errors, $path) {
-			return StringUtils::toUpper($value);
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			$output = StringUtils::toUpper($input);
+			return true;
 		};
 		
 		return $this;
@@ -64,8 +68,9 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function toLower() {
-		$this->functions[] = static function ($value, & $errors, $path) {
-			return StringUtils::toLower($value);
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			$output = StringUtils::toLower($input);
+			return true;
 		};
 		
 		return $this;
@@ -79,9 +84,13 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function map(array $map) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($map) {
-			if (isset($map[$value])) return $map[$value];
-			return $value;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($map) {
+			if (isset($map[$input])) {
+				$output = $map[$input];
+			} else {
+				$output = $input;
+			}
+			return true;
 		};
 		
 		return $this;
@@ -91,9 +100,10 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function regexReplace($regexPattern, $replacementString) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($regexPattern, $replacementString) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($regexPattern, $replacementString) {
 			// Deliberately disallow callback replacements for now, until we see how to support it cross-platform.
-			return RegexUtils::replace($value, $regexPattern, (string) $replacementString);
+			$output = RegexUtils::replace($input, $regexPattern, (string) $replacementString);
+			return true;
 		};
 		
 		return $this;
@@ -104,12 +114,14 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function hasLength($length) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($length) {
-			if (StringUtils::length($value) !== $length) {
-				$errors[] = [$path, "Please use exactly $length characters."];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
+			if (StringUtils::length($input) !== $length) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use exactly $length characters.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -121,12 +133,14 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function hasLengthMin($lengthMin) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($lengthMin) {
-			if (StringUtils::length($value) < $lengthMin) {
-				$errors[] = [$path, "Please use at least $lengthMin characters."];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMin) {
+			if (StringUtils::length($input) < $lengthMin) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use at least $lengthMin characters.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -138,12 +152,14 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function hasLengthMax($lengthMax) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($lengthMax) {
-			if (StringUtils::length($value) > $lengthMax) {
-				$errors[] = [$path, "Please use at most $lengthMax characters."];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMax) {
+			if (StringUtils::length($input) > $lengthMax) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use at most $lengthMax characters.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -167,12 +183,14 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function isNotEmpty() {
-		$this->functions[] = static function ($value, & $errors, $path) {
-			if ($value === '') {
-				$errors[] = [$path, "Please fill in."];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if ($input === '') {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please fill in.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -185,7 +203,7 @@ class StringFormat implements Format {
 	 * field, where it's acceptable to leave the field blank:
 	 * 
 	 * <code>
-	 * 		$emailOrBlank = (new UnionFormat)
+	 * 		$emailOrBlank = (new OrFormat)
 	 * 			->add((new StringFormat)
 	 * 				->doTrim()
 	 * 				->isEmpty())
@@ -197,13 +215,15 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function isEmpty() {
-		$this->functions[] = static function ($value, & $errors, $path) {
-			if ($value !== '') {
-				// If added first in a UnionFormat, this awkward message won't be seen.
-				$errors[] = [$path, "Please leave empty."];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if ($input !== '') {
+				// If added first in a OrFormat, this awkward message won't be seen.
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please leave empty.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -226,16 +246,22 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function isOneOf(array $list, $displayListInMessage = false) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($list, $displayListInMessage) {
-			foreach ($list as $item) if ($value === (string) $item) return $value;
-			
-			if ($displayListInMessage) {
-				$errors[] = [$path, 'Please use one of the following values: "' . \implode('", "', $list) . '".'];
-			} else {
-				$errors[] = [$path, 'Please fill in a valid value.'];
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($list, $displayListInMessage) {
+			foreach ($list as $item) if ($input === (string) $item) {
+				$output = $input;
+				return true;
 			}
 			
-			return null;
+			if ($mask & SL::ERROR_FLAG) {
+				if ($displayListInMessage) {
+					ITU::errorTo($events, $path, 'Please use one of the following values: "' . \implode('", "', $list) . '".');
+				} else {
+					ITU::errorTo($events, $path, 'Please fill in a valid value.');
+				}
+			}
+			
+			$output = null;
+			return false;
 		};
 		
 		return $this;
@@ -256,16 +282,22 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function isEqualTo($input, $displayListInMessage = false) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($input, $displayListInMessage) {
-			if ($value === (string) $input) return $value;
-			
-			if ($displayListInMessage) {
-				$errors[] = [$path, 'Please fill in "' . $input . '".'];
-			} else {
-				$errors[] = [$path, 'Please fill in a valid value.'];
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($input, $displayListInMessage) {
+			if ($input === (string) $input) {
+				$output = $input;
+				return true;
 			}
 			
-			return null;
+			if ($mask & SL::ERROR_FLAG) {
+				if ($displayListInMessage) {
+					ITU::errorTo($events, $path, 'Please fill in "' . $input . '".');
+				} else {
+					ITU::errorTo($events, $path, 'Please fill in a valid value.');
+				}
+			}
+			
+			$output = null;
+			return false;
 		};
 		
 		return $this;
@@ -292,42 +324,44 @@ class StringFormat implements Format {
 	 * @return self
 	 */
 	public function isRegexMatch($regexPattern, $customError = null) {
-		$this->functions[] = static function ($value, & $errors, $path) use ($regexPattern, $customError) {
-			if (!RegexUtils::match($value, $regexPattern)) {
-				if ($customError === null) $customError = ['message' => 'Please fill in a valid value.'];
-				
-				$errors[] = [
-					isset($customError['path']) ? $customError['path'] : $path, 
-					isset($customError['message']) ? $customError['message'] : null,
-					isset($customError['code']) ? $customError['path'] : null,
-					isset($customError['details']) ? $customError['details'] : null
-				];
-				return null;
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($regexPattern, $customError) {
+			if (!RegexUtils::match($input, $regexPattern)) {
+				if ($mask & SL::ERROR_FLAG) {
+					$event = ['type' => 'error', 'message' => 'Please fill in a valid value.'];
+					if ($path) $event['path'] = $path;
+					if ($customError) $event = $customError + $event;
+					
+					$events[] = $event;
+				}
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
 		return $this;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (!\is_string($value)) {
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if (!\is_string($input)) {
 			// We tolerate certain scalars by automatically converting them to strings.
-			if (\is_int($value) || \is_float($value) || \is_bool($value)) {
-				$value = (string) $value;
+			if (\is_int($input) || \is_float($input) || \is_bool($input)) {
+				$output = (string) $input;
 			} else {
-				if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
+				if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-				$log->error($path, 'Please provide a string.');
-				return null;
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a string.');
+				$output = null;
+				return false;
 			}
 		}
 	
 		if ($this->functions) {
-			return $this->applyFunctions($this->functions, $value, $log, $path);
+			return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
 		} else {
-			return $value;
+			return true;
 		}
 	}
 }

@@ -13,7 +13,8 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * Accepts integers, floats, and strings formatted as an integer or a float. Numbers as strings will be normalized
@@ -27,8 +28,8 @@ use Solver\Logging\ErrorLog;
  * TODO: See "ScalarProcessor"/"ScalarFilter" from legacy code for more details and more filters/tests we should add
  * in this class.
  */
-class NumberFormat implements Format {
-	use TransformBase;
+class NumberFormat implements Format, FastAction {
+	use ApplyViaFastApply;
 	
 	protected $functions = [];
 	
@@ -38,13 +39,15 @@ class NumberFormat implements Format {
 	 * @return self
 	 */
 	public function isMin($min) {
-		$this->functions[] = function ($value, & $errors, $path) use ($min) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($min) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
-			if ($value + 0 < $min + 0) {
-				$errors[] = [$path, "Please provide a number bigger than or equal to $min."];
-				return null;
+			if ($input + 0 < $min + 0) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a number bigger than or equal to $min.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -57,13 +60,15 @@ class NumberFormat implements Format {
 	 * @return self
 	 */
 	public function isMax($max) {
-		$this->functions[] = function ($value, & $errors, $path) use ($max) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($max) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
-			if ($value + 0 > $max + 0) {
-				$errors[] = [$path, "Please provide a number lesser than or equal to $max."];
-				return null;
+			if ($input + 0 > $max + 0) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a number lesser than or equal to $max.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -92,13 +97,15 @@ class NumberFormat implements Format {
 	 * @return self
 	 */
 	public function isPositive() {
-		$this->functions[] = function ($value, & $errors, $path) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
-			if ($value + 0 < 0) {
-				$errors[] = [$path, "Please provide a positive number."];
-			return null;
+			if ($input + 0 < 0) {
+				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a positive number.");
+				$output = null;
+				return false;
 			} else {
-				return $value;
+				$output = $input;
+				return true;
 			}
 		};
 		
@@ -116,17 +123,21 @@ class NumberFormat implements Format {
 	 * @return self
 	 */
 	public function isInteger() {
-		$this->functions[] = function ($value, & $errors, $path) {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			// FILTER_VALIDATE_INT not used because it fails on integers outside PHP's native integer range.
-			if (\is_string($value) && \preg_match('/\s*[+-]?\d+\s*$/AD', $value)) return $value;
+			if (\is_string($input) && \preg_match('/\s*[+-]?\d+\s*$/AD', $input)) return $input;
 			
-			if (is_int($value)) return $value;
+			if (is_int($input)) {
+				$output = $input;
+				return true;
+			}
 			
 			// 9007199254740992 = 2^53 (bit precision threshold in doubles).
-			if (is_float($value) && $value === floor($value) && $value <= 9007199254740992) return true;
+			if (is_float($input) && $input === floor($input) && $input <= 9007199254740992) return true;
 			
-			$errors[] = [$path, "Please provide an integer."];
-			return null;
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide an integer.");
+			$output = null;
+			return false;
 		};
 		
 		return $this;
@@ -164,9 +175,9 @@ class NumberFormat implements Format {
 	 * storing it as a string for later processing or handing it to a third-party service that needs higher precision
 	 * than PHP's native number types.
 	 */
-	protected function normalize($value) {
-		if (preg_match('/\s*([+-])?(?|0*(\d+)|0*(\d*)(?:\.0+|\.(\d+?))0*)(?:[Ee]([+-])?(?:0+|0*(\d+)))?\s*$/AD', $value, $matches)) {
-			$value = 
+	protected function normalize($input) {
+		if (preg_match('/\s*([+-])?(?|0*(\d+)|0*(\d*)(?:\.0+|\.(\d+?))0*)(?:[Ee]([+-])?(?:0+|0*(\d+)))?\s*$/AD', $input, $matches)) {
+			$input = 
 				(isset($matches[1]) && $matches[1] === '-' ? '-' : '' ). // integer sign
 				(isset($matches[2]) && ($tmp = $matches[2]) !== '' ? $tmp : '0' ). // integer digits
 				(isset($matches[3]) && ($tmp = $matches[3]) !== '.' ? '.' . $tmp : '' ). // fraction
@@ -177,40 +188,43 @@ class NumberFormat implements Format {
 				);
 		}
 		
-		return $value;
+		return $input;
 	}
 	
-	public function apply($value, ErrorLog $log, $path = null) {
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		// We deliberately do not use the result here (a PHP float) as we don't want to lose precision for large string
 		// numbers.
-		if (filter_var($value, FILTER_VALIDATE_FLOAT) === false) goto error;
+		if (filter_var($input, FILTER_VALIDATE_FLOAT) === false) goto error;
 		
-		if (is_string($value)) {
+		if (is_string($input)) {
 			// We refuse to process strings which are suspiciously large to hold a usable floating point value, in order
 			// to avoid blowing up the application in places where such large (if otherwise valid) number values are not
 			// expected, such as databases.
 			//
 			// TODO: Revise this decision. Ideally we'd normalize the exponent and be able to trim precision for a float
 			// to a user supplied limit (for ex. for single/double/quad IEEE floats).
-			if (strlen($value) > 128) {
+			if (strlen($input) > 128) {
 				goto error;
 			} else {
-				$value = $this->normalize($value);
+				$input = $this->normalize($input);
 			}
 		}
 		
 		success:
 		
 		if ($this->functions) {
-			return $this->applyFunctions($this->functions, $value, $log, $path);
+			return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
 		} else {
-			return $value;
+			$output = $input;
+			return true;
 		}
 		
 		error:
-		if ($value instanceof ValueBox) return $this->apply($value->getValue(), $log, $path);
 		
-		$log->error($path, 'Please provide a number.');
+		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+		
+		if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a number.');
+		$output = null;
 		return null;
 	}
 }

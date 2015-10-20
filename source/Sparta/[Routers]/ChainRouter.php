@@ -30,7 +30,8 @@ class ChainRouter implements Router {
 		$this->routers = $routers;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Sparta\Router::__invoke()
 	 */
 	public function __invoke(array $input) {

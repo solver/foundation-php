@@ -21,12 +21,7 @@ class LogException extends \Exception {
 	 * Generic error condition when passing incorrectly formatted event fields.
 	 */
 	const BAD_FORMAT = 'badFormat';
-	
-	/**
-	 * Logs should require at least of event fields "message" or "code" are not null.
-	 */
-	const NULL_MESSAGE_AND_CODE = 'nullMessageAndCode';
-	
+		
 	/**
 	 * Logs may actively refuse to process events outside their predefined set of types.
 	 */
@@ -40,12 +35,8 @@ class LogException extends \Exception {
 	public static function throwBadFormat($message = null) {
 		throw new static('Bad event format' . ($message ? ': ' . $message : '') . '.', self::BAD_FORMAT);
 	}
-	
-	public static function throwNullMessageAndCode() {
-		throw new static('Specify at least one of fields "message" or "code" with a non-null value.', self::NULL_MESSAGE_AND_CODE);
-	}
-	
+		
 	public static function throwUnknownType($type) {
-		throw new static('Unknown event type "'. $type .'".', self::UNKNOWN_TYPE);
+		throw new static('Unknown event type "' . $type . '".', self::UNKNOWN_TYPE);
 	}
 }

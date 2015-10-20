@@ -14,7 +14,8 @@ class AnonDynamicEndpoint implements Endpoint {
 		$this->resolve = $resolve;
 	}
 	
-	/* (non-PHPdoc)
+	/**
+	 * {@inheritDoc}
 	 * @see \Solver\Services\Endpoint::resolve()
 	 */
 	public function resolve($name) {

@@ -13,29 +13,4 @@
  */
 namespace Solver\Accord;
 
-use Solver\Logging\ErrorLog;
-
-class AnonTransform implements Transform {	
-	/**
-	 * @var \Closure
-	 */
-	protected $apply;
-	
-	public function __construct(\Closure $apply = null) {
-		$this->apply = $apply;
-	}
-	
-	public function setApplyMethod(\Closure $apply) {
-		$this->apply = $apply;
-		
-		return $this;
-	}
-	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if ($this->apply) {
-			return $this->apply->__invoke($value, $log, $path);
-		} else {
-			throw new \Exception('Method apply() has not been set.');
-		}
-	}
-}
+class AnonTransform extends AnonAction implements Transform {}

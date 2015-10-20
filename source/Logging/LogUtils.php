@@ -13,6 +13,8 @@
  */
 namespace Solver\Logging;
 
+use Solver\Services\EndpointLog;
+
 class LogUtils {
 	/**
 	 * Imports all events from a MemoryLog into another Log with an optional path (re)map.
@@ -24,21 +26,29 @@ class LogUtils {
 	 * Get events out of here...
 	 * 
 	 * @param array $map
-	 * A dict of "old base" => "new base" rules, which will be used to alter the paths of the imported events.
+	 * A dict of "old base" => "new base" rules, which will be used to alter the paths of the imported events. Dot is 
+	 * used as a delimiter in order to express multiple segments.
 	 * 
 	 * Be aware that for every event path, ONLY ONE rule will be matched and applied, and this is the LAST RULE that
 	 * matches the path base in your event (rules are processed in reverse). The reverse processing is designed, so you
 	 * can lay out your map naturally from least to most specific rules (the most specific rule will apply to your 
 	 * path).
 	 * 
-	 * Note that events with path set to null or empty string (both semantically identical, meaning "no path") can have
-	 * a path assigned to them by passing [null => 'foo.bar']. The result for path '' will be 'foo.bar', non-empty paths
-	 * won't be affected.
+	 * Note that events with path set to null or empty array (both semantically identical, meaning "no path") can have
+	 * a path assigned to them by passing ['' => 'foo.bar']. The result for path [] will be ['foo', 'bar'], and these
+	 * segments will be prepended to all other paths as well.
 	 * 
 	 * TODO: This certainly needs to be explained better.
-	 * TODO: Add closure ($error => $error|null) as an option for $map, so mapping can be more flexible.
+	 * TODO: Add closure like ($event => list<$event>|$event|null) as an option for $map for more flexible mapping.
 	 */
 	public static function import(Log $destinationLog, MemoryLog $sourceLog, $map = null) {	
+		// FIXME: Replace this special treatment code with general purpose support for TransactionalLog interface (once we have it).
+		if ($destinationLog instanceof EndpointLog) {
+			$destinationLog->begin();
+		}
+		
+		// FIXME: We're just adapting here old "string path" code, but we don't account fully for dots in segment names
+		// (unlikely) and code can probably be optimized, so rewrite to arrays when possible.
 		if ($map) {
 			// Build a regex with the map keys reverse (later entries take priority, but regex returns first match).	
 			$mapKeys = \array_reverse(\array_keys($map));
@@ -48,7 +58,52 @@ class LogUtils {
 			$regex = '%(' . \implode('|', \array_reverse(\array_keys($map))) . ')(?|$()()|(\.?)(.*))%AD';
 				
 			foreach ($sourceLog->getEvents() as $event) {				
-				$path = $event['path'];
+				$path = isset($event['path']) ? \implode('.', $event['path']) : '';
+					
+				if (\preg_match($regex, $path, $matches)) {
+					$replacement = $map[$matches[1]];
+					if ($replacement === '') $path = $matches[3];
+					else $path = $replacement . '.' . $matches[2]  . $matches[3];
+				}
+
+				if ($path === '') {
+					if (isset($event['path'])) unset($event['path']);
+				} else {
+					$event['path'] = explode('.', trim($path, '.'));
+				}
+				
+				$destinationLog->log($event);
+			}
+		} else {
+			foreach ($sourceLog->getEvents() as $event) {
+				$destinationLog->log($event);
+			}
+		}
+		
+		// FIXME: Replace this special treatment code with general purpose support for TransactionalLog interface (once we have it).
+		if ($destinationLog instanceof EndpointLog) {
+			$destinationLog->commit();
+		}
+	}
+	
+	
+	// Old implementation using string paths. Remove once the new direction is certain.
+	private static function import_REMOVEME(Log $destinationLog, MemoryLog $sourceLog, $map = null) {	
+		// FIXME: Replace this special treatment code with general purpose support for TransactionalLog interface (once we have it).
+		if ($destinationLog instanceof EndpointLog) {
+			$destinationLog->begin();
+		}
+		
+		if ($map) {
+			// Build a regex with the map keys reverse (later entries take priority, but regex returns first match).	
+			$mapKeys = \array_reverse(\array_keys($map));
+			
+			foreach ($mapKeys as & $val) $val = \preg_quote($val, '%'); 
+			
+			$regex = '%(' . \implode('|', \array_reverse(\array_keys($map))) . ')(?|$()()|(\.?)(.*))%AD';
+				
+			foreach ($sourceLog->getEvents() as $event) {				
+				$path = isset($event['path']) ? $event['path'] : null;
 				
 				// Null and empty string are semantically equivalent for a path (null is the canonical value for it).
 				if ($path === null) $path = '';
@@ -69,6 +124,11 @@ class LogUtils {
 			foreach ($sourceLog->getEvents() as $event) {
 				$destinationLog->log($event);
 			}
+		}
+		
+		// FIXME: Replace this special treatment code with general purpose support for TransactionalLog interface (once we have it).
+		if ($destinationLog instanceof EndpointLog) {
+			$destinationLog->commit();
 		}
 	}
 }

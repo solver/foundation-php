@@ -11,20 +11,27 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Accord;
+namespace Solver\AccordX;
 
-use Solver\Logging\ErrorLog;
+use Solver\Accord\Format;
+use Solver\Accord\FastAction;
+use Solver\Accord\ApplyViaFastApply;
+use Solver\Accord\ToValue;
+use Solver\Logging\StatusLog as SL;
+use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * This format falls in the group of "adapter" formats. Adapt one format to another, but still fulfill the full Format
  * contract (idempotence etc.).
  * 
  * Turns a string into a list based on a set of delimiter chars. The behavior of this particular class is optimized
- * for human-typed lists into a text field.
+ * for human-typed lists into a text field. If the input is already a list, it returns it unmodified.
  * 
  * This format is idempotent. If fed a list array instead of a string, it returns it unmodified.
  */
-class StringToListFormat implements Format {
+class StringToListFormat implements Format, FastAction {
+	use ApplyViaFastApply;
+	
 	protected $delimiters;
 	
 	/**
@@ -37,19 +44,15 @@ class StringToListFormat implements Format {
 		// Pre-escape for inclusion in regex.
 		$this->delimiters = \preg_quote($delimiters, '@');
 	}
-	
-	public function apply($value, ErrorLog $log, $path = null) {
-		if (\is_array($value)) {
-			return $value;
+
+	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		if (\is_array($input)) {
+			$output = $input;
+			return true;
 		}
 		
-		elseif (!\is_string($value)) {
-			$log->error($path, 'Please supply a string or a list.');
-			return null;
-		} 
-		
-		else {
-			$list = \preg_split('@[' . $this->delimiters . ']+@', $value, 0, \PREG_SPLIT_NO_EMPTY);
+		elseif (\is_string($input)) {
+			$list = \preg_split('@[' . $this->delimiters . ']+@', $input, 0, \PREG_SPLIT_NO_EMPTY);
 			
 			foreach ($list as & $item) {
 				$item = \trim($item);
@@ -57,6 +60,14 @@ class StringToListFormat implements Format {
 			unset($item);
 			
 			return $list;
+		} 
+		
+		else {
+			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+			
+			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please supply a string or a list.');
+			$output = null;
+			return false;
 		}
 	}
 }
