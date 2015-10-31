@@ -1,8 +1,10 @@
 <?php
 namespace Solver\Services;
 
-use Solver\Services\EndpointLog;
-use Solver\Services\EndpointException;
+use Solver\Logging\StatusLog;
+use Solver\Accord\ActionException;
+use Solver\Accord\Action;
+use Solver\AccordX\ExpressLog;
 
 /**
  * A simple router that will traverse service endpoints and either return a closure of the method to call, or null if
@@ -11,9 +13,8 @@ use Solver\Services\EndpointException;
  * For ex. $endpoint = "foo/bar/baz" will attempt to resolve to public $endpoint->foo->bar->baz($input);
  * 
  * TODO: Document more carefully we support actions returning endpoints as well now. Document the format of the $route.
- * TODO: Replace EndointDispatcher when stable and rename back to EndpointDispatcher.
  */
-class EndpointDispatcher2 {	
+class EndpointDispatcher_OLD2 {	
 	/**
 	 * Invokes the specified leaf action (by routing through every branch endpoint and action) and returns the results.
 	 * 
@@ -56,10 +57,13 @@ class EndpointDispatcher2 {
 	 * immediately precede this error in the log).
 	 * - Code "dispatcher.paramFilterFailed", if the caller-supplied parameter filter throws an EndpointException.
 	 */
-	public function dispatch(Endpoint $endpoint, $chain, \Closure $paramFilter = null) {
+	public function dispatch(Endpoint $endpoint, $chain, \Closure $paramFilter = null, StatusLog $log = null) {
+		// TODO: Not use this log here.
+		$log = new ExpressLog($log);
+		
 		$maxI = count($chain) - 1;
 		
-		if ($maxI == -1) $this->segmentNotFound($chain, -1);
+		if ($maxI == -1) $this->segmentNotFound($log, $chain, -1);
 		
 		for ($i = 0; $i <= $maxI; $i++) {
 			$requestSeg = $chain[$i];
@@ -72,77 +76,72 @@ class EndpointDispatcher2 {
 				$requestSegParams = $requestSeg['params'];
 			}
 			
-			try {
-				$responseSeg = $endpoint->resolve($requestSegName);	
-			} catch (EndpointException $e) {
-				$this->segmentFailed($e->getLog(), $chain, $i, $maxI);
-				throw $e;
-			}
+			$responseSeg = $endpoint->resolve($requestSegName);	
 			
 			if ($responseSeg === null) {
-				$this->segmentNotFound($chain, $i);
+				$this->segmentNotFound($log, $chain, $i);
 			}
 			
-			if ($responseSeg instanceof \Closure) {
+			if ($responseSeg instanceof Action) {
 				try {
 					if ($paramFilter) $requestSegParams = $paramFilter($requestSegParams, $i);
-					$result = $responseSeg($requestSegParams);
-				} catch (EndpointException $e) {
+					$result = $responseSeg->apply($requestSegParams, $log->withPath([$i]));
+				} catch (ActionException $e) {
 					$this->segmentFailed($e->getLog(), $chain, $i, $maxI);
 					throw $e;
 				}
 				
 				if ($i == $maxI) {
-					if ($result instanceof Endpoint) $this->dataResultExpected($chain, $i, $maxI);
+					if ($result instanceof Endpoint) $this->dataResultExpected($log, $chain, $i, $maxI);
 					return $result;
 				} else {
-					if (!$result instanceof Endpoint) $this->endpointResultExpected($chain, $i, $maxI);
+					if (!$result instanceof Endpoint) $this->endpointResultExpected($log, $chain, $i, $maxI);
 					$endpoint = $result;
 				}
 			} else {
-				if ($i == $maxI || $requestSegParams) $this->actionExpected($chain, $i, $maxI);
+				if ($i == $maxI || $requestSegParams) $this->actionExpected($log, $chain, $i, $maxI);
 				$endpoint = $responseSeg;
 			}
 		}
 	}
 		
-	protected function segmentNotFound($chain, $errorAtIndex) {
-		(new EndpointLog())->error(
+	protected function segmentNotFound(StatusLog $log, $chain, $errorAtIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex),
 			'Segment not found.', 
 			'dispatcher.segmentNotFound');
 	}
 	
-	protected function endpointResultExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->error(
+	protected function endpointResultExpected(StatusLog $log, $chain, $errorAtIndex, $maxIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Branch action returned data, endpoint expected.', 
 			'dispatcher.endpointResultExpected');		
 	}
 	
-	protected function dataResultExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->error(
+	protected function dataResultExpected(StatusLog $log, $chain, $errorAtIndex, $maxIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Leaf action returned an endpoint, data expected.', 
 			'dispatcher.dataResultExpected');		
 	}
 		
-	protected function actionExpected($chain, $errorAtIndex, $maxIndex) {
-		(new EndpointLog())->error(
+	protected function actionExpected(StatusLog $log, $chain, $errorAtIndex, $maxIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			$errorAtIndex == $maxIndex ? 'Leaf is not an action.' : 'Cannot pass parameters to a branch endpoint, action expected.', 
 			'dispatcher.actionExpected');		
 	}
 	
-	protected function segmentFailed(EndpointLog $log, $chain, $errorAtIndex, $maxIndex) {
-		$log->error(
+	protected function segmentFailed(StatusLog $log, $chain, $errorAtIndex, $maxIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			$errorAtIndex == $maxIndex ? 'Leaf returned errors.' : 'Branch returned errors.', 
 			'dispatcher.segmentFailed');		
 	}
 	
-	protected function paramFilterFailed(EndpointLog $log, $chain, $errorAtIndex, $maxIndex) {
-		$log->error(
+	protected function paramFilterFailed(StatusLog $log, $chain, $errorAtIndex, $maxIndex) {
+		$log->addError(
 			$this->getRoutePath($chain, $errorAtIndex), 
 			'Parameter filter returned errors.', 
 			'dispatcher.paramFilterFailed');		
@@ -161,6 +160,6 @@ class EndpointDispatcher2 {
 			}
 		}
 		
-		return implode('.', $route);
+		return $route;
 	}
 }

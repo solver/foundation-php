@@ -21,6 +21,6 @@ namespace Solver\Logging;
  * TODO: Document method semantics.
  */
 interface MemoryLog extends Log {
-	function hasEvents($types = null);
-	function getEvents($types = null);
+	function hasEvents();
+	function getEvents();
 }

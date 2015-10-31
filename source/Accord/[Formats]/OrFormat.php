@@ -21,7 +21,9 @@ use Solver\Accord\InternalTransformUtils as ITU;
  * Tests the given formats in sequence, until one of them successfully validates the value. You get back the output from
  * that first success. Each next format will get the value unfiltered, without seeing errors from the previous formats.
  * 
- * Union formats have great flexibility that comes with some weaknesses:
+ * This format represents a so-called "union type" or "sum type". See also AndFormat and VariantFormat.
+ * 
+ * The format has a great flexibility that comes with some weaknesses:
  * 
  * - Can be slow with many formats: every format has to run and invalidate, before going to the next.
  * - The errors can be unhelpful and misleading: if all subformats invalidate, the log will ultimately end up with the 
@@ -60,9 +62,10 @@ class OrFormat implements Format, FastAction {
 	 * - code?: null|string;
 	 * - details?: null|dict;
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function useError($error) {
+		$error['type'] = 'error';
 		$this->error = $error;
 		return $this;
 	}
@@ -86,7 +89,7 @@ class OrFormat implements Format, FastAction {
 		if ($this->error) {
 			if ($mask & SL::ERROR_FLAG) {
 				$error = $this->error;
-				if ($path) $error[$path] = $path;
+				if ($path && isset($error['path'])) $error['path'] = array_merge($path, $error['path']);
 				$events[] = $error;
 			}
 		} else {

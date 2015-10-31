@@ -70,7 +70,7 @@ class BoolFormat implements Format, FastAction {
 		
 		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 		
-		if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a valid boolean.');		
+		if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a valid boolean.');		
 		$output = null; 
 		return false;
 	}

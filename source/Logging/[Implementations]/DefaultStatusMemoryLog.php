@@ -15,16 +15,23 @@ namespace Solver\Logging;
 
 // TODO: Optimization opportunities.
 class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemoryLog {
-	/**
-	 * We re-declare this parent property to assign it a proper type (we know it's this type as we configure the 
-	 * parent constructor with it).
-	 * 
-	 * @var DefaultMemoryLog
-	 */
-	protected $log;
+	private $log;
+	private $retainsErrors;
+	private $lastError = null;
 	
-	public function __construct($mask = 15) {
-		parent::__construct(new DefaultMemoryLog(), $mask);
+	public function __construct($mask = StatusLog::DEFAULT_MASK) {
+		$log = new DefaultMemoryLog();
+		$this->log = $log;
+		$this->retainsErrors = (bool) ($mask & StatusLog::ERROR_FLAG); 
+		parent::__construct($log, $mask);
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * @see \Solver\Logging\ErrorMemoryLog::getLastError()
+	 */
+	public function getLastError() {
+		return $this->lastError;
 	}
 	
 	/**
@@ -32,7 +39,12 @@ class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemory
 	 * @see \Solver\Logging\ErrorMemoryLog::getErrors()
 	 */
 	public function getErrors() {
-		return $this->log->getEvents(['error']);
+		// TODO: If method getErrors() is called often it might be good to materialize this list, than filter it on 
+		// every call. The way we do with getLastError().
+		$events = $this->log->getEvents();
+		$errors = [];
+		foreach ($events as $event) if ($event['type'] === 'error') $errors[] = $event;
+		return $errors;
 	}
 
 	/**
@@ -40,22 +52,37 @@ class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemory
 	 * @see \Solver\Logging\ErrorMemoryLog::hasErrors()
 	 */
 	public function hasErrors() {
-		return $this->log->hasEvents(['error']);
+		return (bool) $this->lastError !== null;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
-	public function getEvents($types = null) {
-		return $this->log->getEvents($types);
+	public function getEvents() {
+		return $this->log->getEvents();
 	}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
-	public function hasEvents($types = null) {
-		return $this->log->hasEvents($types);
+	public function hasEvents() {
+		return $this->log->hasEvents();
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * @see \Solver\Logging\DelegatingStatusLog::log()
+	 */
+	public function log(array ...$events) {
+		if ($this->retainsErrors) for ($i = count($events) - 1; $i >= 0; $i--) {
+			if ($events[$i]['type'] === 'error') {
+				$this->lastError = $events[$i];
+				break;
+			}
+		}
+		
+		parent::log(...$events);
 	}
 }

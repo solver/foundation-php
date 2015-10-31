@@ -14,7 +14,9 @@
 namespace Solver\Accord;
 
 // TODO: Document. This is a Transform version of PipelineAction. See PipelineAction.
-class PipelineTransform extends PipelineAction implements Transform {
+class PipelineTransform implements Transform, FastAction {
+	use PipelineAny;
+	
 	public function __construct(Transform ...$transforms) {
 		if ($transforms) $this->actions = $transforms;
 	}
@@ -23,7 +25,7 @@ class PipelineTransform extends PipelineAction implements Transform {
 	 * Adds a new transform to the pipeline.
 	 * 
 	 * @param Transform $transform 
-	 * @return self
+	 * @return $this
 	 */
 	public function add(Transform $transform) {
 		$this->actions[] = $transform;

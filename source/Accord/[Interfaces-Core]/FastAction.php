@@ -50,7 +50,8 @@ interface FastAction extends Action {
 	 * 
 	 * @param $mask
 	 * Default 0 (no events will be logged). The caller needs to explicitly declare they want any events by passing an 
-	 * appropriate mask here (typically 15, or 0b1111, for the four major StatusLog event types).
+	 * appropriate mask here (typically StatusLog::DEFAULT_MASK, which is 15 (0b1111), for the four major StatusLog
+	 * event types).
 	 * 
 	 * Note that just like acknowledging the mask is optional when writing to a StatusLog, acknowledging the $mask by
 	 * fastApply() implementation is optional as well. If the caller passes $events reference, they might still get

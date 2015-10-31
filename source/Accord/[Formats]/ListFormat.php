@@ -40,7 +40,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with exactly $length $noun.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with exactly $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -56,7 +56,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with at least $length $noun.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with at least $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -72,7 +72,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) > $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with at most $length $noun.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with at most $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -91,7 +91,7 @@ class ListFormat implements Format, FastAction {
 	 * 
 	 * @param int $max
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function hasLengthInRange($min, $max) {
 		$this->hasLengthMin($min);
@@ -105,7 +105,7 @@ class ListFormat implements Format, FastAction {
 			if (\count($input) == 0) {
 				// A list with isEmpty() test will typically be 1st item in a OrFormat, where this message will be
 				// never seen.
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide an empty list.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide an empty list.");
 				$output = null;
 				return false;
 			} else {
@@ -120,7 +120,7 @@ class ListFormat implements Format, FastAction {
 	public function isNotEmpty() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if (\count($input) == 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a list with one or more items.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with one or more items.");
 				$output = null;
 				return false;
 			} else {
@@ -136,7 +136,7 @@ class ListFormat implements Format, FastAction {
 		if (!\is_array($input)) {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a list.');
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a list.');
 			$output = null;
 			return null;
 		}

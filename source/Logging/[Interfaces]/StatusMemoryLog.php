@@ -14,8 +14,26 @@
 namespace Solver\Logging;
 
 // TODO: Document.
-// TODO: Consider method getLastError().
 interface StatusMemoryLog extends MemoryLog, StatusLog {
+	/**
+	 * @return bool
+	 * True if the log contains errors, false if it doesn't.
+	 */
 	function hasErrors();
+	
+	/**
+	 * Returns all errors in the log.
+	 * 
+	 * @return array
+	 * Returns a list of errors (empty list if the log has no errors).
+	 */
 	function getErrors();
+	
+	/**
+	 * Returns the last error.
+	 * 
+	 * @return array|null
+	 * Returns the last error or null if the log has no errors.
+	 */
+	function getLastError();
 }

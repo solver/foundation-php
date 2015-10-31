@@ -17,6 +17,9 @@ namespace Solver\Lab;
  * Supports infrastructure for extensible, searchable application level events.
  * 
  * Suitable for event sourcing, logging and other similar purposes.
+ * 
+ * @deprecated
+ * We'll be refactoring this into something useful or removing it.
  */
 class EventService {
 	/**

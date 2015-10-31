@@ -16,7 +16,7 @@ interface FromValue {
 	 * 
 	 * The semantics of this method are identical to the apply() method for Transform instances.
 	 * 
-	 * @param null|bool|int|float|string|array $input
+	 * @param null|bool|int|float|string|array $value
 	 * One of the primitive value types in PHP, which are:
 	 * 
 	 * - null
@@ -28,11 +28,11 @@ interface FromValue {
 	 * @param \Solver\Logging\StatusLog $log
 	 * The method will log here events that have occured during the conversion.
 	 *  
-	 * @return self
+	 * @return $this
 	 * An instance of the class implementing this interface.
 	 * 
 	 * @throws ActionException
 	 * If the conversion fails (for ex. due to invalid input).
 	 */
-	static function fromValue($input, StatusLog $log = null);
+	static function fromValue($value, StatusLog $log = null);
 }

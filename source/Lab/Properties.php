@@ -13,18 +13,18 @@
  */
 namespace Solver\Lab;
 
+use Solver\Base\Magic;
+
 /**
  * A reusable API for creating get/set properties (and often used variations, such as read-only properties etc.).
  * 
  * The API is reminiscent of JavaScript's object.defineProperty(), while geared to fit PHP better.
+ * 
+ * @deprecated This trait is obsoleted and replaced by \Solver\Base\MagicProperties. It's now simply a shell over
+ * MagicProperties itself.
  */
 trait Properties {
-	/**
-	 * A map of registered properties (the ugly long name is necessary in traits to avoid property name collisions).
-	 * 
-	 * @var array
-	 */
-	protected $Solver_Lab_Properties_map;
+	use Magic;
 	
 	/**
 	 * Registers a property for handling with get/set. The property handlers will only fire if the variable is not set
@@ -63,11 +63,7 @@ trait Properties {
 		if ($get === false && $set === false) {
 			throw new \Exception('Cannot create property "'. $name . '" with forbidden both access and modification.');
 		}
-		
-		if (isset($this->Solver_Lab_Properties_map[$name])) {
-			throw new \Exception('Cannot create property "'. $name . '" as it already exists.');
-		}
-		
+				
 		$property = [];
 		
 		/*
@@ -143,30 +139,7 @@ trait Properties {
 		else {
 			throw new \Exception('Invalid setter specification.');
 		}
-				
-		$this->Solver_Lab_Properties_map[$name] = $property;
-	}
-	
-	public function __set($name, $value) {
-		if (isset($this->Solver_Lab_Properties_map[$name])) {
-			$this->Solver_Lab_Properties_map[$name]['set']($value, $name);
-		}
 		
-		// Emulate the default behavior, which allows dynamic properties.
-		// TODO: Consider adding API for sealing properties (to disallow dynamic ones to be set on the object).
-		else {
-			$this->{$name} = $value;
-		}
-	}
-	
-	public function __get($name) {
-		if (isset($this->Solver_Lab_Properties_map[$name])) {
-			return $this->Solver_Lab_Properties_map[$name]['get']($name);
-		}
-		
-		// Emulate the default behavior, which will result in the standard PHP Notice.
-		else {
-			return $this->{$name};
-		}
+		$this->__handlers[$name] = $property;
 	}
 }

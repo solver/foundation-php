@@ -31,7 +31,7 @@ class NullFormat implements Format, FastAction {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
 			// If added first in a OrFormat, this awkward message won't be seen.
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a null value.');
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a null value.');
 			$output = null;
 			return true;
 		} else {

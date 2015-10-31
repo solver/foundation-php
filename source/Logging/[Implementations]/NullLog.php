@@ -37,30 +37,30 @@ class NullLog implements StatusLog {
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::info()
 	 */
-	public function info($path = null, $message = null, $code = null, array $details = null) {}
+	public function addInfo($path = null, $message = null, $code = null, array $details = null) {}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::success()
 	 */
-	public function success($path = null, $message = null, $code = null, array $details = null) {}
+	public function addSuccess($path = null, $message = null, $code = null, array $details = null) {}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\StatusLog::warning()
 	 */
-	public function warning($path = null, $message = null, $code = null, array $details = null) {}
+	public function addWarning($path = null, $message = null, $code = null, array $details = null) {}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\ErrorLog::error()
 	 */
-	public function error($path = null, $message = null, $code = null, array $details = null) {}
+	public function addError($path = null, $message = null, $code = null, array $details = null) {}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event, array ...$events) {}
+	public function log(array ...$events) {}
 
 }

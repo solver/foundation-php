@@ -21,7 +21,7 @@ namespace Solver\Toolbox;
  */
 class CollectionUtils {
 	/**
-	 * Takes a one-dimensional array where the keys may contain "." (or a set of other configurable delimiters)
+	 * Takes a one-dimensional array where the keys may contain "." (or another configurable delimiter)
 	 * to define array paths, and converts them to actual array paths, i.e.:
 	 * 
 	 * <code>
@@ -29,14 +29,13 @@ class CollectionUtils {
 	 * </code>
 	 * 
 	 * @param array $array
-	 * Array to be integrated.
+	 * Array whose keys to split.
 	 * 
 	 * @param string $delim
-	 * Optional (default '.'). One or more characters to split the paths by (a sequence of delimiters is considered
-	 * one instance of a delimiter). You can add or replace with '[]' to parse standard PHP array paths like a[b][c].
+	 * Optional (default '.'). A string to split the paths by.
 	 * 
 	 * @return array
-	 * A new array with the integrated subarrays.
+	 * A new array with split keys.
 	 */
 	static public function splitKeys(array $array, $delim = '.') {
 		$out = [];
@@ -44,7 +43,7 @@ class CollectionUtils {
 		
 		// TODO: Optimization opportunity?
 		foreach ($array as $key => $item) {
-			$parent = & self::drill($out, $key, $topKey, true, true, $delim);
+			$parent = & self::drill($out, explode($delim, $key), $topKey, true, true);
 			$parent[$topKey] = $item;
 		}
 		
@@ -76,7 +75,7 @@ class CollectionUtils {
 			$map = static function (& $arrayRef, $key, $val, $delim) use (& $map) {
 				if (is_array($val) && $val) {
 					foreach ($val as $subKey => $subVal) {
-						$map($arrayRef, $key == '' ? $subKey : $key.$delim.$subKey, $subVal, $delim);
+						$map($arrayRef, $key == '' ? $subKey : $key . $delim . $subKey, $subVal, $delim);
 					}
 				} else {
 					$arrayRef[$key] = $val;
@@ -92,7 +91,7 @@ class CollectionUtils {
 	
 	/**
 	 * This is a low-level operation, that can be used to implement set, get, isset, unset, push etc. operations on a
-	 * deep array item by passing the array and path to the item as a delimited string.
+	 * deep array item by passing the array and path to the item as a list of strings.
 	 * 
 	 * Drills the array to the last but second path segment and returns the parent (by reference), and the last segment
 	 * key for further operations. With these references you are free to read/set/unset the element in the original
@@ -102,7 +101,7 @@ class CollectionUtils {
 	 * 
 	 * <code>
 	 * // In this example we operate on $arrayRef['a']['b']['c'].
-	 * $path = 'a.b.c';
+	 * $path = ['a', 'b', 'c'];
 	 * 
 	 * // Don't forget to take the result by reference if you want to modify.
 	 * $parent = & CollectionUtils::drill($arrayRef, $path, $keyOut); 
@@ -144,39 +143,106 @@ class CollectionUtils {
 	 * @param array $arrayRef
 	 * Array reference to be scanned.
 	 * 
-	 * @param string $path
-	 * Array path identifier, for example: 'abc[def][ghi]', or 'abc.def.ghi'.
+	 * @param array $path
+	 * Array path identifier, for example to acces $array['abc']['def']['ghi'], provide path ['abc', 'def', 'ghi'].
 	 * 
 	 * @param null|string $keyOut
 	 * Returns in this var the key under which the element is found (as per path spec). Null if there's no valid parent
 	 * array (and it couldn't be created depending on the bool flags).
 	 * 
-	 * @param bool $createMissingAncestors
-	 * Optional (default = false). When true, if the ancestor arrays for the given path don't exist, they'll be created
-	 * as long as they're not already set to a conflicting type (a scalar, resource, object). When enabled, this
-	 * behavior matches a trait of PHP called "array promotion".
+	 * @param bool $promote
+	 * Optional (default = false). When true, if the ancestor arrays for the given path don't exist (or are null),
+	 * they'll be created as long as they're not already set to a conflicting type (a scalar, resource, object). When
+	 * enabled, this behavior matches a trait of PHP called "array promotion".
 	 * 
-	 * @param bool $replaceInvalidAncestors
+	 * @param bool $replace
 	 * Optional (default = false). When true, if any ancestors for the given path are set to a conflicting type  (a 
 	 * scalar, object, resource) they'll be silently replaced by empty arrays in order to create the path as requested.
-	 * 
-	 * @param string $delim
-	 * One or more chars that will be considered delimiters between path segments, by default ".". You can add "[]" to
-	 * this string, and the function will also parse the default PHP array path convention (for ex. "foo[bar][baz]").
 	 * 
 	 * @return null|array
 	 * The parent array of the element, by reference. Null if there's no valid parent array (and it couldn't be created
 	 * depending on the bool flags).
 	 */
-	public static function & drill(array & $arrayRef, $path, & $keyOut, $createMissingAncestors = false, $replaceInvalidAncestors = false, $delim = '.') {
-		// Opportunities for optimization if we have code like (best to wait and bench against PHP7 final release):
-		// $segs = explode('.', $path);
-		// switch (count($segs)) {
-		//     ...
-		//     case 3: list($a, $b, $c) = $segs; return isset($arrayRef[$a][$b][$c]) ? $arrayRef[$a][$b][$c] : null;
-		//     ...
-		// }
+	public static function & drill(array & $arrayRef, array $path, & $keyOut, $promote = false, $replace = false) {
+		$count = count($path);
+			
+		if ($promote) goto generic;
 		
+		// TODO: Possible optimization, directly assigning non-existing path by ref to use PHP's native promoting
+		// behavior (no error is fired). One issue is incompatible ancestors, object/resource/string/number will throw
+		// an error, then a warning. If we can handle those edge cases, it'll be a much faster way to promote.
+		switch ($count) {
+			 case 1: 
+				$keyOut = $path[0];
+				return $arrayRef;
+			 case 2: 
+				list($a, $keyOut) = $path;
+				if (isset($arrayRef[$a])) $arrayRef = & $arrayRef[$a]; else goto fail;
+				goto isArrayOrFail;
+			 case 3: 
+				list($a, $b, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b])) $arrayRef = & $arrayRef[$a][$b]; else goto fail;
+				goto isArrayOrFail;
+			 case 4: 
+				list($a, $b, $c, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b][$c])) $arrayRef = & $arrayRef[$a][$b][$c]; else goto fail;
+				goto isArrayOrFail;
+			 case 5: 
+				list($a, $b, $c, $d, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b][$c][$d])) $arrayRef = & $arrayRef[$a][$b][$c][$d]; else goto fail;
+				goto isArrayOrFail;
+			 case 6:
+				list($a, $b, $c, $d, $e, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b][$c][$d][$e])) $arrayRef = & $arrayRef[$a][$b][$c][$d][$e]; else goto fail;
+				goto isArrayOrFail;
+			 case 7:
+				list($a, $b, $c, $d, $e, $f, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b][$c][$d][$e][$f])) $arrayRef = & $arrayRef[$a][$b][$c][$d][$e][$f]; else goto fail;
+				goto isArrayOrFail;
+			 case 8:
+				list($a, $b, $c, $d, $e, $f, $g, $keyOut) = $path;
+				if (isset($arrayRef[$a][$b][$c][$d][$e][$f][$g])) $arrayRef = & $arrayRef[$a][$b][$c][$d][$e][$f][$g]; else goto fail;
+				goto isArrayOrFail;
+			default:
+				goto generic;
+		}
+		
+		isArrayOrFail:
+		if (is_array($arrayRef)) return $arrayRef; 
+		if ($replace) { $arrayRef = []; return $arrayRef; }
+		goto fail;
+		
+		generic:
+		for ($i = 0, $lastI = $count - 1; $i < $lastI; $i++) {
+			$seg = $path[$i];	
+			
+			if (!isset($arrayRef[$seg])) {
+				if ($promote) $arrayRef[$seg] = [];
+				else goto fail;
+			}
+			
+			$arrayRef = & $arrayRef[$seg];
+				
+			if (!is_array($arrayRef)) {
+				if ($replace) $arrayRef = []; 
+				else goto fail;
+			}
+		}		
+			
+		$keyOut = $path[$lastI];
+		return $arrayRef;
+		
+		fail:
+		$keyOut = null;
+		$nothing = null; 
+		return $nothing;
+	}
+	
+	// Left here for reference. Remove once we're sure we don't need this. Old method which works with delimited string paths and is slower in most cases.
+	// One edge case where this function is a bit faster is promoting/replacing a deep path from a nearly empty array (ntoe fast code path is not used with the
+	// new method when we have to $promote) on a path that started as a string. I.e. explode('.', $path) + new drill + promote is slower than this drill + promote. 
+	// Research.
+	private static function & drill_OLD(array & $arrayRef, $path, & $keyOut, $promote = false, $replace = false, $delim = '.') {
 		$parent = & $arrayRef;
 		$keyOut = \strtok($path, $delim);
 		
@@ -186,14 +252,14 @@ class CollectionUtils {
 			
 			if (isset($parent[$keyOut])) {
 				if (!\is_array($parent[$keyOut])) {
-					if ($replaceInvalidAncestors) {
+					if ($replace) {
 						$parent[$keyOut] = [];
 					} else {
 						goto fail;
 					}
 				}
 			} else {
-				if ($createMissingAncestors) {
+				if ($promote) {
 					$parent[$keyOut] = []; 
 				} else {
 					goto fail;

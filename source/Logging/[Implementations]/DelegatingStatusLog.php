@@ -13,14 +13,29 @@
  */
 namespace Solver\Logging;
 
-// FIXME: Implement mask.
 class DelegatingStatusLog implements StatusLog {
-	protected $log;
-	protected $mask;
+	// TODO: Possible optimization: implement shortcut methods locally, with inline mask checks & delegating to parent.
+	use StatusLogConvenienceMethods;
 	
-	public function __construct(Log $log, $mask = 15) {
+	private $log;
+	private $mask;
+	private $filter;
+	
+	/**
+	 * @param Log $log
+	 * Log to send events to.
+	 * 
+	 * @param int $mask
+	 * Optional. Event type mask to use for the log (if you pass null or nothing, StatusLog::DEFAULT_MASK is used).
+	 * 
+	 * @param \Closure $filter
+	 * (list<dict>) => list<dict>; An optional filter which will receive events to be logged, and can return modified
+	 * and filtered events to be logged instead (you can return an empty array to filter out all events if you need).
+	 */
+	public function __construct(Log $log, $mask = null, \Closure $filter = null) {
 		$this->log = $log;
-		$this->mask = $mask;
+		$this->mask = $mask === null ? StatusLog::DEFAULT_MASK : $mask;
+		$this->filter = $filter;
 	}
 
 	/**
@@ -28,15 +43,14 @@ class DelegatingStatusLog implements StatusLog {
 	 * @see \Solver\Logging\StatusLog::getMask()
 	 */
 	public function getMask() {
-		$this->mask;
+		return $this->mask;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event, array ...$events) {
-		// TODO: Implement the mask at every individual method w/o look-up for extra speed?
+	public function log(array ...$events) {
 		static $map = [
 			'error' => self::ERROR_FLAG,
 			'warning' => self::WARNING_FLAG,
@@ -44,74 +58,33 @@ class DelegatingStatusLog implements StatusLog {
 			'success' => self::SUCCESS_FLAG,
 		];
 		
-		// TODO: Optimize for one event here (common).
-		if ($events) array_unshift($events, $event);
-		else $events = [$event];
-		
-		$eventsToSend = [];
+		$mask = $this->mask;
+		$filter = $this->filter;
 		
 		// We need to be atomic, so we first check conditions, then send in one go.
-		foreach ($events as $event) {
-			$type = $event['type'];
-			if (isset($map[$type])) {
-				if ($this->mask & $map[$type]) $eventsToSend[] = $event;
-			} else {
-				LogException::throwUnknownType($type);
+		// If the mask allows all types, we can take a faster route without filtering.
+		if ($mask == StatusLog::FULL_MASK) {
+			foreach ($events as $event) {
+				$type = $event['type'];
+				if (!isset($map[$type])) LogException::throwUnknownType($type);
 			}
+			
+			if ($filter) $events = $filter($events);
+			$this->log->log(...$events);
+		} else {
+			$matchingEvents = [];
+			foreach ($events as $event) {
+				$type = $event['type'];
+				if (isset($map[$type])) {
+					if ($this->mask & $map[$type]) $matchingEvents[] = $event;
+				} else {
+					LogException::throwUnknownType($type);
+				}
+			}
+			
+			if ($filter) $matchingEvents = $filter($matchingEvents);
+			$this->log->log(...$matchingEvents);
 		}
 		
-		$this->log->log(...$eventsToSend);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 * @see \Solver\Logging\StatusLog::error()
-	 */
-	public function error($path = null, $message = null, $code = null, array $details = null) {
-		$event = ['type' => 'error'];
-		if (isset($path)) $event['path'] = $path;
-		if (isset($message)) $event['message'] = $message;
-		if (isset($code)) $event['code'] = $code;
-		if (isset($details)) $event['details'] = $details;
-		$this->log->log($event);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 * @see \Solver\Logging\StatusLog::warning()
-	 */
-	public function warning($path = null, $message = null, $code = null, array $details = null) {
-		$event = ['type' => 'warning'];
-		if (isset($path)) $event['path'] = $path;
-		if (isset($message)) $event['message'] = $message;
-		if (isset($code)) $event['code'] = $code;
-		if (isset($details)) $event['details'] = $details;
-		$this->log->log($event);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 * @see \Solver\Logging\StatusLog::info()
-	 */
-	public function info($path = null, $message = null, $code = null, array $details = null) {
-		$event = ['type' => 'info'];
-		if (isset($path)) $event['path'] = $path;
-		if (isset($message)) $event['message'] = $message;
-		if (isset($code)) $event['code'] = $code;
-		if (isset($details)) $event['details'] = $details;
-		$this->log->log($event);
-	}
-
-	/**
-	 * {@inheritDoc}
-	 * @see \Solver\Logging\StatusLog::success()
-	 */
-	public function success($path = null, $message = null, $code = null, array $details = null) {
-		$event = ['type' => 'success'];
-		if (isset($path)) $event['path'] = $path;
-		if (isset($message)) $event['message'] = $message;
-		if (isset($code)) $event['code'] = $code;
-		if (isset($details)) $event['details'] = $details;
-		$this->log->log($event);
 	}
 }

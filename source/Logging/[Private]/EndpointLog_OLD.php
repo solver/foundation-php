@@ -13,10 +13,8 @@
  */
 namespace Solver\Services;
 
-use Solver\Logging\DefaultErrorMemoryLog;
-
 /**
- * FIXME: Remove.
+ * FIXME: Scavenge for the comments (should be moved to ExpressLog) and remove.
  * 
  * This log is the standard method for an endpoint to report errors to its caller.
  * 
@@ -31,13 +29,4 @@ use Solver\Logging\DefaultErrorMemoryLog;
  * Throwing a EndpointException with one or more errors by manipulating a EndpointLog is the standard way for a service
  * endpoint to end with an error and communicate it to its clients.
  */
-class EndpointLog_OLD extends DefaultErrorMemoryLog {
-	public function throwIfErrors() {
-		if ($this->hasErrors()) throw new EndpointException($this);
-	}
-	
-	public function errorAndThrow($path, $message, $code = null, array $details = null) {
-		$this->error($path, $message, $code, $details);
-		throw new EndpointException($this);
-	}
-}
+class EndpointLog_OLD {}

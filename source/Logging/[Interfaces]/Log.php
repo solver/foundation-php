@@ -17,10 +17,14 @@ namespace Solver\Logging;
 // specific types (status only allows its standard types none other).
 interface Log {
 	/**
-	 * Writes one or more events to the log. 
+	 * Writes events to the log.
 	 * 
-	 * IMPORTANT: This is an atomic operation. In case of failure, log implements MUST NOT commit partial results to the 
-	 * log.
+	 * Passing no arguments (or spreading an empty array) is equivalent to not calling the method at all. 
+	 * 
+	 * IMPORTANT: This is an atomic operation. In case of failure, log implements SHOULD NOT commit partial results to
+	 * the log. One exception to this rule may be aggregate logs which delegate to multiple child logs and have no way
+	 * to coordinate shared failure in case one of the child logs fails. In such cases the aggregate log documentation
+	 * should clearly spell out how failure is handled.
 	 * 
 	 * Specifics about the event format:
 	 * 
@@ -32,17 +36,16 @@ interface Log {
 	 * For events materialized as an object, the unused properties can be null.
 	 * 
 	 * @param array $event
-	 * dict...
+	 * list<#Event>; A list of zero, one or more events to append to the log.
+	 * 
+	 * #Event: dict...
 	 * - type: string; Depending on the log, only certain event types may be permitted in the log.
 	 * - path?: null|list<string>; A path can be specified to demonstrate the input location of origin for an event.
 	 * - message?: null|string; A human readable message describing the event.
-	 * - code?: null|string; Machine readable event code.
+	 * - code?: null|string|int; Machine readable event code.
 	 * - details?: null|dict; An arbitrary dictionary with machine readable event context.
-	 * 
-	 * @param array ...$events
-	 * Zero or more additional events to push onto the log.
 	 * 
 	 * @throws LogException
 	 */
-	function log(array $event, array ...$events);
+	function log(array ...$events);
 }

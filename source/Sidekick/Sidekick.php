@@ -35,8 +35,41 @@ class Sidekick {
 		// TODO: Support creating linked rows (inferred from colNamespace) i.e. deep create. We have to consider how to
 		// support also deep update and deep delete before that, for consistency.
 		// TODO: Validate cols given.
+		// TODO: Support returning multiple insert ids, not just last one. Might need to differentiate insert() from
+		// insertMany(). For now people need to call insert() many times if they want all ids.
 		$rows = $this->mapRows(true, $tableSchema, $rows);
 		SqlUtils::insertMany($this->conn, $tableSchema['internalName'], $rows, true);
+		
+		// Support PgSQL SERIAL type and generated sequences (latter will need extra support in Table::setPK to specify
+		// the sequence name).
+		if ($tableSchema['primaryKeyIsGenerated']) {
+			$lastId = $this->conn->getLastInsertId();
+			
+			// We assume we have 1+ pk columns, because the "is generated" option is on. For composite PK we take the
+			// first col for now, support for more needs research.
+			$name = $tableSchema['primaryKey'][0]; 
+			
+			// TODO: This kind of checking should be moved to the config.
+			if (!isset($tableSchema['externalFields'][$name])) {
+				throw new \Exception('Primary key column "' . $name . '" is not in the list of defined public fields.');
+			}
+			
+			$spec = $tableSchema['externalFields'][$name];
+			
+			// TODO: This kind of checking should be moved to the config. Also the exception message wording is terrifying here.
+			if ($spec['composite']) {
+				throw new \Exception('Primary key column "' . $name . '" is composite, we don\'t support composite columns for generated primary keys (which is distinct from composite PK, which we do support).');
+			}
+			
+			$internalName = $spec['toName'];
+			$transform = $tableSchema['internalFields'][$internalName]['transform'];
+			
+			if ($transform) {
+				$lastId = $transform([$lastId], false)[0];
+			}
+			
+			return $lastId;
+		}
 	}
 	
 	function update($tableName) {

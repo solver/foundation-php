@@ -23,7 +23,7 @@ namespace Solver\Services;
  * 
  * Note that the chain execution interrupts if both your $resolver and the $endpoint you pass resolve to null or an
  * action (i.e. a Closure instance). To avoid that, your $filter function can convert non-endpoint resolutions to an 
- * instance of EmptyEndpoint.
+ * instance of NullEndpoint.
  * 
  */
 class DeepProxyEndpoint implements Endpoint {
@@ -33,7 +33,7 @@ class DeepProxyEndpoint implements Endpoint {
 	protected $path = [];
 	
 	/**
-	 * #Resolution: \Solver\Services\Endpoint|\Closure|null;
+	 * #Resolution: \Solver\Services\Endpoint|\Solver\Accord\Action|null;
 	 * 
 	 * @param \Solver\Services\Endpoint $endpoint
 	 * The endpoint this object will decorate (i.e. wrap).

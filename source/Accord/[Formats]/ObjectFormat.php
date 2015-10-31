@@ -33,7 +33,7 @@ class ObjectFormat implements Format, FastAction {
 	public function isInstanceOf($className) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($className) {
 			if (!$input instanceof $className) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide an instance of ' . $className. '.');
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide an instance of ' . $className. '.');
 				$output = null;
 				return false;
 			} else {
@@ -47,7 +47,7 @@ class ObjectFormat implements Format, FastAction {
 	
 	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		if (!\is_object($input)) {
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a valid object.');
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a valid object.');
 			$output = null;
 			return false;
 		}	

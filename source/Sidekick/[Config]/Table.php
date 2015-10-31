@@ -30,6 +30,7 @@ class Table {
 	protected $externalFields = [];
 	protected $internalFields = [];
  	protected $primaryKey = null;
+ 	protected $primaryKeyIsGenerated = false;
 	
 	function __construct($name = null, $internalName = null) {
 		if ($name !== null) $this->setName($name, $internalName);
@@ -44,11 +45,31 @@ class Table {
 // 	function setSuper($tableName) { TODO: Inheritance, maybe multiple (like traits); makes joins on PK if a superfield is selected.
 // 		
 // 	}
-
-	function setPK(...$columns) { // TODO: Document the names here should be the "external" names, to avoid confusion when they differ from the internal ones.
+	
+	/**
+	 * Sets the primary key for the table.
+	 * 
+	 * @param string|list<string> $columnOrColumnList
+	 * A string column name to set as a primary key, or a list of strings for a composite primary key.
+	 * 
+	 * @param bool $isGenerated
+	 * Optional (default = false). True if the primary key is generated (autoincrement in MySQL, SERIAL in PgSQL etc.),
+	 * false if not.
+	 * 
+	 * Passing true means the insert command will return the last insert id, mapped according to the transform rules
+	 * for the specified primry key column.
+	 * 
+	 * Note that if you specify a composite primary key, the system assumed the first key is the one that's serial or
+	 * autoincrementing (and its decoding transform is used for the return value).
+	 * 
+	 * TODO: Support multiple sequences in one insert?
+	 * 
+	 * TODO: Add optional 3rd param to specify sequence name, instead of autoincrement/SERIAL type.
+	 */
+	function setPK($columnOrColumnList, $isGenerated = false) { // TODO: Document the names here should be the "external" names, to avoid confusion when they differ from the internal ones.
 		// TODO: Validate in render() that those PK fields set here exist, and are columns, not expressions (why not expressions? think about it)
-		$this->primaryKey = $columns;
-		
+		$this->primaryKey = is_array($columnOrColumnList) ? $columnOrColumnList : [$columnOrColumnList];
+		$this->primaryKeyIsGenerated = $isGenerated;
 		return $this;
 	}
 
@@ -86,6 +107,7 @@ class Table {
 		$this->externalFields[$name] = $publicCol;
 		$this->externalFieldList[] = [false, $name];
 		
+		// FIXME: This makes no sense, $internalName is undefined here. Figure out and fix it.
 		$this->internalFields[$internalName] = $internalCol;
 		$this->internalFieldList[] = [false, $internalName];
 		

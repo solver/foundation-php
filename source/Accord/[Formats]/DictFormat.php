@@ -19,6 +19,8 @@ use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * TODO: Add subset($dictFormat, ...$fields) or similar: an ability to create a partial clone only of selected fields.
+ * TODO: Add ignoreRest() /no warnings on rest/ rejectRest() /errors on rest/ to complement addRest() and we need a
+ * method for the default behavior warnOnRest() or similar.
  */
 class DictFormat implements Format, FastAction {
 	use ApplyViaFastApply;
@@ -26,9 +28,23 @@ class DictFormat implements Format, FastAction {
 	protected $fields = [];
 	protected $rest = false;
 	protected $restFormat = null;
+	protected $preserveNull = false;
 	
 	/**
-	 * @return self
+	 * Whether to preserve null values, or treat them the same as if the key is not set.
+	 * 
+	 * TODO: We need this in all collection types (List, Tuple, tags in Variant etc.).
+	 * 
+	 * @param string $preserve
+	 * True to preserve (default when calling the method), false to ignore (default for the class if you don't call this
+	 * method).
+	 */
+	public function preserveNull($preserve = true) {
+		$this->preserveNull = $preserve;
+	}
+	
+	/**
+	 * @return $this
 	 */
 	public function addRequired($name, Format $format = null) {
 		$this->fields[] = [$name, $format, 0]; 
@@ -36,7 +52,7 @@ class DictFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function addOptional($name, Format $format = null) {
 		$this->fields[] = [$name, $format, 1]; 
@@ -46,7 +62,7 @@ class DictFormat implements Format, FastAction {
 	/**
 	 * Same as addOptional(), but if the field is missing it'll be created, and the default value will be assigned.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function addDefault($name, $default = null, Format $format = null) {
 		$this->fields[] = [$name, $format, 2, $default];
@@ -77,10 +93,12 @@ class DictFormat implements Format, FastAction {
 		if (!\is_array($input)) {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a dict.');
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a dict.');
 			$output = null;
 			return null;
 		}
+		
+		$preserveNull = $this->preserveNull;
 		
 		$success = true;
 		$output = [];
@@ -89,9 +107,15 @@ class DictFormat implements Format, FastAction {
 			/* @var $field Format */
 			list($name, $format, $type) = $field;
 			
-			// Isset is faster so we try that and fall back to key_exists for null values. 
-			// TODO: Should we just ignore nulls? Or make it an option?
-			$exists = isset($input[$name]) || \key_exists($name, $input);
+			// TODO: Optimization opportunities when we don't preserve null and skip rest (no warnings) to avoid the
+			// key_exists() call.
+			if (isset($input[$name])) {
+				$exists = true;
+			} elseif (\key_exists($name, $input)) {
+				$exists = $preserveNull;
+			} else {
+				$exists = false;
+			}
 			
 			if ($exists) {
 				$subInput = $input[$name];
@@ -113,7 +137,7 @@ class DictFormat implements Format, FastAction {
 				switch ($type) {
 					case $TYPE_REQUIRED:
 						// Missing fields are a dict-level error (don't add $name to the $path in this case).
-						if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide required field "' . $name . '".');
+						if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide required field "' . $name . '".');
 						$success = false;
 						break;
 						
@@ -124,7 +148,7 @@ class DictFormat implements Format, FastAction {
 			}
 		}
 		
-		if ($this->rest) {
+		if ($input && $this->rest) {
 			if ($this->restFormat) {
 				if ($format instanceof FastAction) {
 					foreach ($input as $subName => $subInput) {
@@ -143,7 +167,7 @@ class DictFormat implements Format, FastAction {
 				$output += $input;
 			}
 		} else {
-			if ($mask & SL::WARNING_FLAG) ITU::warningTo($events, $path, 'One or more fields were ignored: "' . implode('", "', array_keys($input)) . '".');
+			if ($mask & SL::WARNING_FLAG) ITU::addWarningTo($events, $path, 'One or more fields were ignored: "' . implode('", "', array_keys($input)) . '".');
 		}
 		
 		if ($success) {

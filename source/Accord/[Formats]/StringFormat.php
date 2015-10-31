@@ -29,7 +29,7 @@ class StringFormat implements Format, FastAction {
 	/**
 	 * @param string $form
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function normalize($form = StringUtils::NFC) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($form) {
@@ -41,7 +41,7 @@ class StringFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function trim() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
@@ -53,7 +53,7 @@ class StringFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function toUpper() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
@@ -65,7 +65,7 @@ class StringFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function toLower() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
@@ -81,7 +81,7 @@ class StringFormat implements Format, FastAction {
 	 * A dictionary of string keys and string values (a value matching a key is mapped to its value). On no match, the
 	 * value remains unmodified.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function map(array $map) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($map) {
@@ -97,7 +97,7 @@ class StringFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function regexReplace($regexPattern, $replacementString) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($regexPattern, $replacementString) {
@@ -111,12 +111,12 @@ class StringFormat implements Format, FastAction {
 	
 	/**
 	 * @param int $length
-	 * @return self
+	 * @return $this
 	 */
 	public function hasLength($length) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (StringUtils::length($input) !== $length) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use exactly $length characters.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use exactly $length characters.");
 				$output = null;
 				return false;
 			} else {
@@ -130,12 +130,12 @@ class StringFormat implements Format, FastAction {
 	
 	/**
 	 * @param int $lengthMin
-	 * @return self
+	 * @return $this
 	 */
 	public function hasLengthMin($lengthMin) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMin) {
 			if (StringUtils::length($input) < $lengthMin) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use at least $lengthMin characters.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use at least $lengthMin characters.");
 				$output = null;
 				return false;
 			} else {
@@ -149,12 +149,12 @@ class StringFormat implements Format, FastAction {
 	
 	/**
 	 * @param int $lengthMax
-	 * @return self
+	 * @return $this
 	 */
 	public function hasLengthMax($lengthMax) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMax) {
 			if (StringUtils::length($input) > $lengthMax) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please use at most $lengthMax characters.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use at most $lengthMax characters.");
 				$output = null;
 				return false;
 			} else {
@@ -171,7 +171,7 @@ class StringFormat implements Format, FastAction {
 	 * 
 	 * @param int $lengthMin
 	 * @param int $lengthMax
-	 * @return self
+	 * @return $this
 	 */
 	public function hasLengthInRange($lengthMin, $lengthMax) {
 		$this->hasLengthMin($lengthMin);
@@ -180,12 +180,12 @@ class StringFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * @return self
+	 * @return $this
 	 */
 	public function isNotEmpty() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if ($input === '') {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please fill in.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please fill in.");
 				$output = null;
 				return false;
 			} else {
@@ -212,13 +212,13 @@ class StringFormat implements Format, FastAction {
 	 * 
 	 * Also see BlankStringFormat.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isEmpty() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if ($input !== '') {
 				// If added first in a OrFormat, this awkward message won't be seen.
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please leave empty.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please leave empty.");
 				$output = null;
 				return false;
 			} else {
@@ -243,7 +243,7 @@ class StringFormat implements Format, FastAction {
 	 * to leave that disabled if the list of values may be too long to show in a human readable message, or the kind of 
 	 * values in the list aren't human readable anyway.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isOneOf(array $list, $displayListInMessage = false) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($list, $displayListInMessage) {
@@ -254,9 +254,9 @@ class StringFormat implements Format, FastAction {
 			
 			if ($mask & SL::ERROR_FLAG) {
 				if ($displayListInMessage) {
-					ITU::errorTo($events, $path, 'Please use one of the following values: "' . \implode('", "', $list) . '".');
+					ITU::addErrorTo($events, $path, 'Please use one of the following values: "' . \implode('", "', $list) . '".');
 				} else {
-					ITU::errorTo($events, $path, 'Please fill in a valid value.');
+					ITU::addErrorTo($events, $path, 'Please fill in a valid value.');
 				}
 			}
 			
@@ -279,7 +279,7 @@ class StringFormat implements Format, FastAction {
 	 * Optional (default = false). Pass true if you want the error message to show the valid value. You'd want to leave
 	 * that disabled if the valid value is too long for a human readable message, or is a secret.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isEqualTo($input, $displayListInMessage = false) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($input, $displayListInMessage) {
@@ -290,9 +290,9 @@ class StringFormat implements Format, FastAction {
 			
 			if ($mask & SL::ERROR_FLAG) {
 				if ($displayListInMessage) {
-					ITU::errorTo($events, $path, 'Please fill in "' . $input . '".');
+					ITU::addErrorTo($events, $path, 'Please fill in "' . $input . '".');
 				} else {
-					ITU::errorTo($events, $path, 'Please fill in a valid value.');
+					ITU::addErrorTo($events, $path, 'Please fill in a valid value.');
 				}
 			}
 			
@@ -321,7 +321,7 @@ class StringFormat implements Format, FastAction {
 	 * 
 	 * Doing so will replace the built-in generic "Please fill in a valid value." message in case the match fails.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isRegexMatch($regexPattern, $customError = null) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($regexPattern, $customError) {
@@ -352,7 +352,7 @@ class StringFormat implements Format, FastAction {
 			} else {
 				if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a string.');
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a string.');
 				$output = null;
 				return false;
 			}

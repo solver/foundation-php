@@ -13,7 +13,7 @@ class ProxyEndpoint implements Endpoint {
 	use AbstractProxyEndpoint;
 	
 	/**
-	 * #Resolution: \Solver\Services\Endpoint|\Closure|null;
+	 * #Resolution: \Solver\Services\Endpoint|\Solver\Accord\Action|null;
 	 * 
 	 * @param \Solver\Services\Endpoint $endpoint
 	 * The endpoint this object will decorate (i.e. wrap).

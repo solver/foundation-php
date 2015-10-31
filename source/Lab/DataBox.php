@@ -52,7 +52,7 @@ class DataBox {
 	 */
 	public function sub($path) {
 		$sub = new static();
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
+		$parent = & CollectionUtils::drill($this->data, explode('.', $path), $keyOut, true, true);
 		if (!isset($parent[$keyOut]) || !is_array($parent[$keyOut])) $parent[$keyOut] = [];
 		$sub->data = & $parent[$keyOut];
 		
@@ -86,7 +86,7 @@ class DataBox {
 	
 	// TODO: Document.
 	public function has($path) {
-		$parent = CollectionUtils::drill($this->data, $path, $keyOut, true);
+		$parent = CollectionUtils::drill($this->data, explode('.', $path), $keyOut, true);
 		
 		if (isset($parent[$keyOut])) {
 			return true;
@@ -97,7 +97,7 @@ class DataBox {
 	
 	// TODO: Document.
 	public function set($path, $value) {
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
+		$parent = & CollectionUtils::drill($this->data, explode('.', $path), $keyOut, true, true);
 		$parent[$keyOut] = $value;
 		if ($parent !== null) {
 			$parent[$keyOut] = $value;
@@ -106,7 +106,7 @@ class DataBox {
 	
 	// TODO: Document.
 	public function push($path, $value) {
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut, true, true);
+		$parent = & CollectionUtils::drill($this->data, explode('.', $path), $keyOut, true, true);
 		
 		if (!isset($parent[$keyOut]) || !is_array($parent[$keyOut])) {
 			$parent[$keyOut] = [];
@@ -117,7 +117,7 @@ class DataBox {
 	
 	// TODO: Document.
 	public function remove($path) {
-		$parent = & CollectionUtils::drill($this->data, $path, $keyOut);
+		$parent = & CollectionUtils::drill($this->data, explode('.', $path), $keyOut);
 		
 		unset($parent[$keyOut]);
 	}
@@ -136,7 +136,7 @@ class DataBox {
 	 * Returns the array value at that path, or the default if it's not set, or null.
 	 */
 	public function get($path, $default = null) {
-		$parent = CollectionUtils::drill($this->data, $path, $keyOut);
+		$parent = CollectionUtils::drill($this->data, explode('.', $path), $keyOut);
 		
 		if (isset($parent[$keyOut])) {
 			return $parent[$keyOut];

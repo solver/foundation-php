@@ -1,0 +1,3 @@
+- Define PageView interface.
+- Isolate the Template engine and compiler as a standalone Sparta-indendent component ScenicView (or other name).
+- Isolate the render*() and capture*() methods from Page as a separate trait (maybe in ScenicView or SpartaX).

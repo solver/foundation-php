@@ -36,13 +36,13 @@ class NumberFormat implements Format, FastAction {
 	/**
 	 * @param int $min
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isMin($min) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($min) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 < $min + 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a number bigger than or equal to $min.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a number bigger than or equal to $min.");
 				$output = null;
 				return false;
 			} else {
@@ -57,13 +57,13 @@ class NumberFormat implements Format, FastAction {
 	/**
 	 * @param int $max
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isMax($max) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($max) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 > $max + 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a number lesser than or equal to $max.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a number lesser than or equal to $max.");
 				$output = null;
 				return false;
 			} else {
@@ -82,7 +82,7 @@ class NumberFormat implements Format, FastAction {
 	 * 
 	 * @param int $max
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isInRange($min, $max) {
 		$this->isMin($min);
@@ -94,13 +94,13 @@ class NumberFormat implements Format, FastAction {
 	/**
 	 * This is identical as isMin(0), but provides a specialized error message for a common test (positive numbers).
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function isPositive() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 < 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide a positive number.");
+				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a positive number.");
 				$output = null;
 				return false;
 			} else {
@@ -120,7 +120,7 @@ class NumberFormat implements Format, FastAction {
 	 * - A positive or negative number in a string without a fraction part, or an exponent notation.
 	 * 
 	 * For floats, it also verifies the float value is within range for an accurately represented integer value.
-	 * @return self
+	 * @return $this
 	 */
 	public function isInteger() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
@@ -135,7 +135,7 @@ class NumberFormat implements Format, FastAction {
 			// 9007199254740992 = 2^53 (bit precision threshold in doubles).
 			if (is_float($input) && $input === floor($input) && $input <= 9007199254740992) return true;
 			
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, "Please provide an integer.");
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide an integer.");
 			$output = null;
 			return false;
 		};
@@ -223,7 +223,7 @@ class NumberFormat implements Format, FastAction {
 		
 		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 		
-		if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please provide a number.');
+		if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a number.');
 		$output = null;
 		return null;
 	}

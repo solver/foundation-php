@@ -14,7 +14,9 @@
 namespace Solver\Accord;
 
 // TODO: Document. This is a Format version of PipelineAction. See PipelineAction.
-class PipelineFormat extends PipelineAction implements Format {
+class PipelineFormat implements Format, FastAction {
+	use PipelineAny;
+	
 	public function __construct(Format ...$formats) {
 		if ($formats) $this->actions = $formats;
 	}
@@ -23,7 +25,7 @@ class PipelineFormat extends PipelineAction implements Format {
 	 * Adds a new format to the pipeline.
 	 * 
 	 * @param Format $format 
-	 * @return self
+	 * @return $this
 	 */
 	public function add(Format $format) {
 		$this->actions[] = $format;

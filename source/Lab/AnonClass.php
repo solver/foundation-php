@@ -74,7 +74,7 @@ class AnonClass {
 	 * Default = true. True if you want to implement abstract methods & interfaces partially, false to require full
 	 * implementation.
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function partial($partial = true) {
 		$this->partial = $partial;
@@ -98,7 +98,7 @@ class AnonClass {
 	
 	/**
 	 * @param string $className
-	 * @return self
+	 * @return $this
 	 */
 	public function extend($className) {
 		$this->extend = $className;
@@ -107,7 +107,7 @@ class AnonClass {
 	
 	/**
 	 * @param string[] ...$interfaceNames
-	 * @return self
+	 * @return $this
 	 */
 	public function implement(...$interfaceNames) {
 		$this->implement = $interfaceNames;
@@ -117,7 +117,7 @@ class AnonClass {
 	/**
 	 * @param string $name
 	 * @param mixed $value
-	 * @return self
+	 * @return $this
 	 */
 	public function property($name, $value = null) {
 		$this->properties[$name] = $value;
@@ -127,7 +127,7 @@ class AnonClass {
 	/**
 	 * @param string $name
 	 * @param mixed $value
-	 * @return self
+	 * @return $this
 	 */
 	public function staticProperty($name, $value = null) {
 		$this->staticProperties[$name] = $value;
@@ -136,7 +136,7 @@ class AnonClass {
 
 	/**
 	 * @param \Closure $implementation
-	 * @return self
+	 * @return $this
 	 */
 	public function constructor(\Closure $implementation) {
 		$this->methods['__construct'] = $implementation;
@@ -145,7 +145,7 @@ class AnonClass {
 
 	/**
 	 * @param \Closure $implementation
-	 * @return self
+	 * @return $this
 	 */
 	public function destructor(\Closure $implementation) {
 		$this->methods['__destruct'] = $implementation;
@@ -155,7 +155,7 @@ class AnonClass {
 	/**
 	 * @param string $name
 	 * @param \Closure $implementation
-	 * @return self
+	 * @return $this
 	 */
 	public function method($name, \Closure $implementation) {
 		$this->methods[$name] = $implementation;
@@ -165,7 +165,7 @@ class AnonClass {
 	/**
 	 * @param string $name
 	 * @param \Closure $implementation
-	 * @return self
+	 * @return $this
 	 */
 	public function staticMethod($name, \Closure $implementation) {
 		$this->staticMethods[$name] = $implementation;

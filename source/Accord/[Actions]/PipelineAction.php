@@ -13,8 +13,6 @@
  */
 namespace Solver\Accord;
 
-use Solver\Accord\ActionUtils as AU;
-
 /**
  * Takes multiple actions and runs the value through each of them in order, feeding the output of one as the input of
  * the next one. This is analogous to function composition.
@@ -23,9 +21,7 @@ use Solver\Accord\ActionUtils as AU;
  * apply() or fastApply() returns false), and in this case the entire pipeline fails.
  */
 class PipelineAction implements FastAction {
-	use ApplyViaFastApply;
-	
-	protected $actions;
+	use PipelineAny;
 
 	public function __construct(Action ...$actions) {
 		if ($actions) $this->actions = $actions;
@@ -35,26 +31,10 @@ class PipelineAction implements FastAction {
 	 * Adds a new action to the pipeline.
 	 * 
 	 * @param Action $action 
-	 * @return self
+	 * @return $this
 	 */
 	public function add(Action $action) {
 		$this->actions[] = $action;
 		return $this;
-	}
-	
-	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
-		$success = true;
-		
-		foreach ($this->actions as $i => $action) {
-			if ($action instanceof FastAction) {
-				$success = $action->fastApply($input, $output, $mask, $events, $path);
-			} else {
-				$success = AU::emulateFastApply($action, $input, $output, $mask, $events, $path);	
-			}
-			
-			if (!$success) return false;
-		}
-		
-		return true;
 	}
 }

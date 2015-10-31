@@ -14,26 +14,16 @@
 namespace Solver\Logging;
 
 class DefaultMemoryLog implements MemoryLog {
-	private $has = []; // TODO: Can be replaced with a bitmask.
 	private $events = [];
 	
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event, array ...$events) {
-		$type = $event['type'];
-		if (!isset($this->has[$type])) $this->has[$type] = true;
-		
+	public function log(array ...$events) {
 		if ($events) {
-			foreach ($events as $event) {
-				$type = $event['type'];
-				if (!isset($this->has[$type])) $this->has[$type] = true;
-			}
-			
-			array_push($this->events, $event, ...$events);
-		} else {
-			$this->events[] = $event;
+			if (isset($events[1])) array_push($this->events, ...$events);
+			else $this->events[] = $events[0];
 		}
 	}	
 	
@@ -41,40 +31,15 @@ class DefaultMemoryLog implements MemoryLog {
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::getEvents()
 	 */
-	public function getEvents($types = null) {
-		if ($types === null || !$this->events) {
-			return $this->events;
-		} else {
-			$types = array_flip($types);
-			
-			// Special optimized case: the given $types mask matches or is a superset of the event types we have.
-			$optimized = true;
-			
-			foreach ($this->has as $key => $val) if (!isset($types[$key])) {
-				$optimized = false;
-				break;
-			}
-				 
-			if ($optimized) {
-				return $this->events;
-			} else {
-				$events = [];
-				foreach ($this->events as $event) if (isset($types[$event['type']])) $events[] = $event;
-				return $events;
-			}
-		}
+	public function getEvents() {
+		return $this->events;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\MemoryLog::hasEvents()
 	 */
-	public function hasEvents($types = null) {
-		if ($types === null) {
-			return (bool) $this->has;
-		} else {
-			foreach ($types as $type) if (isset($this->has[$type])) return true;
-			return false;
-		}
+	public function hasEvents() {
+		return (bool) $this->events;
 	}
 }

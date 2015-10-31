@@ -2,8 +2,33 @@
 namespace Solver\Accord;
 
 use Solver\Logging\DelegatingStatusLog;
+use Solver\Toolbox\FuncUtils;
 
 class ActionUtils {
+	/**
+	 * Converts any action to a closure (the closure will have a signature and semantics identical to  Action::apply()).
+	 * 
+	 * @param Action $action
+	 * 
+	 * @return \Closure
+	 */
+	public static function toClosure(Action $action) {
+		// TODO: Do this locally to avoid loading FuncUtils & depnding on Solver\Toolbox.
+		return FuncUtils::toClosure($action, 'apply');
+	}
+	
+	/** 
+	 * Converts any closure to an Action instance (the closure signature MUST be compatible to Action::apply()).
+	 * 
+	 * @param \Closure $closure
+	 * 
+	 * @return Action
+	 */
+	public static function fromClosure(\Closure $closure) {
+		// TODO: Use anon class here when we drop PHP5.x support.
+		return new AnonAction($closure);
+	}
+	
 	/**
 	 * Implements the calling conventions of FastAction::fastApply() for any Action.
 	 * 
@@ -35,7 +60,7 @@ class ActionUtils {
 			return $action->fastApply($input, $output, $mask, $events, $path);
 		} else {
 			if ($mask) {
-				// TODO: Eliminate log nesting here (implement as a flat simple log) for speed. Maybe pass events by reference.
+				// TODO: Eliminate log nesting here (implement as a flat simple log) for speed.
 				$log = new DelegatingStatusLog(new InternalTempLog($events, $path), $mask);
 			} else {
 				$log = null;

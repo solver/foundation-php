@@ -13,11 +13,11 @@
  */
 namespace Solver\Sparta;
 
-use Solver\Logging\DefaultStatusMemoryLog;
+use Solver\AccordX\ExpressLog;
 
 /**
  * Logs the progress of events in the page controller (success, info, warning, error).
  * 
  * This log is given to templates for display (if needed).
  */
-class PageLog extends DefaultStatusMemoryLog {}
+class PageLog extends ExpressLog {}

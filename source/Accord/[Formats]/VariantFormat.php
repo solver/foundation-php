@@ -19,7 +19,7 @@ use Solver\Accord\InternalTransformUtils as ITU;
 
 /**
  * A variant is an implementation of a "tagged union" type, for dictionaries where a specific field is designated to 
- * differentiate between the subtypes in a union.
+ * differentiate between the subtypes in a union. See also OrFormat and AndFormat.
  * 
  * Variants are able to directly select the correct subformat by matching the provided values for the tag field. This
  * results in better performance and improved error reporting (the errors from the correct subtype get reported if the
@@ -49,7 +49,7 @@ class VariantFormat implements Format, FastAction {
 	 * Note: the merged tag may be overwritten by a sub-format if it returns the same field name (sub-formats have 
 	 * higher priority).
 	 * 
-	 * @return self
+	 * @return $this
 	 */
 	public function setTag($fieldName, $mergeInOutput) {
 		// For now we enforce this to ensure a consistent method call order, but in the future we may drop this requirement.
@@ -91,7 +91,7 @@ class VariantFormat implements Format, FastAction {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
 			// TODO: More specific error?
-			if ($mask & SL::ERROR_FLAG) ITU::errorTo($events, $path, 'Please fill in a valid value.');
+			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please fill in a valid value.');
 			$output = null;
 			return false;
 		}
@@ -105,7 +105,7 @@ class VariantFormat implements Format, FastAction {
 					$message = 'Please provide required field "' . $tagField . '".';
 				}
 				
-				ITU::errorTo($events, $path, $message);
+				ITU::addErrorTo($events, $path, $message);
 			}
 			
 			$output = null;
@@ -119,7 +119,7 @@ class VariantFormat implements Format, FastAction {
 				$subPath[] = $this->tagFieldName;
 				
 				// TODO: More specific error?
-				ITU::errorTo($events, $subPath, 'Please fill in a valid value.');
+				ITU::addErrorTo($events, $subPath, 'Please fill in a valid value.');
 			}
 			
 			$output = null;

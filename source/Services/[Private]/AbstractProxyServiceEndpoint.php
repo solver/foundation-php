@@ -6,7 +6,7 @@ namespace Solver\Services;
  * change without warning.
  */
 trait AbstractProxyEndpoint {
-	use DynamicEndpoint;
+	use MembersViaResolve;
 	
 	/** @var \Solver\Services\Endpoint */
 	protected $endpoint;
@@ -33,25 +33,5 @@ trait AbstractProxyEndpoint {
 		}
 		
 		return $resolution;
-	}
-	
-	public function __call($name, $args) {
-		$method = $this->resolve($name);
-		
-		if (!$method instanceof \Closure) {
-			throw new \Exception('Non-existing method "' . $name . '".');
-		} else {
-			return $method(...$args);
-		}
-	}
-	
-	public function __get($name) {
-		$property = $this->resolve($name);
-		
-		if (!$property instanceof Endpoint) {
-			throw new \Exception('Non-existing property "' . $name . '".');
-		} else {
-			return $property;
-		}
 	}
 }

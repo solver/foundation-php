@@ -43,13 +43,13 @@ interface Endpoint {
 	 * same name).
 	 * 
 	 * Make sure to check the provided reusable implementations for possible different approaches to implementing this
-	 * interface: StaticEndpoint, DynamicEndpoint, ProxyEndpoint & DeepProxyEndpoint, EmptyEndpoint etc. 
+	 * interface: ResolveViaMembers, MembersViaResolve, ProxyEndpoint & DeepProxyEndpoint, NullEndpoint etc. 
 	 *  
 	 * @param string $name
 	 * Name of a child endpoint or a child action.
 	 * 
-	 * @return \Solver\Services\Endpoint|\Closure|null
-	 * Endpoint instance, method as a closure, or null if the name does not resolve to either.
+	 * @return \Solver\Services\Endpoint|\Solver\Accord\Action|null
+	 * Endpoint instance, Action instance, or null if the name does not resolve to either.
 	 * 
 	 * @throws \Solver\Services\EndpointException
 	 * The endpoint may throw an exception if it wants to communicate details about the resolution failure, rather than

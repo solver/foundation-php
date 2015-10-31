@@ -16,7 +16,9 @@ namespace Solver\Accord;
 use Solver\Accord\ActionUtils as AU;
 
 /**
- * Extracts the value from each given sub-format (via add()) and combines the result into a single output.
+ * Extracts the value from each given sub-format (via add()) and combines the result into a single output. 
+ * 
+ * This format represents a so-called "intersection type" or "product type". See also OrFormat and VariantFormat.
  * 
  * If any of the sub-formats returns errors (doesn't validate) the return value will be null and you get a log with
  * the combined errors from all sub-formats.

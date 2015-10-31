@@ -24,6 +24,9 @@ namespace Solver\Lab;
  * 
  * IMPORTANT: If you're validating & filtering complex untrusted input (especially in a service), it's highly
  * recommended to use the existing Format classes, instead. They're built for that purpose.
+ * 
+ * @deprecated
+ * TODO: Refactor into an Accord format or a set of factory shortcuts for it?
  */
 class ParamValidator {
 	/**
@@ -268,7 +271,7 @@ class ParamValidator {
 	}
 	
 
-	protected static function error($name, $requirement) {
+	protected static function addError($name, $requirement) {
 		throw new \Exception('Parameter ' . ($name === null ? '' : '"' . $name . '" ') . ' ' . $requirement . '.');
 	}
 	

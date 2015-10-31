@@ -18,7 +18,7 @@ namespace Solver\Accord;
  * away without warning.
  */
 class InternalTransformUtils {
-	public static function errorTo(& $events, $path, $message, $code = null, $details = null) {
+	public static function addErrorTo(& $events, $path, $message, $code = null, $details = null) {
 		if ($path) {
 			$event = ['type' => 'error', 'path' => $path];
 		} else {
@@ -31,7 +31,7 @@ class InternalTransformUtils {
 		$events[] = $event;
 	}
 	
-	public static function warningTo(& $events, $path, $message, $code = null, $details = null) {
+	public static function addWarningTo(& $events, $path, $message, $code = null, $details = null) {
 		if ($path) {
 			$event = ['type' => 'warning', 'path' => $path];
 		} else {
@@ -83,7 +83,7 @@ class InternalTransformUtils {
 	 */
 	public static function fastApplyFunctions($functions, $input, & $output, $mask, & $events, $path) {
 		foreach ($functions as $function) {
-			if (!$function($input, & $output, $mask, & $events, $path)) return false;
+			if (!$function($input, $output, $mask, $events, $path)) return false;
 		}
 		return true;
 	}

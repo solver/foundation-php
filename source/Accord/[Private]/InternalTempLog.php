@@ -13,7 +13,7 @@ class InternalTempLog implements Log {
 	protected $events;
 	protected $path;
 	
-	public function __construct(& $events, $path) {
+	public function __construct(& $events, array $path) {
 		$this->events = & $events;
 		$this->path = $path;
 	}
@@ -22,18 +22,14 @@ class InternalTempLog implements Log {
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\Log::log()
 	 */
-	public function log(array $event, ...$events) {
-		if ($this->path) {
+	public function log(array ...$events) {
+		foreach ($events as $event) {
 			if (isset($event['path'])) {
 				$event['path'] = array_merge($this->path, $event['path']);
 			} else {
 				$event['path'] = $this->path;
 			}
+			$this->events[] = $event;
 		}
-		
-		$this->events[] = $event;
-		
-		// TODO: Optimize, don't call self?
-		if ($events) foreach ($events as $event) $this->log($event);
 	}
 }

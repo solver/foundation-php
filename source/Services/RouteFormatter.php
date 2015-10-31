@@ -14,7 +14,7 @@ namespace Solver\Services;
  *  
  * We're no longer re-mapping endpoint names for API purposes. It only makes sense if the URL is user-facing. For this
  * purpose we'll create a more comprehensive solution (probably rolled into Workspace). This class is left for reference
- * purposes.
+ * purposes, it might be useful in another component that maps to user-facing URLs.
  */
 class RouteFormatter {
 	public static function webToPhp($route) {

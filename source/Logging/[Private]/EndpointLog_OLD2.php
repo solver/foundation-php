@@ -13,10 +13,12 @@
  */
 namespace Solver\Services;
 
-use Solver\Logging\ErrorMemoryLog;
 use Solver\Logging\LogException;
 
 /**
+ * FIXME: Scavenge the transactional logic and semantics for adding a TransactionalLog interface and implementations and
+ * remove.
+ * 
  * This log is the standard method for an endpoint to report errors to its caller.
  * 
  * The log can contain one or more error, where by default when you add an error it automatically throws an
@@ -37,7 +39,7 @@ use Solver\Logging\LogException;
  * TODO: Add support for reading only uncommitted & only committed errors (also support for the has* methods)?
  * Maybe as flags, to avoid method count explosion.
  */
-class EndpointLog implements ErrorMemoryLog {
+class EndpointLog_OLD2  {
 	/**
 	 * list<int>; Lists of indexes of uncommitted events.
 	 * 
@@ -127,7 +129,7 @@ class EndpointLog implements ErrorMemoryLog {
 	 * {@inheritDoc}
 	 * @see \Solver\Logging\ErrorLog::error()
 	 */
-	public function error($path, $message, $code = null, array $details = null) {
+	public function addError($path, $message, $code = null, array $details = null) {
 		$this->errors[] = [
 			'type' => 'error',
 			'path' => $path,
