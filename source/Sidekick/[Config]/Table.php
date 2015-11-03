@@ -81,35 +81,34 @@ class Table {
 //		
 // 	}
 	
-	function addExpession($name, $expression, \Closure $decoder = null) {
+	function addExpession($name, $internalName = null, $expression, \Closure $decoder = null) {
 		// Field type pseudo-constants.
 		static $FT_EXPR = 2;
 		
-		if (is_array($name)) throw new \Exception('Name as array given: expression fields cannot be composite.');
+		list($composite, $name, $internalName) = $this->normalizeFieldNames($name, $internalName);
 		
-		$publicCol = [
+		if ($composite && $decoder === null) {
+			throw new \Exception('Decoder must be provided when you specify composite expressions.');
+		}
+		
+		$publicConfig = [
 			'name' => $name,
-			'toName' => $name,
+			'toName' => $internalName,
 			'composite' => false,
 			'transform' => null,
 			'expression' => $expression,
 			'type' => $FT_EXPR,
 		];
 		
-		$internalCol = [
-			'name' => $name,
+		$internalConfig = [
+			'name' => $internalName,
 			'toName' => $name,
 			'composite' => false,
 			'transform' => $decoder,
 			'type' => $FT_EXPR,
 		];
 		
-		$this->externalFields[$name] = $publicCol;
-		$this->externalFieldList[] = [false, $name];
-		
-		// FIXME: This makes no sense, $internalName is undefined here. Figure out and fix it.
-		$this->internalFields[$internalName] = $internalCol;
-		$this->internalFieldList[] = [false, $internalName];
+		$this->addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig);
 		
 		return $this;
 	}
@@ -118,19 +117,13 @@ class Table {
 		// Field type pseudo-constants.
 		static $FT_COL = 1;
 		
-		if ($internalName === null) $internalName = $name;
-		$composite = is_array($name) || is_array($internalName);
-		
-		if ($composite) {
-			$name = (array) $name;
-			$internalName = (array) $internalName;
-		}
+		list($composite, $name, $internalName) = $this->normalizeFieldNames($name, $internalName);
 		
 		if ($composite && ($encoder === null || $decoder === null)) {
 			throw new \Exception('Encoder and decoder must be provided when you specify composite columns.');
 		}
 
-		$publicCol = [
+		$publicConfig = [
 			'name' => $name,
 			'toName' => $internalName,
 			'composite' => $composite,
@@ -138,7 +131,7 @@ class Table {
 			'type' => $FT_COL,
 		];
 		
-		$internalCol = [
+		$internalConfig = [
 			'name' => $internalName,
 			'toName' => $name,
 			'composite' => $composite,
@@ -146,24 +139,7 @@ class Table {
 			'type' => $FT_COL,
 		];
 		
-		// TODO: Detect collisions and throw on them.
-		if ($composite) {
-			foreach ($name as $v) {
-				$this->externalFields[$v] = $publicCol;
-			}
-			$this->externalFieldList[] = [true, $name];
-			
-			foreach ($internalName as $v) {
-				$this->internalFields[$v] = $internalCol;
-			}
-			$this->internalFieldList[] = [true, $internalName];
-		} else {
-			$this->externalFields[$name] = $publicCol;
-			$this->externalFieldList[] = [false, $name];
-			
-			$this->internalFields[$internalName] = $internalCol;
-			$this->internalFieldList[] = [false, $internalName];
-		}
+		$this->addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig);
 		
 		return $this;
 	}
@@ -172,5 +148,43 @@ class Table {
 		if ($this->name === null) throw new \Exception('Table name is a required property.');
 		if (!$this->externalFields) throw new \Exception('Tables need at least one column.');
 		return get_object_vars($this);
+	}
+	
+	protected function normalizeFieldNames($name, $internalName) {
+		if ($internalName === null) $internalName = $name;
+		$composite = is_array($name) || is_array($internalName);
+		
+		if ($composite) {
+			$name = (array) $name;
+			$internalName = (array) $internalName;
+		}
+		
+		return [$composite, $name, $internalName];
+	}
+	
+	protected function addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig) {
+		// TODO: Support uni-directional bindings (vs. bidirectional default now) which will allow multiple definitions
+		// of one field to map FROM, as long as one is selected primary when mapping TO it.
+		if ($composite) {
+			foreach ($name as $v) {
+				if (isset($this->externalFields[$v])) throw new \Exception('Duplicate declaration of public field "' . $v . '".');
+				$this->externalFields[$v] = $publicConfig;
+			}
+			$this->externalFieldList[] = [true, $name];
+			
+			foreach ($internalName as $v) {
+				if (isset($this->internalFields[$v])) throw new \Exception('Duplicate declaration of internal field "' . $v . '".');
+				$this->internalFields[$v] = $internalConfig;
+			}
+			$this->internalFieldList[] = [true, $internalName];
+		} else {
+			if (isset($this->externalFields[$name])) throw new \Exception('Duplicate declaration of public field "' . $name . '".');
+			$this->externalFields[$name] = $publicConfig;
+			$this->externalFieldList[] = [false, $name];
+			
+			if (isset($this->internalFields[$internalName])) throw new \Exception('Duplicate declaration of internal field "' . $internalName . '".');
+			$this->internalFields[$internalName] = $internalConfig;
+			$this->internalFieldList[] = [false, $internalName];
+		}
 	}
 }

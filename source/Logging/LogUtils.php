@@ -184,10 +184,12 @@ class LogUtils {
 				$message = '(@' . implode('.', $error['path']) . ') ';
 			}
 			
-			if ($error['message'] === null) {
-				$message = 'Code: ' + $error['code'];
-			} else {
+			if (isset($error['message'])) {
 				$message .= $error['message'];
+			} elseif (isset($error['code'])) {
+				$message .= 'Code: ' + $error['code'];
+			} else {
+				$message .= 'The event provides no message or code.';
 			}
 			
 			$messages[] = $message;

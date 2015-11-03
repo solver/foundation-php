@@ -74,13 +74,16 @@ class ExpressLog extends DefaultStatusMemoryLog {
 	 * Returns a write-only view of the current log, such that any events logged onto the view will show up in the
 	 * current log with a path starting with the given path.
 	 * 
-	 * @param array $path
-	 * Path prefix to use for all events.
+	 * @param array|string $path
+	 * Path prefix to use for all events. If a string is given, it's converted to an array, using dot as a segment
+	 * delimiter.
 	 * 
 	 * @return StatusLog
 	 * A write-only view into the current log (all events logged on the view will show up in the parent log).
 	 */
-	public function at(array $path) {
+	public function at($path) {
+		if (is_string($path)) $path = explode('.', $path);
+		
 		if ($path) {
 			return new DelegatingStatusLog($this, StatusLog::DEFAULT_MASK, function ($events) use ($path) {
 				foreach ($events as & $event) {

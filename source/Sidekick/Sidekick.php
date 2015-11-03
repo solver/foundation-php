@@ -175,11 +175,16 @@ class Sidekick {
 		if ($stmt['distinctRow']) $sql .= 'DISTINCTROW ';
 		
 		if ($stmt['selectFields']) {
-			// TODO: Support expressions.
 			$selects = [];
 			$selectFields = $this->mapFieldNames(true, $tableSchema, $stmt['selectFields']);
 			foreach ($selectFields as $k => $v) {
-				$selects[] = $conn->encodeIdent($k);
+				// The value is null for column fields, and a string for expression fields (FT_EXPR). This is a bit
+				// temporary, and we'll extend it in the future to be more explicit and clear.
+				if ($v === null) {
+					$selects[] = $conn->encodeIdent($k);
+				} else {
+					$selects[] = $v;
+				}
 			}
 			$sql .= implode(', ', $selects) . ' ';
 		} else {
@@ -213,6 +218,7 @@ class Sidekick {
 		
 		return $conn->query($sql);
 	}
+	
 	protected function splitRowByPK($tableSchema, $row) {
 		if ($tableSchema['primaryKey'] === null) throw new \Exception('The operation cannot be performed as table ' . $tableSchema['name'] . ' has no defined primary key column(s).');
 		// TODO: Support composite PK.
@@ -284,7 +290,7 @@ class Sidekick {
 	}
 	
 	protected function mapFieldNames($encoding, $tableSchema, $fieldsIn) {
-		$fieldsOut = [];
+		$fieldsOut = []; // dict<fieldName: string, 
 		
 		$colSchemaList = $encoding ? $tableSchema['externalFieldList'] : $tableSchema['internalFieldList'];
 		$colSchemaIndex = $encoding ? $tableSchema['externalFields'] : $tableSchema['internalFields'];
@@ -315,17 +321,29 @@ class Sidekick {
 				
 				if (!$hasSome) continue; 
 				if (!$hasAll) throw new \Exception('All or none ' . ($encoding ? 'public' : 'internal') . ' columns in group "' . implode('", "', $colOrColGroup) . '" should be specified in a select. Some, but not all were specified.');
-			
-				// TODO: We ignore values... Columns have no values but that should be revised for the other types.
-				foreach ($thisColSchema['toName'] as $name) {
-					$fieldsOut[$name] = null;
+				
+				// 2 = FT_EXPR (SQL expression fields)
+				if ($thisColSchema['type'] === 2) {
+					foreach ($thisColSchema['toName'] as $name) {
+						$fieldsOut[$name] = $thisColSchema['expression'];
+					}
+				} else {
+					foreach ($thisColSchema['toName'] as $name) {
+						$fieldsOut[$name] = null;
+					}
 				}
 			} else {
 				if (!key_exists($colOrColGroup, $fieldsIn)) continue;
 				unset($fieldsIn[$colOrColGroup]);
 				
-				// TODO: We ignore values... Columns have no values but that should be revised for the other types.
-				$fieldsOut[$thisColSchema['toName']] = null;
+				// 2 = FT_EXPR (SQL expression fields)
+				if ($thisColSchema['type'] === 2) {
+					// The key we use here doesn't matter, it's ignored, we just grab index 0 to have some unique name.
+					// This obviously should be refactored...
+					$fieldsOut[$thisColSchema['toName'][0]] = $thisColSchema['expression'];
+				} else {
+					$fieldsOut[$thisColSchema['toName']] = null;
+				}
 			}
 		}
 		
@@ -364,7 +382,8 @@ class Sidekick {
 			// Handles Expr instances, which happens only while encoding (we avoid it on decoding as it's a performance hit).
 			if ($encoding) $transform = $this->getTransformWithExprSupport($transform);
 			
-			if (!$transform) {
+			// 1 = FT_COL
+			if ((!$encoding || $thisColSchema['type'] == 1) && !$transform) {
 				if (!isset($transRowsIn[$colOrColGroup])) continue;
 					
 				// Note that groups always have a transform, so we're sure this one is not a group.

@@ -13,7 +13,7 @@ class InternalTempLog implements Log {
 	protected $events;
 	protected $path;
 	
-	public function __construct(& $events, array $path) {
+	public function __construct(& $events, array $path = null) {
 		$this->events = & $events;
 		$this->path = $path;
 	}
@@ -24,11 +24,14 @@ class InternalTempLog implements Log {
 	 */
 	public function log(array ...$events) {
 		foreach ($events as $event) {
-			if (isset($event['path'])) {
-				$event['path'] = array_merge($this->path, $event['path']);
-			} else {
-				$event['path'] = $this->path;
+			if ($this->path) {
+				if (isset($event['path'])) {
+					$event['path'] = array_merge($this->path, $event['path']);
+				} else {
+					$event['path'] = $this->path;
+				}
 			}
+			
 			$this->events[] = $event;
 		}
 	}

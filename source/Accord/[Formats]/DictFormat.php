@@ -25,23 +25,16 @@ use Solver\Accord\InternalTransformUtils as ITU;
 class DictFormat implements Format, FastAction {
 	use ApplyViaFastApply;
 	
+	// TODO: These should become protected constants in PHP 7.1.
+	protected static $REST_IGNORE = 0;
+	protected static $REST_ADD = 1;
+	protected static $REST_WARN = 2;
+	protected static $REST_ERROR = 3;
+	
 	protected $fields = [];
-	protected $rest = false;
+	protected $rest = 0; // One of the REST_* constants.
 	protected $restFormat = null;
 	protected $preserveNull = false;
-	
-	/**
-	 * Whether to preserve null values, or treat them the same as if the key is not set.
-	 * 
-	 * TODO: We need this in all collection types (List, Tuple, tags in Variant etc.).
-	 * 
-	 * @param string $preserve
-	 * True to preserve (default when calling the method), false to ignore (default for the class if you don't call this
-	 * method).
-	 */
-	public function preserveNull($preserve = true) {
-		$this->preserveNull = $preserve;
-	}
 	
 	/**
 	 * @return $this
@@ -60,7 +53,7 @@ class DictFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * Same as addOptional(), but if the field is missing it'll be created, and the default value will be assigned.
+	 * Same as addOptional(), but if the field is missing it'll be created in output & assigned the given default value.
 	 * 
 	 * @return $this
 	 */
@@ -70,22 +63,94 @@ class DictFormat implements Format, FastAction {
 	}
 	
 	/**
-	 * Allows keys which are specified neither as required nor optional to be extracted. Be careful with this option,
-	 * this means you have no control over which keys end up in your filtered data.
+	 * If the format encounters additional fields over those which are explicitly specified, it adds them to the output,
+	 * optionally filtered through a given format.
 	 * 
-	 * TODO: Add bool flag (false by default) which allows the given format to receive tuple [$key, $val] instead of just $val.
-	 * Requires consideration about how to interpret the error message paths coming back from that tuple into the dict.
+	 * Be careful with this option, this means you have no control over which keys end up in your output.
 	 * 
-	 * return $this
+	 * TODO: Add bool flag (false by default) which allows the given format to receive tuple [$key, $val] instead of
+	 * just $val. Requires consideration about how to interpret the error message paths coming back from that tuple
+	 * into the dict.
+	 * 
+	 * This function overrides the effect of other {verb}Rest() methods.
+	 * 
+	 * @return $this
 	 */
 	public function addRest(Format $format = null) {
-		if ($this->rest) throw new \Exception('Method addRest() can only be called once per DictFormat instance.');
-		$this->rest = true;
+		$this->rest = self::$REST_ADD;
 		$this->restFormat = $format;
 		return $this;
 	}
 	
+	/**
+	 * If the format encounters additional fields over those which are explicitly specified, it silently ignores them.
+	 * 
+	 * This is the default behavior if you don't call any of the {verb}Rest() methods.
+	 * 
+	 * This function overrides the effect of other {verb}Rest() methods.
+	 * 
+	 * @return $this
+	 */
+	public function ignoreRest() {
+		$this->rest = self::$REST_IGNORE;
+		$this->restFormat = null;
+		return $this;
+	}
+	
+	/**
+	 * If the format encounters additional fields over those which are explicitly specified, it ignores them, but adds
+	 * a warning about the ignored keys to the provided log.
+	 * 
+	 * Keep in mind you'll get false positives when using this mode for dictionaries that participate in algebraic 
+	 * expressions like unions (OrFormat) and intersections (AndFormat). It's normal in such expressions for a subformat
+	 * to only need a subset of the input.
+	 * 
+	 * This function overrides the effect of other {verb}Rest() methods.
+	 * 
+	 * @return $this
+	 */
+	public function warnRest() {
+		$this->rest = self::$REST_WARN;
+		$this->restFormat = null;
+		return $this;
+	}
+	
+	/**
+	 * If the format encounters additional fields over those which are explicitly specified, it fails, adding an error
+	 * about the unknown field names to the provided log.
+	 * 
+	 * Keep in mind you'll get false positives when using this mode for dictionaries that participate in algebraic 
+	 * expressions like unions (OrFormat) and intersections (AndFormat). It's normal in such expressions for a subformat
+	 * to only need a subset of the input.
+	 * 
+	 * This function overrides the effect of other {verb}Rest() methods.
+	 * 
+	 * @return $this
+	 */
+	public function rejectRest() {
+		$this->rest = self::$REST_ERROR;
+		$this->restFormat = null;
+		return $this;
+	}
+	
+	/**
+	 * Whether to preserve null values, or treat them the same as if the key is not set.
+	 * 
+	 * TODO: We need this in all collection types (List, Tuple, tags in Variant etc.).
+	 * 
+	 * @param string $preserve
+	 * True to preserve (default when calling the method), false to ignore (default for the class if you don't call this
+	 * method).
+	 * 
+	 * @return $this
+	 */
+	public function preserveNull($preserve = true) {
+		$this->preserveNull = $preserve;
+		return $this;
+	}
+	
 	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		// TODO: Make protected constants in PHP 7.1.
 		static $TYPE_REQUIRED = 0;
 		static $TYPE_OPTIONAL = 1;
 		static $TYPE_DEFAULT = 2;
@@ -107,12 +172,17 @@ class DictFormat implements Format, FastAction {
 			/* @var $field Format */
 			list($name, $format, $type) = $field;
 			
-			// TODO: Optimization opportunities when we don't preserve null and skip rest (no warnings) to avoid the
+			// TODO: Optimization opportunities when we don't preserve null and in REST_IGNORE mode, to avoid the
 			// key_exists() call.
 			if (isset($input[$name])) {
 				$exists = true;
 			} elseif (\key_exists($name, $input)) {
-				$exists = $preserveNull;
+				if ($preserveNull) {
+					$exists = true;
+				} else {
+					$exists = false;
+					unset($input[$name]);
+				}
 			} else {
 				$exists = false;
 			}
@@ -148,26 +218,37 @@ class DictFormat implements Format, FastAction {
 			}
 		}
 		
-		if ($input && $this->rest) {
-			if ($this->restFormat) {
-				if ($format instanceof FastAction) {
-					foreach ($input as $subName => $subInput) {
-						$subPath = $path;
-						$subPath[] = $subName;
-						$success = $success && $format->fastApply($subInput, $output[$subName], $mask, $events, $subPath);
+		if ($input && $this->rest != self::$REST_IGNORE) {
+			switch ($this->rest) {
+				case self::$REST_WARN:
+					if ($mask & SL::WARNING_FLAG) ITU::addWarningTo($events, $path, 'One or more unexpected fields were ignored: "' . implode('", "', array_keys($input)) . '".');
+					break;
+				
+				case self::$REST_ERROR:
+					if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Unexpected fields: "' . implode('", "', array_keys($input)) . '".');
+					break;
+			
+				case self::$REST_ADD:
+					if ($this->restFormat) {
+						if ($format instanceof FastAction) {
+							foreach ($input as $subName => $subInput) {
+								$subPath = $path;
+								$subPath[] = $subName;
+								$success = $success && $format->fastApply($subInput, $output[$subName], $mask, $events, $subPath);
+							}
+						} else {
+							foreach ($input as $subName => $subInput) {
+								$subPath = $path;
+								$subPath[] = $subName;
+								$success = $success && AU::emulateFastApply($format, $subInput, $output[$subName], $mask, $events, $subPath);
+							}
+						}
+					} else {
+						$output += $input;
 					}
-				} else {
-					foreach ($input as $subName => $subInput) {
-						$subPath = $path;
-						$subPath[] = $subName;
-						$success = $success && AU::emulateFastApply($format, $subInput, $output[$subName], $mask, $events, $subPath);
-					}
-				}
-			} else {
-				$output += $input;
+					break;
 			}
-		} else {
-			if ($mask & SL::WARNING_FLAG) ITU::addWarningTo($events, $path, 'One or more fields were ignored: "' . implode('", "', array_keys($input)) . '".');
+			
 		}
 		
 		if ($success) {
