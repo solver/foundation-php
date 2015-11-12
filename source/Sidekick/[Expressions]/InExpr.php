@@ -13,9 +13,6 @@
  */
 namespace Solver\Sidekick;
 
-use Solver\Sql\SqlConnection;
-use Solver\SqlX\SqlUtils;
-
 class InExpr implements Expr {
 	protected $valueList;
 	
@@ -23,9 +20,9 @@ class InExpr implements Expr {
 		$this->valueList = $valueList;
 	}
 	
-	public function getTransformed($transform) {
+	public function transformed($transform) {
 		$clone = clone $this;
-		$clone->valueList = $transform($clone->valueList, false);
+		foreach ($this->valueList as $i => $v) $clone->valueList[$i] = $transform($v);
 		return $clone;
 	}
 	
@@ -33,7 +30,7 @@ class InExpr implements Expr {
 	 * {@inheritDoc}
 	 * @see \Solver\Sidekick\Expr::render()
 	 */
-	public function render(SqlConnection $conn, $columnName) {
-		return SqlUtils::boolean($conn, [$columnName => ['IN', $this->valueList]]);
+	public function render(SqlContext $sqlContext, $subject) {
+		return $subject . ' IN ' . ' (' . implode(', ', $sqlContext->encodeValue($this->valueList)) . ')';
 	}
 }

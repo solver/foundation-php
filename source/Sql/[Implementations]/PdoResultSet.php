@@ -22,8 +22,9 @@ use PDOStatement;
  * Contains and executes a single SQL query, returns results.
  * 
  * TODO: Fix PDO default buffering not to be used for fetchNext, but used for getAll.
+ * TODO: Port the rest of the methods from the old lib, like explicit close(), iterators, etc.
  */
-class PdoMysqlResultSet implements SqlResultSet {
+class PdoResultSet implements SqlResultSet {
 	/**
 	 * @var \PDOStatement
 	 */
@@ -42,11 +43,22 @@ class PdoMysqlResultSet implements SqlResultSet {
 	protected $query;
 	
 	/**
-	 * To be called by the relevant SqlConnection class (do not instantiate directly).
+	 * We retain a reference to the parent session while the result set is open, or else there's a risk it'll get 
+	 * garbage collected and its connection will be returned to the pool while it's still in use (by the result set).
 	 * 
-	 * @param \PDOStatement $handle
+	 * Once the result set is closed, we release the reference.
+	 * 
+	 * @var PdoSession
 	 */
-	public function __construct(PDOStatement $handle) {
+	protected $parent;
+	
+	/**
+	 * To be called by the relevant SqlSession class (do not instantiate directly).
+	 * 
+	 * @param PDOStatement $handle
+	 */
+	public function __construct(PdoSession $parent, PDOStatement $handle) {
+		$this->parent = $parent;
 		$this->handle = $handle;
 	}
 	
@@ -67,13 +79,18 @@ class PdoMysqlResultSet implements SqlResultSet {
 		
 		if (\is_int($field)) {
 			$row = $this->handle->fetch(PDO::FETCH_COLUMN, $field);
+			
 			$this->handle->closeCursor();
 			$this->closed = true;
+			$this->parent = null;
+			
 			return $row === false ? null : $row;
 		} else {
 			$row = $this->handle->fetch(PDO::FETCH_ASSOC);
+			
 			$this->handle->closeCursor();
 			$this->closed = true;
+			$this->parent = null;
 			
 			if ($field === null) {
 				return $row === false ? null : $row;
@@ -98,12 +115,10 @@ class PdoMysqlResultSet implements SqlResultSet {
 	public function getAll($field = null) {		
 		if ($this->closed) $this->errorClosed();
 		
-		$this->closed = true;
-		
 		if ($field === null) {
-			return $this->handle->fetchAll(PDO::FETCH_ASSOC);
+			$result = $this->handle->fetchAll(PDO::FETCH_ASSOC);
 		} else if (\is_int($field)) {
-			return $this->handle->fetchAll(PDO::FETCH_COLUMN, $field);
+			$result = $this->handle->fetchAll(PDO::FETCH_COLUMN, $field);
 		} else if (\is_string($field)) {
 			$row = $this->handle->fetch(PDO::FETCH_ASSOC);
 			
@@ -119,12 +134,17 @@ class PdoMysqlResultSet implements SqlResultSet {
 				}
 				
 				if ($index === null) throw new SqlException('Trying to fetch non-existent result set column "' . $field . '".');
+				
+				$result = \array_merge(array($row[$field]), $this->handle->fetchAll(PDO::FETCH_COLUMN, $index));
 			} else {
-				return [];
+				$result = [];
 			}
-			
-			return \array_merge(array($row[$field]), $this->handle->fetchAll(PDO::FETCH_COLUMN, $index));
-		}	
+		}
+		
+		$this->closed = true;
+		$this->parent = null;
+		
+		return $result;
 	}
 	
 	protected function errorClosed() {

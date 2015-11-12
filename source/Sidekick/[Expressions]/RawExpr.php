@@ -13,43 +13,25 @@
  */
 namespace Solver\Sidekick;
 
-interface Field {
-}
-
-interface InternalField extends Field {
-	function render();
-}
-
-interface QueryField extends Field {
-	function query($queryBuilder, $selectFields, $whereFields, $orderFields) {
-		
-	}
-}
-
-interface UpdateField extends Field {
-	function update($updateBuilder, $setFields, $whereFields, $orderFields) {
-		
-	}
-}
-
-interface InsertField extends Field {
-	function insert($insertBuilder, $insertFields) {
-		
-	}
-}
-
-interface DeleteField extends Field {
-	function delete($deleteBuilder, $whereFields, $orderFields) {
-		
-	}
-}
-
-interface EncodedField {
-	function encodeMany($fieldLists) {
-		
+/**
+ * This expression type simply renders the string given to the constructor. The subject parameter is ignored.
+ * 
+ * It's *highly* recommended to avoid raw expressions when using a preconfigured Sidekick as a repository. This class
+ * is intended to be used in field handlers (FieldHandler) and other handlers that belong strictly to the Sidekick
+ * schema and configuration.
+ */
+interface RawExpr {
+	protected $stringExpr;
+	
+	public function __construct($stringExpr) {
+		$this->stringExpr = $stringExpr;	
 	}
 	
-	function decodeMany($fieldLists) {
-		
+	function transformed($transform) {
+		return $this;
+	}
+	
+	function render(SqlContext $sqlContext, $subject) {
+		return $this->stringExpr;
 	}
 }

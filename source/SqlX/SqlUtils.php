@@ -13,14 +13,14 @@
  */
 namespace Solver\SqlX;
 
-use Solver\Sql\PdoMysqlConnection;
+use Solver\Sql\PdoMysqlSession;
 
 /**
  * Common tasks performed on an SQL connection.
  * 
  * IMPORTANT: Only MySQL and SQLite connections are supported at the moment.
  * 
- * TODO: Replace PdoMysqlConnection hints with SqlConnection hints (once the interfaces are defined).
+ * TODO: Replace PdoMysqlSession hints with SqlSession hints (once the interfaces are defined).
  * TODO: Validate the given connection is MySQL or SQLite.
  * TODO: This class will eventually be refactored into something better.
  */
@@ -35,7 +35,7 @@ class SqlUtils {
 	 * API, the engine just looks for question marks without analyzing the query structure (i.e. if your $sql string
 	 * contains a question mark within a string literal, it'll get replaced as well).
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $sql
@@ -46,8 +46,8 @@ class SqlUtils {
 	 * 
 	 * @return string
 	 */
-	public static function encodeInto(PdoMysqlConnection $conn, $sql, array $values) {		
-		$values = $conn->encodeValue($values);
+	public static function encodeInto(PdoMysqlSession $sqlSess, $sql, array $values) {		
+		$values = $sqlSess->encodeValue($values);
 		$sql = \explode('?', $sql);
 		$ce = \count($sql);
 		
@@ -67,7 +67,7 @@ class SqlUtils {
 	/**
 	 * Inserts a single row.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $table
@@ -76,14 +76,14 @@ class SqlUtils {
 	 * @param array $row
 	 * Hashmap representing row (automatically encoded).
 	 */
-	public static function insert(PdoMysqlConnection $conn, $table, array $row) {
-		self::insertMany($conn, $table, array($row));
+	public static function insert(PdoMysqlSession $sqlSess, $table, array $row) {
+		self::insertMany($sqlSess, $table, array($row));
 	}
 
 	/**
 	 * Inserts a list of new rows into a table.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $table
@@ -96,30 +96,30 @@ class SqlUtils {
 	 * Optional (default = false). If true, the engine will attempt to insert all passed rows in a single extended
 	 * insert query. This requires that all rows to be inserted have the same columns.
 	 */
-	public static function insertMany(PdoMysqlConnection $conn, $table, array $rows, $extended = false) {
+	public static function insertMany(PdoMysqlSession $sqlSess, $table, array $rows, $extended = false) {
 		if (empty($rows)) return;
 		
-		$tblQ = $conn->encodeIdent($table);
+		$tblQ = $sqlSess->encodeIdent($table);
 		
 		if (!$extended) {		
 			// TODO: Wrap in a transaction if count($rows) > 1 (once we have nested transactions again).	
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {				
-				$row = $conn->encodeRow($rows[$i]);	
+				$row = $sqlSess->encodeRow($rows[$i]);	
 				$sql = 'INSERT INTO ' . $tblQ . ' (' . \implode(',', \array_keys($row)).') VALUES (' . \implode(',', $row) . ')';
-				$conn->execute($sql);
+				$sqlSess->execute($sql);
 			}
 		}
 		
 		// Single extended insert (cols specified for each row should match).
 		else {
 			$cols = \array_keys($rows[0]);
-			$colsQ = $conn->encodeIdent($cols);
+			$colsQ = $sqlSess->encodeIdent($cols);
 			
 			// When imploded, forms the VALUES part of the query.
 			$valSeq = array();
 			
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
-				$row = $conn->encodeValue($rows[$i]);
+				$row = $sqlSess->encodeValue($rows[$i]);
 				
 				$vals = array();
 				
@@ -139,14 +139,14 @@ class SqlUtils {
 			
 			$sql = 'INSERT INTO '.$tblQ.' (' . implode(',', $colsQ) . ') VALUES ' . implode(',', $valSeq);
 
-			$conn->execute($sql);
+			$sqlSess->execute($sql);
 		}
 	}
 		
 	/**
 	 * Updates a table row, matching it by the column(s) specified as a primary key.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $table
@@ -159,14 +159,14 @@ class SqlUtils {
 	 * A dict representing a row. The columns used as PK must be present, but it's not a requirement to pass all of the
 	 * remaining cols in the table, only those to be updated.
 	 */
-	public static function updateByPrimaryKey(PdoMysqlConnection $conn, $table, $pkCols, array $row) {	
-		return self::updateByPrimaryKeyMany($conn, $table, $pkCols, array($row));
+	public static function updateByPrimaryKey(PdoMysqlSession $sqlSess, $table, $pkCols, array $row) {	
+		return self::updateByPrimaryKeyMany($sqlSess, $table, $pkCols, array($row));
 	}	
 	
 	/**
 	 * Executes updates for all passed rows, matching them by the column(s) specified as id (primary key).
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $table
@@ -179,15 +179,15 @@ class SqlUtils {
 	 * Array of hashmaps representing a row each. The columns used as id must be specified, but it's not a requirement
 	 * to have all other columns.
 	 */
-	public static function updateByPrimaryKeyMany(PdoMysqlConnection $conn, $table, $pkCols, $rows) {
+	public static function updateByPrimaryKeyMany(PdoMysqlSession $sqlSess, $table, $pkCols, $rows) {
 		if (empty($rows)) return;
 		
-		$tblQ = $conn->encodeIdent($table);
-		$pkColsQ = $conn->encodeIdent($pkCols);
+		$tblQ = $sqlSess->encodeIdent($table);
+		$pkColsQ = $sqlSess->encodeIdent($pkCols);
 		
 		if (\is_array($pkCols)) {
 			foreach ($rows as $rk => $row) {
-				$row = $conn->encodeValue($row);
+				$row = $sqlSess->encodeValue($row);
 				
 				$setArr = array();
 				$whereArr = array();
@@ -200,18 +200,18 @@ class SqlUtils {
 				}
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $conn->encodeIdent($rk).' = '.$rv;
+					$setArr[] = $sqlSess->encodeIdent($rk).' = '.$rv;
 				}
 				
 				if (!$setArr) return;
 				
 				$q = 'UPDATE '.$tblQ.' SET '.$setArr(',', $setArr).' WHERE '.implode(',', $whereArr);
 				
-				$conn->execute($q);
+				$sqlSess->execute($q);
 			}
 		} else {
 			foreach ($rows as $rk => $row) {
-				$row = $conn->encodeValue($row);
+				$row = $sqlSess->encodeValue($row);
 				
 				$setArr = array();
 				
@@ -220,14 +220,14 @@ class SqlUtils {
 				unset($row[$pkCols]);
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $conn->encodeIdent($rk) . ' = ' . $rv;
+					$setArr[] = $sqlSess->encodeIdent($rk) . ' = ' . $rv;
 				}
 				
 				if (!$setArr) return;
 				
 				$q = 'UPDATE ' . $tblQ . ' SET ' . implode(',', $setArr) . ' WHERE ' . $where;
 				
-				$conn->execute($q);
+				$sqlSess->execute($q);
 			}			
 		}
 	}	
@@ -235,7 +235,7 @@ class SqlUtils {
 	/**
 	 * Blanks the table. Optionally will reset the autoIncrement counter.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Connection against which to execute the operation.
 	 * 
 	 * @param string $table
@@ -244,13 +244,13 @@ class SqlUtils {
 	 * @param bool $resetAutoIncrement
 	 * Whether to reset autoincrement to 1.
 	 */
-	public static function truncate(PdoMysqlConnection $conn, $table, $resetAutoIncrement = false) {
-		$tblQ = $conn->encodeIdent($table);
+	public static function truncate(PdoMysqlSession $sqlSess, $table, $resetAutoIncrement = false) {
+		$tblQ = $sqlSess->encodeIdent($table);
 		
-		$conn->execute('TRUNCATE TABLE ' . $tblQ);
+		$sqlSess->execute('TRUNCATE TABLE ' . $tblQ);
 		
 		if ($resetAutoIncrement) {
-			$conn->execute('ALTER TABLE ' . $tblQ . ' AUTO_INCREMENT = 1');
+			$sqlSess->execute('ALTER TABLE ' . $tblQ . ' AUTO_INCREMENT = 1');
 		}
 	}
 	
@@ -370,7 +370,7 @@ class SqlUtils {
 	 * Takes an array of bool SQL expressions and joins then with the given boolean operator (default AND). See
 	 * renderBoolExpr().
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $boolExprList
@@ -386,7 +386,7 @@ class SqlUtils {
 	 * @return string
 	 * SQL expression.
 	 */
-	static public function booleanMany(PdoMysqlConnection $conn, array $boolExprList, $operator = 'AND', $subOperator = 'AND') {		
+	static public function booleanMany(PdoMysqlSession $sqlSess, array $boolExprList, $operator = 'AND', $subOperator = 'AND') {		
 		foreach ($boolExprList as & $boolExpr) {
 			if (is_array($boolExpr)) {
 				$boolExpr = self::boolean($boolExpr, $subOperator);			
@@ -408,7 +408,7 @@ class SqlUtils {
 	 * Takes a boolean expression array and returns it rendered as an SQL string. The separate statements are joined via
 	 * boolean AND, OR or XOR.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $boolExpr
@@ -433,7 +433,7 @@ class SqlUtils {
 	 * @return string
 	 * An SQL expression.
 	 */
-	static public function boolean(PdoMysqlConnection $conn, array $boolExpr, $operator = 'AND') {		
+	static public function boolean(PdoMysqlSession $sqlSess, array $boolExpr, $operator = 'AND') {		
 		$exprList = array();
 		
 		if(!is_array($boolExpr)) {
@@ -444,7 +444,7 @@ class SqlUtils {
 			
 			if(!\is_array($rule)) { // Simple equals.
 				
-				$exprList[] = $conn->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $conn->encodeValue($rule));
+				$exprList[] = $sqlSess->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($rule));
 				
 			} else {
 				
@@ -460,7 +460,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $conn->encodeValue($val));
+						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($val));
 						break;
 						
 					case '!=':
@@ -468,7 +468,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $conn->encodeValue($val));
+						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $sqlSess->encodeValue($val));
 						break;							
 					case '>':
 					case '<':
@@ -479,49 +479,49 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' ' . $conn->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!LIKE':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' NOT LIKE ' . $conn->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT LIKE ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!REGEXP':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' NOT REGEXP ' . $conn->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT REGEXP ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case 'IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $conn->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case '!IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' NOT IN (' . \implode(',', $conn->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT IN (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case 'BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' ' . $type . ' ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					case '!BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $conn->encodeIdent($col) . ' NOT BETWEEN ' . $conn->encodeValue($val[0]) . ' AND ' . $conn->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT BETWEEN ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					default: 
@@ -545,19 +545,19 @@ class SqlUtils {
 	/**
 	 * Renders an ORDER BY expression from a hashmap in format: {colName} => "ASC" / "DESC".
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $orderExpr
 	 * 
 	 * @return string
 	 */
-	static public function orderBy(PdoMysqlConnection $conn, array $orderExpr) {
+	static public function orderBy(PdoMysqlSession $sqlSess, array $orderExpr) {
 		$expr = array();
 			
 		foreach ($orderExpr as $col => $mode) {
 			if($mode === 'ASC' || $mode === 'DESC') {
-				$expr[] =  $conn->encodeIdent($col) . ' ' . $mode;
+				$expr[] =  $sqlSess->encodeIdent($col) . ' ' . $mode;
 			} else {
 				throw new \Exception('Invalid order mode "' . $mode . '" (expected "ASC" or "DESC").');
 			}
@@ -571,7 +571,7 @@ class SqlUtils {
 	 * Renders a list of quoted identifiers into a comma delimited string. Aliases ("x AS y") can be specified if you
 	 * pass a list of two strings instead of a string.
 	 * 
-	 * @param \Solver\Sql\PdoMysqlConnection $conn
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $identExpr
@@ -583,9 +583,9 @@ class SqlUtils {
 	 * @return string
 	 * An SQL expression.
 	 */
-	static public function identList(PdoMysqlConnection $conn, $identExpr) {		
+	static public function identList(PdoMysqlSession $sqlSess, $identExpr) {		
 		// Taking advantage of the recursive nature of encodeIdent() here.
-		$identExpr = $conn->encodeIdent($identExpr);
+		$identExpr = $sqlSess->encodeIdent($identExpr);
 		
 		foreach ($identExpr as & $ident) {
 			$ident = $ident[0] . ' AS ' . $ident[1];

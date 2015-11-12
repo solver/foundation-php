@@ -134,7 +134,7 @@ class SqlExpression {
 	 * Takes an array of bool SQL expressions and joins then with the given boolean operator (default AND). See
 	 * renderBoolExpr().
 	 * 
-	 * @param SqlConnection $connection
+	 * @param SqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $boolExprList
@@ -150,7 +150,7 @@ class SqlExpression {
 	 * @return string
 	 * SQL expression.
 	 */
-	static public function booleanMany(SqlConnection $connection, array $boolExprList, $operator = 'AND', $subOperator = 'AND') {		
+	static public function booleanMany(SqlSession $sqlSess, array $boolExprList, $operator = 'AND', $subOperator = 'AND') {		
 		foreach ($boolExprList as & $boolExpr) {
 			if (is_array($boolExpr)) {
 				$boolExpr = self::boolean($boolExpr, $subOperator);			
@@ -172,7 +172,7 @@ class SqlExpression {
 	 * Takes a boolean expression array and returns it rendered as an SQL string. The separate statements are joined via
 	 * boolean AND, OR or XOR.
 	 * 
-	 * @param SqlConnection $connection
+	 * @param SqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $boolExpr
@@ -197,7 +197,7 @@ class SqlExpression {
 	 * @return string
 	 * An SQL expression.
 	 */
-	static public function boolean(SqlConnection $connection, array $boolExpr, $operator = 'AND') {		
+	static public function boolean(SqlSession $sqlSess, array $boolExpr, $operator = 'AND') {		
 		$exprList = array();
 		
 		if(!is_array($boolExpr)) {
@@ -208,7 +208,7 @@ class SqlExpression {
 			
 			if(!\is_array($rule)) { // Simple equals.
 				
-				$exprList[] = $connection->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $connection->encodeValue($rule));
+				$exprList[] = $sqlSess->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($rule));
 				
 			} else {
 				
@@ -224,7 +224,7 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $connection->encodeValue($val));
+						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($val));
 						break;
 						
 					case '!=':
@@ -232,7 +232,7 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $connection->encodeValue($val));
+						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $sqlSess->encodeValue($val));
 						break;							
 					case '>':
 					case '<':
@@ -243,49 +243,49 @@ class SqlExpression {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' ' . $connection->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!LIKE':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' NOT LIKE ' . $connection->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT LIKE ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!REGEXP':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' NOT REGEXP ' . $connection->encodeValue($val);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT REGEXP ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case 'IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $connection->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case '!IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' NOT IN (' . \implode(',', $connection->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT IN (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case 'BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' ' . $type . ' ' . $connection->encodeValue($val[0]) . ' AND ' . $connection->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					case '!BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $connection->encodeIdent($col) . ' NOT BETWEEN ' . $connection->encodeValue($val[0]) . ' AND ' . $connection->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT BETWEEN ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					default: 
@@ -309,19 +309,19 @@ class SqlExpression {
 	/**
 	 * Renders an ORDER BY expression from a hashmap in format: {colName} => "ASC" / "DESC".
 	 * 
-	 * @param SqlConnection $connection
+	 * @param SqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $orderExpr
 	 * 
 	 * @return string
 	 */
-	static public function orderBy(SqlConnection $connection, array $orderExpr) {
+	static public function orderBy(SqlSession $sqlSess, array $orderExpr) {
 		$expr = array();
 			
 		foreach ($orderExpr as $col => $mode) {
 			if($mode === 'ASC' || $mode === 'DESC') {
-				$expr[] =  $connection->encodeIdent($col) . ' ' . $mode;
+				$expr[] =  $sqlSess->encodeIdent($col) . ' ' . $mode;
 			} else {
 				throw new \Exception('Invalid order mode "' . $mode . '" (expected "ASC" or "DESC").');
 			}
@@ -335,7 +335,7 @@ class SqlExpression {
 	 * Renders a list of quoted identifiers into a comma delimited string. Aliases ("x AS y") can be specified if you
 	 * pass a list of two strings instead of a string.
 	 * 
-	 * @param SqlConnection $connection
+	 * @param SqlSession $sqlSess
 	 * Database connection instance to quote/render against.
 	 * 
 	 * @param array $identExpr
@@ -347,9 +347,9 @@ class SqlExpression {
 	 * @return string
 	 * An SQL expression.
 	 */
-	static public function identList(SqlConnection $connection, $identExpr) {		
+	static public function identList(SqlSession $sqlSess, $identExpr) {		
 		// Taking advantage of the recursive nature of encodeIdent() here.
-		$identExpr = $connection->encodeIdent($identExpr);
+		$identExpr = $sqlSess->encodeIdent($identExpr);
 		
 		foreach ($identExpr as & $ident) {
 			$ident = $ident[0] . ' AS ' . $ident[1];

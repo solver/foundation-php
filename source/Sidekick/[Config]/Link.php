@@ -17,13 +17,13 @@ abstract class Link {
 	protected $first = null;
 	protected $second = null;
 	protected $junction = null;
-	 
+	
 	function setFirstTable($tableName, $columnName, $fieldName = null) {
-		$this->first = ['tableName' => $tableName, 'columnName' => $columnName, 'fieldName' => $fieldNamespace];
+		$this->first = ['tableName' => $tableName, 'columnName' => $columnName, 'fieldName' => $fieldName];
 	}
 	
 	function setSecondTable($tableName, $columnName, $fieldName = null) {
-		$this->second = ['tableName' => $tableName, 'columnName' => $columnName, 'fieldName' => $fieldNamespace];
+		$this->second = ['tableName' => $tableName, 'columnName' => $columnName, 'fieldName' => $fieldName];
 	}
 	
 	function setJunctionTable($tableName) { // Required only for many-to-many; for the rest is optional and changes how the relation is computed.

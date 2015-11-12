@@ -42,7 +42,7 @@ class SqlResultSet {
 	protected $query;
 	
 	/**
-	 * To be called by the relevant SqlConnection class (do not instantiate directly).
+	 * To be called by the relevant SqlSession class (do not instantiate directly).
 	 * 
 	 * @param \PDOStatement $handle
 	 */

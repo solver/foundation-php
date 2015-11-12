@@ -18,9 +18,9 @@ use PDOStatement;
 use PDOException;
 
 /**
- * This is a forward compatible subset of the full Solver\Sql\SqlConnection class, supports MySQL and SQLite for now.
+ * This is a forward compatible subset of the full Solver\Sql\SqlSession class, supports MySQL and SQLite for now.
  */
-class SqlConnection {
+class SqlSession {
 	/**
 	 * Database type ("sqlite" or "mysql").
 	 * 
@@ -356,8 +356,8 @@ class SqlConnection {
 	 * parameter, i.e. those two calls are equivalent:
 	 * 
 	 * <code>
-	 * $conn->callInTransaction(null, function () { ... });
-	 * $conn->callInTransaction(function () { ... });
+	 * $sqlSess->callInTransaction(null, function () { ... });
+	 * $sqlSess->callInTransaction(function () { ... });
 	 * </code>
 	 * 
 	 * @param string $isolation

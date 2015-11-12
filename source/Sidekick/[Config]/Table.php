@@ -13,7 +13,7 @@
  */
 namespace Solver\Sidekick;
 
-// TODO: Change terminology to "fields" which can be based on columns or expressions.
+// TODO:
 // Read fields: only can be selected;
 // Write fields: only can be written to;
 // Conditions or filter fields: only can be used in where() clauses;
@@ -21,36 +21,47 @@ namespace Solver\Sidekick;
 // Linked is just another field type (with parameter Selector).
 // Expressions get QueryBuilder where they can add to the select etc. query (and say, add JOIN and get back temp table id to use etc.).
 class Table {
-	protected $hasColumnCodecs = false;
-	protected $hasColumnRenames = false;
-	protected $name = null;
+	protected $name = null;	
 	protected $internalName = null;
-	protected $externalFieldList = [];
-	protected $internalFieldList = [];
-	protected $externalFields = [];
-	protected $internalFields = [];
- 	protected $primaryKey = null;
- 	protected $primaryKeyIsGenerated = false;
 	
-	function __construct($name = null, $internalName = null) {
-		if ($name !== null) $this->setName($name, $internalName);
-	}
-
-	function setName($name, $internalName = null) {
+ 	protected $pkFields = null; 	
+ 	protected $pkFieldIsGenerated = false;
+	
+	/**
+	 * list<FieldHandler>;
+	 * 
+	 * @var array
+	 */
+	protected $fieldConfigs = [];
+	
+	/**
+	 * dict<fieldName: string, fieldConfigIndex: int>; The index points to property $fieldConfigs.
+	 * 
+	 * @var array
+	 */
+	protected $fieldIndex = [];
+	
+	/**
+	 * dict<tableAlias: string, joinConfig: #JoinConfig>;
+	 * 
+	 * #JoinConfig: tuple...; Describes a table join config.
+	 * - table: string; Full table name we're joining.
+	 * - condition: array|Expr; A list/dict specifying columns to match or expression to render as a join condition.
+	 * 
+	 * @var array
+	 */
+	protected $joins = []; // TODO: Document format.
+	
+	function __construct($name, $internalName = null) {
 		$this->name = $name;
 		$this->internalName = $internalName ?: $name;
-		return $this;
 	}
-	
-// 	function setSuper($tableName) { TODO: Inheritance, maybe multiple (like traits); makes joins on PK if a superfield is selected.
-// 		
-// 	}
 	
 	/**
 	 * Sets the primary key for the table.
 	 * 
-	 * @param string|list<string> $columnOrColumnList
-	 * A string column name to set as a primary key, or a list of strings for a composite primary key.
+	 * @param string|list<string> $fieldOrFieldList
+	 * A string field name to set as a primary key, or a list of fields for a composite primary key.
 	 * 
 	 * @param bool $isGenerated
 	 * Optional (default = false). True if the primary key is generated (autoincrement in MySQL, SERIAL in PgSQL etc.),
@@ -66,12 +77,61 @@ class Table {
 	 * 
 	 * TODO: Add optional 3rd param to specify sequence name, instead of autoincrement/SERIAL type.
 	 */
-	function setPK($columnOrColumnList, $isGenerated = false) { // TODO: Document the names here should be the "external" names, to avoid confusion when they differ from the internal ones.
-		// TODO: Validate in render() that those PK fields set here exist, and are columns, not expressions (why not expressions? think about it)
-		$this->primaryKey = is_array($columnOrColumnList) ? $columnOrColumnList : [$columnOrColumnList];
-		$this->primaryKeyIsGenerated = $isGenerated;
+	function setPK($fieldOrFieldList, $isGenerated = false) { // TODO: Document the names here should be the "external" names, to avoid confusion when they differ from the internal ones.
+		// TODO: Validate in render() that those PK fields set here exist.
+		$this->pkFields = (array) $fieldOrFieldList;
+		$this->pkFieldIsGenerated = $isGenerated;
 		return $this;
 	}
+	
+	function addFields(FieldHandler ...$handlers) {
+		$count = count($this->fieldConfigs);
+		
+		foreach ($handlers as $handler) {
+			foreach ($handler->getHandledFields() as $field) {
+				if (isset($this->fieldIndex[$field])) throw new \Exception('Duplicate declaration of field "' . $field . '".');
+				$this->fieldIndex[$field] = $count;
+			}
+			
+			$this->fieldConfigs[] = $handler;
+			$count++;
+		}
+		
+		return $this;
+	}
+	
+	// $condition can be:
+	// Same col names on both sides, one or more: [col1, col2] rendered ON foo.col1 = bar.col1 AND foo.col2 = bar.col2
+	// Differing col names: [col1 => col2, col3 => col4] rendered ON foo.col1 = bar.col2 AND foo.col3 = bar.col4
+	// Expression (rendered verbatim) ON $expr->render().
+	function addJoin($name, $tableName, $condition) {
+		if (is_array($condition)) foreach ($condition as $key => $val) if (is_int($key)) {
+			unset($condition[$key]);
+			$condition[$val] = $val;
+		}
+		
+		$tableName = $tableName ?: $name;
+		if ($name === 'this') throw new \Exception('Alias "this" is reserved to refer to the root table for a recordset.');
+		
+		if (isset($this->joins[$name])) throw new \Exception('Duplicate declaration of join named "' . $name . '".');
+		$this->joins[$name] = [$tableName, $condition];
+		
+		return $this;
+	}
+	
+	function render() {
+		return get_object_vars($this);
+	}
+
+	
+	// TODO: Allow multiple field mappings to the primary key
+// 	function addAltPK($columnOrColumnList, $isGenerated = false) {
+		
+// 	}
+	
+// 	function setSuper($tableName) { TODO: Inheritance, maybe multiple (like traits); makes joins on PK if a superfield is selected.
+// 		
+// 	}
 
 // 	function addFieldLoader(\Closure $closure) {
 // 		TODO: Ability to lazy-load a field upon it being demanded (allows schemas to not get too big up-front).		
@@ -80,111 +140,4 @@ class Table {
 // 	function addDirective($fieldName, $columnName = null, \Directive $directive) {
 //		
 // 	}
-	
-	function addExpession($name, $internalName = null, $expression, \Closure $decoder = null) {
-		// Field type pseudo-constants.
-		static $FT_EXPR = 2;
-		
-		list($composite, $name, $internalName) = $this->normalizeFieldNames($name, $internalName);
-		
-		if ($composite && $decoder === null) {
-			throw new \Exception('Decoder must be provided when you specify composite expressions.');
-		}
-		
-		$publicConfig = [
-			'name' => $name,
-			'toName' => $internalName,
-			'composite' => false,
-			'transform' => null,
-			'expression' => $expression,
-			'type' => $FT_EXPR,
-		];
-		
-		$internalConfig = [
-			'name' => $internalName,
-			'toName' => $name,
-			'composite' => false,
-			'transform' => $decoder,
-			'type' => $FT_EXPR,
-		];
-		
-		$this->addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig);
-		
-		return $this;
-	}
-	
-	function addColumn($name, $internalName = null, \Closure $encoder = null, \Closure $decoder = null) {
-		// Field type pseudo-constants.
-		static $FT_COL = 1;
-		
-		list($composite, $name, $internalName) = $this->normalizeFieldNames($name, $internalName);
-		
-		if ($composite && ($encoder === null || $decoder === null)) {
-			throw new \Exception('Encoder and decoder must be provided when you specify composite columns.');
-		}
-
-		$publicConfig = [
-			'name' => $name,
-			'toName' => $internalName,
-			'composite' => $composite,
-			'transform' => $encoder,
-			'type' => $FT_COL,
-		];
-		
-		$internalConfig = [
-			'name' => $internalName,
-			'toName' => $name,
-			'composite' => $composite,
-			'transform' => $decoder,
-			'type' => $FT_COL,
-		];
-		
-		$this->addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig);
-		
-		return $this;
-	}
-		
-	function render() {
-		if ($this->name === null) throw new \Exception('Table name is a required property.');
-		if (!$this->externalFields) throw new \Exception('Tables need at least one column.');
-		return get_object_vars($this);
-	}
-	
-	protected function normalizeFieldNames($name, $internalName) {
-		if ($internalName === null) $internalName = $name;
-		$composite = is_array($name) || is_array($internalName);
-		
-		if ($composite) {
-			$name = (array) $name;
-			$internalName = (array) $internalName;
-		}
-		
-		return [$composite, $name, $internalName];
-	}
-	
-	protected function addFieldConfig($composite, $name, $internalName, $publicConfig, $internalConfig) {
-		// TODO: Support uni-directional bindings (vs. bidirectional default now) which will allow multiple definitions
-		// of one field to map FROM, as long as one is selected primary when mapping TO it.
-		if ($composite) {
-			foreach ($name as $v) {
-				if (isset($this->externalFields[$v])) throw new \Exception('Duplicate declaration of public field "' . $v . '".');
-				$this->externalFields[$v] = $publicConfig;
-			}
-			$this->externalFieldList[] = [true, $name];
-			
-			foreach ($internalName as $v) {
-				if (isset($this->internalFields[$v])) throw new \Exception('Duplicate declaration of internal field "' . $v . '".');
-				$this->internalFields[$v] = $internalConfig;
-			}
-			$this->internalFieldList[] = [true, $internalName];
-		} else {
-			if (isset($this->externalFields[$name])) throw new \Exception('Duplicate declaration of public field "' . $name . '".');
-			$this->externalFields[$name] = $publicConfig;
-			$this->externalFieldList[] = [false, $name];
-			
-			if (isset($this->internalFields[$internalName])) throw new \Exception('Duplicate declaration of internal field "' . $internalName . '".');
-			$this->internalFields[$internalName] = $internalConfig;
-			$this->internalFieldList[] = [false, $internalName];
-		}
-	}
 }

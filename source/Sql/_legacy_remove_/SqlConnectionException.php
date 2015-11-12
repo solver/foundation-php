@@ -16,6 +16,6 @@ namespace Solver\Lab;
 use Solver\Base\Exception;
 
 /**
- * Thrown by SqlConnection & SqlResultSet instances.
+ * Thrown by SqlSession & SqlResultSet instances.
  */
 class SqlException extends Exception {}

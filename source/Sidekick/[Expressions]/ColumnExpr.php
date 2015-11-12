@@ -13,25 +13,21 @@
  */
 namespace Solver\Sidekick;
 
-use Solver\Sql\SqlConnection;
-
-// TODO: Implement in other expressions as an input value type.
-interface FieldExpr {
-	protected $fieldName;
+/**
+ * Renders the given name as an SQL identifier.
+ */
+interface ColumnExpr {
+	protected $identName;
 	
-	public function __construct($fieldName) {
-		$this->fieldName = $fieldName;	
+	public function __construct($identName) {
+		$this->identName = $identName;	
 	}
 	
-	function getFieldName() {
-		return $this->fieldName;
-	}
-	
-	function getTransformed($transform) {
+	function transformed($transform) {
 		return $this;
 	}
 	
-	function render(SqlConnection $conn, $columnName) {
-		return $conn->encodeIdent($columnName) . ' = ' . $conn->encodeIdent($columnName);
+	function render(SqlContext $sqlContext, $subject) {
+		return $subject . ' = ' . $sqlContext->encodeColumn($this->identName);
 	}
 }

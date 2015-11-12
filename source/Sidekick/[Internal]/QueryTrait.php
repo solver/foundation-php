@@ -64,7 +64,7 @@ trait QueryTrait {
 	}
 	
 	function select($fields) {
-		// Passing ["foo"] is a shortcut for ["foo" => null].
+		// Passing ["foo"] is a shortcut for ["foo" => null]. 
 		foreach ($fields as $k => $v) {
 			if (is_int($k)) {
 				unset($fields[$k]);
