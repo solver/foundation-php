@@ -13,7 +13,7 @@
  */
 namespace Solver\Sql;
 
-class PdoMysqlPool extends PdoPool {
+class PdoSqlitePool extends PdoPool {
 	protected $config;
 	
 	/**

@@ -11,7 +11,7 @@
  * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations under the License.
  */
-namespace Solver\Sparta;
+namespace Solver\Web;
 
 /**
  * This exception is used internally in the Page class to implement the Page::stop*() methods. On true failure, pages 
