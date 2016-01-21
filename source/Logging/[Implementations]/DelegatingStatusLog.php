@@ -26,7 +26,7 @@ class DelegatingStatusLog implements StatusLog {
 	 * Log to send events to.
 	 * 
 	 * @param int $mask
-	 * Optional. Event type mask to use for the log (if you pass null or nothing, StatusLog::DEFAULT_MASK is used).
+	 * Optional. Event type mask to use for the log (if you pass null or nothing, StatusLog::T_DEFAULT is used).
 	 * 
 	 * @param \Closure $filter
 	 * (list<dict>) => list<dict>; An optional filter which will receive events to be logged, and can return modified
@@ -34,7 +34,7 @@ class DelegatingStatusLog implements StatusLog {
 	 */
 	public function __construct(Log $log, $mask = null, \Closure $filter = null) {
 		$this->log = $log;
-		$this->mask = $mask === null ? StatusLog::DEFAULT_MASK : $mask;
+		$this->mask = $mask === null ? StatusLog::T_DEFAULT : $mask;
 		$this->filter = $filter;
 	}
 
@@ -52,10 +52,10 @@ class DelegatingStatusLog implements StatusLog {
 	 */
 	public function log(array ...$events) {
 		static $map = [
-			'error' => self::ERROR_FLAG,
-			'warning' => self::WARNING_FLAG,
-			'info' => self::INFO_FLAG,
-			'success' => self::SUCCESS_FLAG,
+			'error' => self::T_ERROR,
+			'warning' => self::T_WARNING,
+			'info' => self::T_INFO,
+			'success' => self::T_SUCCESS,
 		];
 		
 		$mask = $this->mask;
@@ -63,7 +63,7 @@ class DelegatingStatusLog implements StatusLog {
 		
 		// We need to be atomic, so we first check conditions, then send in one go.
 		// If the mask allows all types, we can take a faster route without filtering.
-		if ($mask == StatusLog::FULL_MASK) {
+		if ($mask == StatusLog::T_ALL) {
 			foreach ($events as $event) {
 				$type = $event['type'];
 				if (!isset($map[$type])) LogException::throwUnknownType($type);

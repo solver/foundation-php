@@ -42,7 +42,7 @@ class NumberFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($min) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 < $min + 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a number bigger than or equal to $min.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a number bigger than or equal to $min.");
 				$output = null;
 				return false;
 			} else {
@@ -63,7 +63,7 @@ class NumberFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($max) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 > $max + 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a number lesser than or equal to $max.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a number lesser than or equal to $max.");
 				$output = null;
 				return false;
 			} else {
@@ -100,7 +100,7 @@ class NumberFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			// TODO: Use arbitrary precision semantics for large numbers in strings.
 			if ($input + 0 < 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a positive number.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a positive number.");
 				$output = null;
 				return false;
 			} else {
@@ -135,7 +135,7 @@ class NumberFormat implements Format, FastAction {
 			// 9007199254740992 = 2^53 (bit precision threshold in doubles).
 			if (is_float($input) && $input === floor($input) && $input <= 9007199254740992) return true;
 			
-			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide an integer.");
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide an integer.");
 			$output = null;
 			return false;
 		};
@@ -223,7 +223,7 @@ class NumberFormat implements Format, FastAction {
 		
 		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 		
-		if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a number.');
+		if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a number.');
 		$output = null;
 		return null;
 	}

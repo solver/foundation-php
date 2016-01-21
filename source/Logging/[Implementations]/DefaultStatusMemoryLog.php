@@ -19,10 +19,10 @@ class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemory
 	private $retainsErrors;
 	private $lastError = null;
 	
-	public function __construct($mask = StatusLog::DEFAULT_MASK) {
+	public function __construct($mask = StatusLog::T_DEFAULT) {
 		$log = new DefaultMemoryLog();
 		$this->log = $log;
-		$this->retainsErrors = (bool) ($mask & StatusLog::ERROR_FLAG); 
+		$this->retainsErrors = (bool) ($mask & StatusLog::T_ERROR); 
 		parent::__construct($log, $mask);
 	}
 	

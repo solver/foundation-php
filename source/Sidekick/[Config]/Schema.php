@@ -14,70 +14,17 @@
 namespace Solver\Sidekick;
 
 class Schema {
-	protected $tables = [];
+	protected $recordSets = [];
 	protected $rels = [];
 	
-	// TODO: Add ability to add global expressions which automatically resolve in every table (this also means you can't use this expression name in a table, or the table overrides the global - pick one). Maybe best is allow override with explicit $override = true parameter to avoid errors.
-	// function addExpression($name, $sqlExpression) {}
-	
-	function addTable(Table $table) {
-		$tableData = $table->render();		
-		$this->tables[$tableData['name']] = $tableData;
+	function addRecordSet(RecordSet $recordSet) {
+		$recordSetData = $recordSet->render();
 		
-		return $this;
-	}
-	
-	function addLink(Link $link) {
-		$linkData = $link->render();
-		
-		$index = function ($namespace, $hasMany, $localTableName, $localColumnName, $foreignTableName, $foreignColumnName, $junctionTableName) {
-			$rel = [
-				'namespace' => $namespace,
-				'hasMany' => $hasMany,
-				'junctionTableName' => $junctionTableName,
-				'foreignTableName' => $foreignTableName,
-				'localColumnName' => $localColumnName, // TODO: Verify if exists.
-				'foreignColumnName' => $foreignColumnName, // TODO: Verify if exists.
-			];
-			
-			if (!isset($this->tables[$junctionTableName])) {
-				throw new \Exception('Table with public name "' . $junctionTableName . '" is not defined.');
-			}
-			
-			if (!isset($this->tables[$localTableName])) {
-				throw new \Exception('Table with public name "' . $localTableName . '" is not defined.');
-			}
-			
-			if (!isset($this->tables[$foreignTableName])) {
-				throw new \Exception('Table with public name "' . $foreignTableName . '" is not defined.');
-			}
-						
-			if (!isset($this->rels[$localTableName])) {
-				$this->rels[$localTableName] = [];
-			}
-			
-			$this->rels[$localTableName][$namespace] = $rel;
-		};
-		
-		$junctionTableName = $junction['tableName'];
-		
-		if ($linkData['first']['namespace']) {
-			$namespace = $linkData['first']['namespace'];
-			$hasMany = $linkData['firstHasMany'];
-			$localTableName = $linkData['first']['tableName'];
-			$localColumnName = $linkData['first']['columnName'];
-			$foreignTableName = $linkData['second']['tableName'];
-			$foreignColumnName = $linkData['second']['columnName'];
-			$index($namespace, $hasMany, $localTableName, $localColumnName, $foreignTableName, $foreignColumnName, $junctionTableName);
-		} else {
-			$namespace = $linkData['second']['namespace'];
-			$hasMany = $linkData['secondHasMany'];
-			$localTableName = $linkData['second']['tableName'];
-			$localColumnName = $linkData['second']['columnName'];
-			$foreignTableName = $linkData['first']['tableName'];
-			$foreignColumnName = $linkData['first']['columnName'];
-			$index($namespace, $hasMany, $localTableName, $localColumnName, $foreignTableName, $foreignColumnName, $junctionTableName);
+		if (isset($this->recordSets[$recordSetData['name']])) {
+			throw new \Exception('Duplicate declaration of record set name "' . $recordSetData['name'] . '".');
 		}
+		
+		$this->recordSets[$recordSetData['name']] = $recordSetData;
 		
 		return $this;
 	}

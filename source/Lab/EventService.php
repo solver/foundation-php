@@ -324,7 +324,7 @@ class EventService {
 		
 		$this->sqlSess->transactional(function () use (& $row, & $extRows) {
 			$this->sqlSess->insert($this->tableName, $row);
-			$id = $this->sqlSess->getLastInsertId();
+			$id = $this->sqlSess->getLastIdentity();
 			
 			foreach ($extRows as $extTableName => $extRow) {
 				$extRow['id'] = $id;

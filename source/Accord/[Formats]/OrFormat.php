@@ -87,7 +87,7 @@ class OrFormat implements Format, FastAction {
 		}
 		
 		if ($this->error) {
-			if ($mask & SL::ERROR_FLAG) {
+			if ($mask & SL::T_ERROR) {
 				$error = $this->error;
 				if ($path && isset($error['path'])) $error['path'] = array_merge($path, $error['path']);
 				$events[] = $error;

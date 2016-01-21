@@ -45,7 +45,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 		$this->log = $log;
 		
 		// Should we reduce flags if parent log has lesser flags?
-		parent::__construct(StatusLog::DEFAULT_MASK);
+		parent::__construct(StatusLog::T_DEFAULT);
 	}
 	
 	/**
@@ -66,7 +66,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 	}
 	
 	public function throwError(array $path = null, $message = null, $code = null, array $details = null) {
-		$this->error($path, $message, $code, $details);
+		$this->addError($path, $message, $code, $details);
 		throw new ActionException($this->log ?: $this);
 	}
 		
@@ -85,7 +85,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 		if (is_string($path)) $path = explode('.', $path);
 		
 		if ($path) {
-			return new DelegatingStatusLog($this, StatusLog::DEFAULT_MASK, function ($events) use ($path) {
+			return new DelegatingStatusLog($this, StatusLog::T_DEFAULT, function ($events) use ($path) {
 				foreach ($events as & $event) {
 					if (isset($event['path'])) {
 						$event['path'] = array_merge($path, $event['path']);
@@ -97,7 +97,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 				return $events;
 			});
 		} else {
-			return new DelegatingStatusLog($this, StatusLog::DEFAULT_MASK);
+			return new DelegatingStatusLog($this, StatusLog::T_DEFAULT);
 		}
 	}
 	
@@ -111,7 +111,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 	 * A write-only view into the current log (all events logged on the view will show up in the parent log).
 	 */
 	public function filtered(\Closure $filter) {
-		return new DelegatingStatusLog($this, StatusLog::DEFAULT_MASK, $filter);
+		return new DelegatingStatusLog($this, StatusLog::T_DEFAULT, $filter);
 	}
 	
 	/**
@@ -126,6 +126,6 @@ class ExpressLog extends DefaultStatusMemoryLog {
 	 * A write-only view into the current log (all events logged on the view will show up in the parent log).
 	 */
 	public function mapped(array $map) {
-		return new DelegatingStatusLog($this, StatusLog::DEFAULT_MASK, LogUtils::getPathMapFilter($map));
+		return new DelegatingStatusLog($this, StatusLog::T_DEFAULT, LogUtils::getPathMapFilter($map));
 	}
 }

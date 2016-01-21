@@ -34,7 +34,7 @@ abstract class PdoSession implements SqlSession {
 	protected $handle = null;
 	
 	/**
-	 * Stores the proper valid last insert id for MySQL. See getLastInsertId().
+	 * Stores the proper valid last insert id for MySQL. See getLastIdentity().
 	 * 
 	 * @var int
 	 */
@@ -62,6 +62,9 @@ abstract class PdoSession implements SqlSession {
 	
 	/**
 	 * DO NOT INSTANTIATE a session directly. Use the relevant SqlPool implementation to instantiate it, instead.
+	 * 
+	 * TODO: We don't ever use $name's value, we only check if it's null. Reduce to a boolean $named? We might need the
+	 * name if we ever implement cleaning up instantiated handle-less named sessions.
 	 */
 	public function __construct($context, $name) {
 		$this->context = $context;
@@ -89,7 +92,7 @@ abstract class PdoSession implements SqlSession {
 		// Because named connections always have one instance in the pool, we release the handle when refCount is 1. For
 		// anonymous connections we release when refCount is 0 (i.e. no more instances of that connection).
 		if ($this->handle && $refCount == ($this->name === null ? 0 : 1)) {
-			if ($this->transactions) throw new SqlException('A connection object was deleted with one or more on-going transactions.');
+			if ($this->transactions) throw new SqlException('An SQL session object was destroyed with one or more on-going transactions.');
 			
 			$this->context->drop->__invoke($this->handle);
 			$this->handle = null;
@@ -192,9 +195,9 @@ abstract class PdoSession implements SqlSession {
 		
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sql\SqlSession::getLastInsertId()
+	 * @see \Solver\Sql\SqlSession::getLastIdentity()
 	 */
-	public function getLastInsertId() {		
+	public function getLastIdentity() {		
 		if (!$this->handle) $this->open();
 		
 		// TODO: Obviously we're doing a bit of class detecting magic here that has to go. First we need to investigate
@@ -295,7 +298,13 @@ abstract class PdoSession implements SqlSession {
 		if (!$currentTransaction) {
 			$fulfillment = self::TF_REAL;
 		} else {
-			throw new SqlException('Cannot fulfill real transaction as one is already in progress for this connection.');
+			if ($fulfillment === null) {
+				$fulfillment === self::TF_REAL;
+			}
+			
+			if ($fulfillment === self::TF_REAL) {
+				throw new SqlException('Cannot fulfill real transaction as one is already in progress for this connection.');
+			}
 		}
 		
 		/*
@@ -347,7 +356,11 @@ abstract class PdoSession implements SqlSession {
 		$t = array_pop($this->transactions);
 		
 		if (!$t) throw new SqlException('There is no open transaction.');
-		if ($tid != self::$transactionId) throw new SqlException('The given transaction id doesn\'t match the opened transaction.');
+
+		// TODO: Should we look up the stack to find a match & roll back for it?
+		if ($tid !== $t->id) {
+			throw new SqlException('The given transaction id doesn\'t match the last opened transaction.');
+		}
 		
 		if (!$this->consistent && $t->fullfillment !== self::TF_VIRTUAL) {
 			$this->rollback($tid);
@@ -381,7 +394,11 @@ abstract class PdoSession implements SqlSession {
 		$t = array_pop($this->transactions);
 		
 		if (!$t) throw new SqlException('There is no open transaction.');
-		if ($tid != self::$transactionId) throw new SqlException('The given transaction id doesn\'t match the opened transaction.');
+		
+		// TODO: Should we look up the stack to find a match & roll back for it?
+		if ($tid !== $t->id) {
+			throw new SqlException('The given transaction id doesn\'t match the last opened transaction.');
+		}
 		
 		switch ($t->fullfillment) {
 			case self::TF_REAL:

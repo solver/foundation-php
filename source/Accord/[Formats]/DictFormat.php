@@ -149,6 +149,8 @@ class DictFormat implements Format, FastAction {
 		return $this;
 	}
 	
+	// TODO: We could short-circuit here and not run further tests on first failure. We deliberately run everything in
+	// full to produce a more full report. Make an option?
 	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
 		// TODO: Make protected constants in PHP 7.1.
 		static $TYPE_REQUIRED = 0;
@@ -158,7 +160,7 @@ class DictFormat implements Format, FastAction {
 		if (!\is_array($input)) {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a dict.');
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a dict.');
 			$output = null;
 			return null;
 		}
@@ -195,11 +197,14 @@ class DictFormat implements Format, FastAction {
 					$subPath = $path;
 					$subPath[] = $name;
 					
+					// We could short-circuit here if $success if false, we deliberately don't in order to produce more
+					// full error reports.
 					if ($format instanceof FastAction) {
-						$success = $success && $format->fastApply($subInput, $output[$name], $mask, $events, $subPath);
+						$subSuccess = $format->fastApply($subInput, $output[$name], $mask, $events, $subPath);
 					} else {
-						$success = $success && AU::emulateFastApply($format, $subInput, $output[$name], $mask, $events, $subPath);
+						$subSuccess = AU::emulateFastApply($format, $subInput, $output[$name], $mask, $events, $subPath);
 					}
+					$success = $success && $subSuccess;
 				} else {
 					$output[$name] = $subInput;
 				}
@@ -207,7 +212,7 @@ class DictFormat implements Format, FastAction {
 				switch ($type) {
 					case $TYPE_REQUIRED:
 						// Missing fields are a dict-level error (don't add $name to the $path in this case).
-						if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide required field "' . $name . '".');
+						if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide required field "' . $name . '".');
 						$success = false;
 						break;
 						
@@ -221,11 +226,11 @@ class DictFormat implements Format, FastAction {
 		if ($input && $this->rest != self::$REST_IGNORE) {
 			switch ($this->rest) {
 				case self::$REST_WARN:
-					if ($mask & SL::WARNING_FLAG) ITU::addWarningTo($events, $path, 'One or more unexpected fields were ignored: "' . implode('", "', array_keys($input)) . '".');
+					if ($mask & SL::T_WARNING) ITU::addWarningTo($events, $path, 'One or more unexpected fields were ignored: "' . implode('", "', array_keys($input)) . '".');
 					break;
 				
 				case self::$REST_ERROR:
-					if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Unexpected fields: "' . implode('", "', array_keys($input)) . '".');
+					if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Unexpected fields: "' . implode('", "', array_keys($input)) . '".');
 					break;
 			
 				case self::$REST_ADD:

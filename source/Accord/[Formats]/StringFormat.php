@@ -116,7 +116,7 @@ class StringFormat implements Format, FastAction {
 	public function hasLength($length) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (StringUtils::length($input) !== $length) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use exactly $length characters.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please use exactly $length characters.");
 				$output = null;
 				return false;
 			} else {
@@ -135,7 +135,7 @@ class StringFormat implements Format, FastAction {
 	public function hasLengthMin($lengthMin) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMin) {
 			if (StringUtils::length($input) < $lengthMin) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use at least $lengthMin characters.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please use at least $lengthMin characters.");
 				$output = null;
 				return false;
 			} else {
@@ -154,7 +154,7 @@ class StringFormat implements Format, FastAction {
 	public function hasLengthMax($lengthMax) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($lengthMax) {
 			if (StringUtils::length($input) > $lengthMax) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please use at most $lengthMax characters.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please use at most $lengthMax characters.");
 				$output = null;
 				return false;
 			} else {
@@ -185,7 +185,7 @@ class StringFormat implements Format, FastAction {
 	public function isNotEmpty() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if ($input === '') {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please fill in.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please fill in.");
 				$output = null;
 				return false;
 			} else {
@@ -218,7 +218,7 @@ class StringFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if ($input !== '') {
 				// If added first in a OrFormat, this awkward message won't be seen.
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please leave empty.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please leave empty.");
 				$output = null;
 				return false;
 			} else {
@@ -252,7 +252,7 @@ class StringFormat implements Format, FastAction {
 				return true;
 			}
 			
-			if ($mask & SL::ERROR_FLAG) {
+			if ($mask & SL::T_ERROR) {
 				if ($displayListInMessage) {
 					ITU::addErrorTo($events, $path, 'Please use one of the following values: "' . \implode('", "', $list) . '".');
 				} else {
@@ -288,7 +288,7 @@ class StringFormat implements Format, FastAction {
 				return true;
 			}
 			
-			if ($mask & SL::ERROR_FLAG) {
+			if ($mask & SL::T_ERROR) {
 				if ($displayListInMessage) {
 					ITU::addErrorTo($events, $path, 'Please fill in "' . $input . '".');
 				} else {
@@ -326,7 +326,7 @@ class StringFormat implements Format, FastAction {
 	public function isRegexMatch($regexPattern, $customError = null) {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($regexPattern, $customError) {
 			if (!RegexUtils::match($input, $regexPattern)) {
-				if ($mask & SL::ERROR_FLAG) {
+				if ($mask & SL::T_ERROR) {
 					$event = ['type' => 'error', 'message' => 'Please fill in a valid value.'];
 					if ($path) $event['path'] = $path;
 					if ($customError) $event = $customError + $event;
@@ -352,7 +352,7 @@ class StringFormat implements Format, FastAction {
 			} else {
 				if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a string.');
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a string.');
 				$output = null;
 				return false;
 			}

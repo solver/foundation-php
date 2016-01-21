@@ -65,7 +65,7 @@ class StringToListFormat implements Format, FastAction {
 		else {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please supply a string or a list.');
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please supply a string or a list.');
 			$output = null;
 			return false;
 		}

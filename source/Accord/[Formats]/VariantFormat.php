@@ -91,15 +91,15 @@ class VariantFormat implements Format, FastAction {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
 			// TODO: More specific error?
-			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please fill in a valid value.');
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please fill in a valid value.');
 			$output = null;
 			return false;
 		}
 		
 		// The tag field must be present.
 		if (!key_exists($tagField, $input)) {
-			if ($mask & SL::ERROR_FLAG) {
-				if ((string) $tagField === (string) (int) $tagField) {
+			if ($mask & SL::T_ERROR) {
+				if (is_int($tagField)) {
 					$message = 'Please provide required index "' . $tagField . '".';
 				} else {
 					$message = 'Please provide required field "' . $tagField . '".';
@@ -114,7 +114,7 @@ class VariantFormat implements Format, FastAction {
 		
 		// The value must match our registered type tags.
 		if (!isset($this->formats[$input[$tagField]])) {
-			if ($mask & SL::ERROR_FLAG) {
+			if ($mask & SL::T_ERROR) {
 				$subPath = $path;
 				$subPath[] = $this->tagFieldName;
 				

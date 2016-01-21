@@ -40,7 +40,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with exactly $length $noun.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a list with exactly $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -56,7 +56,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) < $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with at least $length $noun.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a list with at least $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -72,7 +72,7 @@ class ListFormat implements Format, FastAction {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) use ($length) {
 			if (\count($input) > $length) {
 				$noun = $length == 1 ? 'item' : 'items';
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with at most $length $noun.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a list with at most $length $noun.");
 				$output = null;
 				return false;
 			} else {
@@ -105,7 +105,7 @@ class ListFormat implements Format, FastAction {
 			if (\count($input) == 0) {
 				// A list with isEmpty() test will typically be 1st item in a OrFormat, where this message will be
 				// never seen.
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide an empty list.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide an empty list.");
 				$output = null;
 				return false;
 			} else {
@@ -120,7 +120,7 @@ class ListFormat implements Format, FastAction {
 	public function isNotEmpty() {
 		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
 			if (\count($input) == 0) {
-				if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, "Please provide a list with one or more items.");
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a list with one or more items.");
 				$output = null;
 				return false;
 			} else {
@@ -136,14 +136,14 @@ class ListFormat implements Format, FastAction {
 		if (!\is_array($input)) {
 			if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
-			if ($mask & SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please provide a list.');
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a list.');
 			$output = null;
 			return null;
 		}
 		
 		$itemFormat = $this->itemFormat;
 		$output = [];
-		$success = false;
+		$success = true;
 				
 		// We require a sequential, zero based list, anything else is ignored. The PHP array order of the keys in the
 		// input, however is irrelevant (the return value will be sorted by key order anyway).
@@ -154,11 +154,15 @@ class ListFormat implements Format, FastAction {
 				if ($itemFormat) {
 					$itemPath = $path;
 					$itemPath[] = $i;
+					
+					// We could not apply rules here on first failure ($success false). We deliberately run in full to
+					// produce more complete error reports. TODO: Option?
 					if ($itemFormat instanceof FastAction) {
-						$success = $success && $itemFormat->fastApply($input, $output, $mask, $events, $itemPath);
+						$subSuccess = $itemFormat->fastApply($input[$i], $output[$i], $mask, $events, $itemPath);
 					} else {
-						$success = $success && AU::emulateFastApply($itemFormat, $input, $output, $mask, $events, $itemPath);
+						$subSuccess = AU::emulateFastApply($itemFormat, $input[$i], $output[$i], $mask, $events, $itemPath);
 					}
+					$success = $success && $subSuccess;
 				} else {
 					$output[$i] = $input[$i];
 				}

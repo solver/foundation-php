@@ -46,8 +46,10 @@ class SqlUtils {
 	 * 
 	 * @return string
 	 */
-	public static function encodeInto(PdoMysqlSession $sqlSess, $sql, array $values) {		
-		$values = $sqlSess->encodeValue($values);
+	public static function encodeInto(PdoMysqlSession $sqlSess, $sql, array $values) {
+		foreach ($values as & $value) $value = $sqlSess->encodeValue($value);
+		unset($value);
+		
 		$sql = \explode('?', $sql);
 		$ce = \count($sql);
 		
@@ -99,12 +101,13 @@ class SqlUtils {
 	public static function insertMany(PdoMysqlSession $sqlSess, $table, array $rows, $extended = false) {
 		if (empty($rows)) return;
 		
-		$tblQ = $sqlSess->encodeIdent($table);
+		$tblQ = $sqlSess->encodeName($table);
 		
 		if (!$extended) {		
 			// TODO: Wrap in a transaction if count($rows) > 1 (once we have nested transactions again).	
-			for($i = 0, $max = \count($rows); $i < $max; $i++) {				
-				$row = $sqlSess->encodeRow($rows[$i]);	
+			for($i = 0, $max = \count($rows); $i < $max; $i++) {
+				$row = [];
+				foreach ($rows[$i] as $k => $v) $row[$sqlSess->encodeName($k)] = $sqlSess->encodeValue($v);
 				$sql = 'INSERT INTO ' . $tblQ . ' (' . \implode(',', \array_keys($row)).') VALUES (' . \implode(',', $row) . ')';
 				$sqlSess->execute($sql);
 			}
@@ -113,7 +116,7 @@ class SqlUtils {
 		// Single extended insert (cols specified for each row should match).
 		else {
 			$cols = \array_keys($rows[0]);
-			$colsQ = $sqlSess->encodeIdent($cols);
+			$colsQ = $sqlSess->encodeName($cols);
 			
 			// When imploded, forms the VALUES part of the query.
 			$valSeq = array();
@@ -182,8 +185,8 @@ class SqlUtils {
 	public static function updateByPrimaryKeyMany(PdoMysqlSession $sqlSess, $table, $pkCols, $rows) {
 		if (empty($rows)) return;
 		
-		$tblQ = $sqlSess->encodeIdent($table);
-		$pkColsQ = $sqlSess->encodeIdent($pkCols);
+		$tblQ = $sqlSess->encodeName($table);
+		$pkColsQ = $sqlSess->encodeName($pkCols);
 		
 		if (\is_array($pkCols)) {
 			foreach ($rows as $rk => $row) {
@@ -200,7 +203,7 @@ class SqlUtils {
 				}
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $sqlSess->encodeIdent($rk).' = '.$rv;
+					$setArr[] = $sqlSess->encodeName($rk).' = '.$rv;
 				}
 				
 				if (!$setArr) return;
@@ -220,7 +223,7 @@ class SqlUtils {
 				unset($row[$pkCols]);
 				
 				foreach ($row as $rk => $rv) {
-					$setArr[] = $sqlSess->encodeIdent($rk) . ' = ' . $rv;
+					$setArr[] = $sqlSess->encodeName($rk) . ' = ' . $rv;
 				}
 				
 				if (!$setArr) return;
@@ -245,7 +248,7 @@ class SqlUtils {
 	 * Whether to reset autoincrement to 1.
 	 */
 	public static function truncate(PdoMysqlSession $sqlSess, $table, $resetAutoIncrement = false) {
-		$tblQ = $sqlSess->encodeIdent($table);
+		$tblQ = $sqlSess->encodeName($table);
 		
 		$sqlSess->execute('TRUNCATE TABLE ' . $tblQ);
 		
@@ -444,7 +447,7 @@ class SqlUtils {
 			
 			if(!\is_array($rule)) { // Simple equals.
 				
-				$exprList[] = $sqlSess->encodeIdent($col) . ($rule === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($rule));
+				$exprList[] = $sqlSess->encodeName($col) . ($rule === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($rule));
 				
 			} else {
 				
@@ -460,7 +463,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($val));
+						$exprList[] = $sqlSess->encodeName($col) . ($val === null ? ' IS NULL' : ' = ' . $sqlSess->encodeValue($val));
 						break;
 						
 					case '!=':
@@ -468,7 +471,7 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $sqlSess->encodeValue($val));
+						$exprList[] = $sqlSess->encodeName($col) . ($val === null ? ' IS NOT NULL' : ' <> ' . $sqlSess->encodeValue($val));
 						break;							
 					case '>':
 					case '<':
@@ -479,49 +482,49 @@ class SqlUtils {
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val);
+						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!LIKE':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT LIKE ' . $sqlSess->encodeValue($val);
+						$exprList[] = $sqlSess->encodeName($col) . ' NOT LIKE ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case '!REGEXP':
 						if (!\is_scalar($val)) {
 							throw new \Exception('Bad expression value format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT REGEXP ' . $sqlSess->encodeValue($val);
+						$exprList[] = $sqlSess->encodeName($col) . ' NOT REGEXP ' . $sqlSess->encodeValue($val);
 						break;
 						
 					case 'IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case '!IN':
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT IN (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
+						$exprList[] = $sqlSess->encodeName($col) . ' NOT IN (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
 						break;
 						
 					case 'BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					case '!BETWEEN':
 						if (!is_array($val) || \count($val) != 2) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $sqlSess->encodeIdent($col) . ' NOT BETWEEN ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
+						$exprList[] = $sqlSess->encodeName($col) . ' NOT BETWEEN ' . $sqlSess->encodeValue($val[0]) . ' AND ' . $sqlSess->encodeValue($val[1]);
 						break;
 						
 					default: 
@@ -557,7 +560,7 @@ class SqlUtils {
 			
 		foreach ($orderExpr as $col => $mode) {
 			if($mode === 'ASC' || $mode === 'DESC') {
-				$expr[] =  $sqlSess->encodeIdent($col) . ' ' . $mode;
+				$expr[] =  $sqlSess->encodeName($col) . ' ' . $mode;
 			} else {
 				throw new \Exception('Invalid order mode "' . $mode . '" (expected "ASC" or "DESC").');
 			}
@@ -584,8 +587,8 @@ class SqlUtils {
 	 * An SQL expression.
 	 */
 	static public function identList(PdoMysqlSession $sqlSess, $identExpr) {		
-		// Taking advantage of the recursive nature of encodeIdent() here.
-		$identExpr = $sqlSess->encodeIdent($identExpr);
+		// Taking advantage of the recursive nature of encodeName() here.
+		$identExpr = $sqlSess->encodeName($identExpr);
 		
 		foreach ($identExpr as & $ident) {
 			$ident = $ident[0] . ' AS ' . $ident[1];

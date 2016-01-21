@@ -17,8 +17,20 @@ use Solver\Sidekick\SqlContext;
 use Solver\Sql\SqlSession;
 use Solver\Sidekick\SqlContext as SC;
 
-// TODO: The internal mapping methods (map*() are currently factored for granularity and understandability, not
-// performance, this should tilt towards "performance" when the logic and features are stable).
+// FIXME: In some clauses (and statement classes) it's not very strict where you can pass keys/values/expressions with
+// certain interpretations, and we need to lock down and define all this a little bit better.
+// FIXME: We should probably require that columns in read context specify alias always (alias.column) to avoid
+// ambiguity. Implicit cols derived from fields by prepending "this." would still work. At the same time we need to 
+// enforce write context columns (i.e.: in SELECT name as _here_, or SET _here_ = val, or VALUES (_here_ = val)) are
+// always without alias as aliases don't apply there. Not that we can't strip the alias from "this." (like we do) but
+// it shows this can be better specified and locked down.
+// TODO: The original plan was to compile the schema to something that's easily serializable, so the weight of the 
+// schema object is irrelevant for reuse, because we just use it to export and serialize an array config. But we use
+// closures and objects with injected (and non-serializable) state extensively for codecs and so on.
+// So another option is lazy loading. We should implement setLoader() or something like this, where a closure can be
+// given a recordset and it loads it on demand. We can even have field lazy loading if it works fine. We can combine
+// this with serialization maybe (serialized cached skeleton config, with a single closure to autoload the rest as 
+// needed on demand).
 class Sidekick {
 	protected $schema;
 	
@@ -29,68 +41,69 @@ class Sidekick {
 	
 	public function __construct(SqlSession $sqlSess, Schema $schema) {
 		$this->sqlSess = $sqlSess;
-		$this->schema = $schema->render();		
+		$this->schema = $schema->render();
 	}
 
-	// IMPORTANT: We don't return generated id if you pass multiple rows to insert at once, only when you pass one row.
-	// There are differences in behavior across databases that need to be ironed out, and Sidekick needs work to support
-	// this reliably as well. It seems MySQL returns first id on extended insert, and rest are consecutive:
-	// https://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-configurable.html <-- research depends on lock
-	// settings.
-	function insert($tableName, ...$rows) {
-		$tableSchema = $this->getTableSchema($tableName);
+	// The method is named ugly like this as we're planning an insert() method with a full InsertStatement, which
+	// supports some extra options like deferred insert, extended insert (multiple rows), options for results etc.
+	function insertOne($rsetName, $record, $DO_NOT_SET = 'no more multi-insert') {
+		if ($DO_NOT_SET !== 'no more multi-insert') throw new \Exception('Multiple insert records are no longer supported.');
+		
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
 		$sess = $this->sqlSess;
 		
 		// TODO: Support creating linked rows (inferred from colNamespace) i.e. deep create. We have to consider how to
 		// support also deep update and deep delete before that, for consistency.
-		// TODO: Support returning multiple insert ids, not just last one. Might need to differentiate insert() from
-		// insertMany(). For now people need to call insert() many times if they want all ids.
-		foreach ($rows as $row) {
-			$sql = $this->renderInsertStatement($sess, $tableSchema, ['valuesFields' => $row]);
-			$sess->execute($sql);
-		}
+		// TODO: Support multi-insert, with a switch whether they want lastInsertId for every row or for neither.
+		// There are differences in behavior across databases that need to be ironed out, and Sidekick needs work to support
+		// this reliably as well. It seems MySQL returns first id on extended insert, and rest are consecutive:
+		// https://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-configurable.html <-- research depends on lock
+		// settings. We can always fall back to individual inserts for DB without solid multi-insert with last id support.
+		$sql = $this->renderInsertStatement($sess, $rsetSchema, ['valuesFields' => $record]);
+		$sess->execute($sql);
 		
-		// Note we only return generated id if one passes a single row. This is intentional. Other cases need work.
-		// TODO: Support PgSQL SERIAL type and generated sequences (latter will need extra support in Table::setPK to
-		// specify the sequence name).
-		if (count($rows) == 1 && $tableSchema['pkFieldIsGenerated']) {
-			return $this->decodeGeneratedPK($sess, $tableSchema, $sess->getLastInsertId());
+		if ($rsetSchema['identityField']) {
+			return $this->decodeIdentity($sess, $rsetSchema, $sess->getLastIdentity());
 		}
 	}
 	
-	function update($tableName) {
-		$tableSchema = $this->getTableSchema($tableName);
+	function update($rsetName) {
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
 		$sess = $this->sqlSess;
 		
-		return new UpdateStatement(function ($stmt) use ($tableSchema, $sess) {
-			$sql = $this->renderUpdateStatement($sess, $tableSchema, $stmt);
+		return new UpdateStatement(function ($stmt) use ($rsetSchema, $sess) {
+			$sql = $this->renderUpdateStatement($sess, $rsetSchema, $stmt);
 			return $sess->execute($sql);
 		});
 	}
 	
-	function updateByPK($tableName, $row) {
-		$tableSchema = $this->getTableSchema($tableName);
-		list($where, $set) = $this->splitRowByPK($tableSchema, $row);
-		return $this->update($tableName)->set($set)->where($where)->execute();
+	function updateByPK($rsetName, $record) {
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
+		list($where, $set) = $this->splitRowByPK($rsetSchema, $record);
+		return $this->update($rsetName)->set($set)->where($where)->execute();
 	}
 	
-	function query($tableName) {
-		$tableSchema = $this->getTableSchema($tableName);
+	function query($rsetName) {
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
 		$sess = $this->sqlSess;
 		
-		return new QueryStatement(function ($stmt, $getAll, $column) use ($tableSchema, $sess) {
-			$sql = $this->renderQueryStatement($sess, $tableSchema, $stmt);
+		return new QueryStatement(function ($stmt, $getAll, $fieldOrIndex) use ($rsetSchema, $sess) {
+			$sql = $this->renderQueryStatement($sess, $rsetSchema, $stmt);
 			$resultSet = $sess->query($sql);
 			
+			// TODO: Implement. We can't naively pass this to the resultset as we're selecting fields, not columns. It's doable.
+			// But it'll require extra logic to do efficiently.
+			if ($fieldOrIndex !== null) throw new \Exception('Specifying field/index for getOne() is not implemented currently.');
+			
 			if ($getAll) {
-				$rows = $resultSet->getAll($column);
-				$rows = $this->decodeRows($tableSchema, $stmt['selectFields'], $rows);
+				$rows = $resultSet->getAll($fieldOrIndex);
+				$rows = $this->decodeRows($rsetSchema, $stmt['selectFields'], $rows);
 				
 				return $rows;
 			} else {
-				$row = $resultSet->getOne($column);
+				$row = $resultSet->getOne($fieldOrIndex);
 				if ($row !== null) {
-					$row = $this->decodeRows($tableSchema, $stmt['selectFields'], [$row])[0];
+					$row = $this->decodeRows($rsetSchema, $stmt['selectFields'], [$row])[0];
 				}
 				
 				return $row;
@@ -98,12 +111,12 @@ class Sidekick {
 		});
 	}
 	
-	function queryAndUpdateByPK($tableName) {
-		$tableSchema = $this->getTableSchema($tableName);
+	function queryAndUpdateByPK($rsetName) {
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
 		$sess = $this->sqlSess;
 		
 		// TODO: Wrap in a nested transaction here when SqlSession support them (again).
-		return new QueryAndUpdateByPKStatement(function ($stmt, $mapper) use ($tableName, $tableSchema, $sess) {
+		return new QueryAndUpdateByPKStatement(function ($stmt, $mapper) use ($rsetName, $rsetSchema, $sess) {
 			// We run this in a real/virtual transaction, so we commit & fail atomically.
 			$tid = $sess->begin(null, $sess::TF_VIRTUAL);
 			
@@ -112,14 +125,14 @@ class Sidekick {
 				$stmt['forShare'] = false;
 				$stmt['forUpdate'] = true;
 				
-				$sql = $this->renderQueryStatement($sess, $tableSchema, $stmt);
+				$sql = $this->renderQueryStatement($sess, $rsetSchema, $stmt);
 				
 				// TODO: The get/update loop should stream results for a large number of results, to avoid going out of RAM.
 				$rows = $sess->query($sql)->getAll();
-				$rows = $this->decodeRows($tableSchema, $stmt['selectFields'], $rows);
+				$rows = $this->decodeRows($rsetSchema, $stmt['selectFields'], $rows);
 				
 				foreach ($rows as $row) {
-					$this->updateByPK($tableName, $mapper($row));
+					$this->updateByPK($rsetName, $mapper($row));
 				}
 				
 				$sess->commit($tid);
@@ -131,55 +144,60 @@ class Sidekick {
 		});
 	}
 		
-	function delete($tableName) {
-		$tableSchema = $this->getTableSchema($tableName);
+	function delete($rsetName) {
+		$rsetSchema = $this->getRecordSetSchema($rsetName);
 		$sess = $this->sqlSess;
-			
-		return new DeleteStatement(function ($stmt) use ($tableSchema, $sess) {
-			$sql = $this->renderDeleteStatement($sess, $tableSchema, $stmt);
+		
+		return new DeleteStatement(function ($stmt) use ($rsetSchema, $sess) {
+			$sql = $this->renderDeleteStatement($sess, $rsetSchema, $stmt);
 			return $sess->execute($sql);
 		});
 	}
 	
-	protected function renderInsertStatement(SqlSession $sess, $tableSchema, $stmt) {
+	protected function renderInsertStatement(SqlSession $sess, $rsetSchema, $stmt) {
+		if ($rsetSchema['table'] instanceof Expr) {
+			throw new \Exception('Cannot insert into a record set based on a derived table.');
+		}
+		
 		/*
 		 * Render clauses.
 		 */
 		
-		$mask = SC::S_INSERT;
+		$mask = SC::C_INSERT_STATEMENT;
 		$allowJoins = false;
 		$usedJoins = [];
 		$sqlContext = new SqlContext($sess, $mask, $allowJoins, $usedJoins);
 		
-		// TODO: This should never show up as we don't have an InsertStatement object (yet). Fix the error message if/when we do.
-		if (!$stmt['valuesFields']) throw new \Exception('Please specify the fields to assign via a "values" clause.');
-		
-		$valuesClause = $this->renderValues($sqlContext, $mask, $tableSchema, $stmt['valuesFields']);
+		$valuesClause = $this->renderValues($sqlContext, $mask, $rsetSchema, $stmt['valuesFields']);
 		
 		/*
 		 * Build statement.
 		 */
 		
-		$sql = 'INSERT INTO ' . $sess->encodeIdent($tableSchema['internalName']) . ' ' . $valuesClause;
+		$sql = 'INSERT INTO ' . $sess->encodeName($rsetSchema['table']) . ' ';
+		
+		if ($valuesClause !== null) $sql .= $valuesClause . ' '; else throw new \Exception('Please specify the fields to assign via a "values" clause. You can pass an empty array to insert with all default values.');
+		
 		return $sql;
 	}
 	
-	protected function renderQueryStatement(SqlSession $sess, $tableSchema, $stmt) {
+	protected function renderQueryStatement(SqlSession $sess, $rsetSchema, $stmt) {
 		/*
 		 * Render clauses.
 		 */
 		
-		$mask = SC::S_QUERY;
+		$mask = SC::C_QUERY_STATEMENT;
 		$allowJoins = true;
 		$usedJoins = [];
 		$sqlContext = new SqlContext($sess, $mask, $allowJoins, $usedJoins);
 		
-		if (!$stmt['selectFields']) throw new \Exception('Please specify the fields to read via select().');
+		$selectClause = $this->renderSelect($sqlContext, $mask, $rsetSchema, $stmt['selectFields']);
+		$fromClause = $this->renderFrom($sqlContext, $mask, $rsetSchema['table'], 'this');
+		$joinClause = $this->renderJoin($sqlContext, $mask, $rsetSchema, $usedJoins);
+		$whereClause = $this->renderWhere($sqlContext, $mask, $rsetSchema, $stmt['whereFields']);
+		$orderClause = $this->renderOrder($sqlContext, $mask, $rsetSchema, $stmt['orderFields']);
 		
-		$selectClause = $this->renderSelect($sqlContext, $mask, $tableSchema, $stmt['selectFields']);
-		$whereClause = $stmt['whereFields'] ? $this->renderWhere($sqlContext, $mask, $tableSchema, $stmt['whereFields']) : null;
-		$orderClause = $stmt['orderFields'] ? $this->renderOrder($sqlContext, $mask, $tableSchema, $stmt['orderFields']) : null;
-		$joinClause = $usedJoins ? $this->renderJoin($sqlContext, $mask, $tableSchema, $usedJoins) : null;
+		// FIXME: Add GROUP and HAVING.
 		
 		/*
 		 * Build statement.
@@ -189,9 +207,9 @@ class Sidekick {
 		if ($stmt['distinct']) $sql .= 'DISTINCT ';
 		if ($stmt['distinctRow']) $sql .= 'DISTINCTROW ';
 		
-		$sql .= $selectClause . ' ';
+		if ($selectClause !== null) $sql .= $selectClause . ' '; else throw new \Exception('Please specify the fields to read via select().');
 		
-		$sql .= 'FROM ' . $sess->encodeIdent($tableSchema['internalName']) . ' this ';
+		$sql .= 'FROM ' . $fromClause . ' ';
 		
 		if ($joinClause !== null) $sql .= $joinClause . ' ';
 		if ($whereClause !== null) $sql .= 'WHERE ' . $whereClause . ' ';
@@ -212,38 +230,47 @@ class Sidekick {
 		
 	}
 	
-	protected function renderUpdateStatement(SqlSession $sess, $tableSchema, $stmt) {
+	protected function renderUpdateStatement(SqlSession $sess, $rsetSchema, $stmt) {
+		// TODO: Some situations may allow for updating derived. Research. 
+		if ($rsetSchema['table'] instanceof Expr) {
+			throw new \Exception('Cannot update a record set based on a derived table.');
+		}
+		
 		/*
 		 * Render clauses.
 		 */
 		
-		$mask = SC::S_UPDATE;
+		$mask = SC::C_UPDATE_STATEMENT;
 		$allowJoins = false; // TODO: Support join.
 		$usedJoins = [];
 		$sqlContext = new SqlContext($sess, $mask, $allowJoins, $usedJoins);
 		
-		if (!$stmt['setFields']) throw new \Exception('Please specify the fields to update via set().');
-		
-		$setClause = $this->renderSet($sqlContext, $mask, $tableSchema, $stmt['setFields']);
-		$whereClause = $stmt['whereFields'] ? $this->renderWhere($sqlContext, $mask, $tableSchema, $stmt['whereFields']) : null;
+		$setClause = $this->renderSet($sqlContext, $mask, $rsetSchema, $stmt['setFields']);
+		$whereClause = $this->renderWhere($sqlContext, $mask, $rsetSchema, $stmt['whereFields']);
 		
 		/*
 		 * Build statement.
 		 */
 		
-		$sql = 'UPDATE ' . $sess->encodeIdent($tableSchema['internalName']) . ' this SET ' . $setClause;
+		$sql = 'UPDATE ' . $sess->encodeName($rsetSchema['table']) . ' this SET ';
 		
-		if ($whereClause !== null) $sql .= $whereClause . ' ';
+		if ($setClause !== null) $sql .= $setClause . ' '; else throw new \Exception('Please specify the fields to update via set().');
+		if ($whereClause !== null) $sql .= 'WHERE ' . $whereClause . ' ';
 		
 		return $sql;
 	}
 	
-	protected function renderDeleteStatement(SqlSession $sess, $tableSchema, $stmt) {
+	protected function renderDeleteStatement(SqlSession $sess, $rsetSchema, $stmt) {
+		// TODO: Some situations may allow for deleting from derived. Research. 
+		if ($rsetSchema['table'] instanceof Expr) {
+			throw new \Exception('Cannot delete from a record set based on a derived table.');
+		}
+		
 		/*
 		 * Render clauses.
 		 */
 		
-		$mask = SC::S_DELETE;
+		$mask = SC::C_DELETE_STATEMENT;
 		$allowJoins = false; // TODO: Support join.
 		$usedJoins = [];
 		$sqlContext = new SqlContext($sess, $mask, $allowJoins, $usedJoins);
@@ -251,7 +278,7 @@ class Sidekick {
 		// To avoid deleting full tables by accident. Might remove this.
 		if (!$stmt['whereFields']) throw new \Exception('Please specify the rows to delete via where().');
 		
-		$whereClause = $this->renderWhere($sqlContext, $mask, $tableSchema, $stmt['whereFields']);
+		$whereClause = $this->renderWhere($sqlContext, $mask, $rsetSchema, $stmt['whereFields']);
 		
 		// TODO: Support joins? More specific error?
 		if ($usedJoins) throw new \Exception('A requested field needs joins, and DELETE statement doesn\'t support joins.');
@@ -260,35 +287,43 @@ class Sidekick {
 		 * Build statement.
 		 */
 		
-		$tableEn = $sess->encodeIdent($tableSchema['internalName']);
+		$tableEn = $sess->encodeName($rsetSchema['table']);
 		
-		$sql = 'DELETE FROM ' . $tableEn . ' USING ' . $tableEn . ' this WHERE ' . $whereClause . ' ';
+		$sql = 'DELETE FROM this USING ' . $tableEn . ' this WHERE ' . $whereClause . ' ';
 		
 		return $sql;
 	}
 	
-	protected function renderSelect(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderSelect(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_SELECT;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		if (!$columns) return null;
+		
 		$expr = [];
 		
-		foreach ($fields as $key => $val) {
+		foreach ($columns as $key => $val) {
 			// If the value is null, we render the key as a straight column select:
 			// SELECT `key`.
 			if ($val === null) {
-				$expr[] = $sqlContext->encodeIdent($key, true);
+				$expr[] = $sqlContext->encodeName($key, true);
 			} 
 			
 			// If the value is a string, we render as an alias:
 			// SELECT `val` AS `key`.
 			elseif (is_string($val)) {
-				$expr[] = $sqlContext->encodeIdent($val, true) . ' AS ' . $sqlContext->encodeIdent($key);
+				// We detect constructs like "sameName" => "alias.sameName" as we can render it without an explicit alias.
+				// TODO: Optimize this. We can do it w/o regex (if faster).
+				if (preg_match('(\w+\.' . preg_quote($key) . ')', $val)) {
+					$expr[] = $sqlContext->encodeName($val, true);
+				} else {				
+					$expr[] = $sqlContext->encodeName($val, true) . ' AS ' . $sqlContext->encodeName($key);
+				}
 			}
 			
 			// If the value is an expression, we render it and assign the result the key as an alias (subject is null):
 			// SELECT expr AS `key`.
 			elseif ($val instanceof Expr) {
-				$expr[] = $val->render($sqlContext, null) . ' AS ' . $sqlContext->encodeIdent($key);
+				$expr[] = $val->render($sqlContext, null) . ' AS ' . $sqlContext->encodeName($key);
 			}
 			
 			else {
@@ -300,21 +335,23 @@ class Sidekick {
 		return implode(', ', $expr);
 	}
 	
-	protected function renderWhere(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderWhere(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_WHERE;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		if (!$columns) return null;
+		
 		$expr = [];
 		
-		foreach ($fields as $key => $val) {
+		foreach ($columns as $key => $val) {
 			// Scalars and null produce a basic ident-to-value equality comparison:
 			// WHERE `key` = "val"
 			if ($val === null || is_scalar($val)) {
-				$expr[] = $sqlContext->encodeIdent($key, true) . ' = ' . $sqlContext->encodeValue($val);
+				$expr[] = $sqlContext->encodeName($key, true) . ' = ' . $sqlContext->encodeValue($val);
 			} 
 			
 			// Expressions are rendered with the key encoded as an identifier for subject.
 			elseif ($val instanceof Expr) {
-				$expr[] = $val->render($sqlContext, $sqlContext->encodeIdent($key, true));
+				$expr[] = $val->render($sqlContext, $sqlContext->encodeName($key, true));
 			} 
 			
 			else {
@@ -326,44 +363,47 @@ class Sidekick {
 		return implode(' AND ', $expr);
 	}
 	
-	protected function renderGroup(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderGroup(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_GROUP;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		if (!$columns) return null;
 		
 		$mask = $maskPrev;
 		throw new \Exception('Pending implementation...');
 	}
 	
-	protected function renderHaving(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderHaving(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_HAVING;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
 		
 		$mask = $maskPrev;
 		throw new \Exception('Pending implementation...');
 	}
 	
-	protected function renderOrder(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderOrder(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_ORDER;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		if (!$columns) return null;
+		
 		$expr = [];
 		
-		foreach ($fields as $key => $val) {
+		foreach ($columns as $key => $val) {
 			// If the value is null or string ASC, we render a simple order-by-ident expression (null is same as ASC):
 			// ORDER BY `key` val.
 			if ($val === null || $val === 'ASC') {
-				$expr[] = $sqlContext->encodeIdent($key, true);
+				$expr[] = $sqlContext->encodeName($key, true);
 			} 
 			
 			// And similar for DESC:
 			// ORDER BY `key` DESC.
-			elseif ($val ==='DESC') {
-				$expr[] = $sqlContext->encodeIdent($key, true) . ' DESC';
+			elseif ($val === 'DESC') {
+				$expr[] = $sqlContext->encodeName($key, true) . ' DESC';
 			}
 			
 			// If the value is an expression, we render it and give it the encoded key as subject:
 			// SELECT expr AS `key`.
 			elseif ($val instanceof Expr) {
-				$expr[] = $val->render($sqlContext, $sqlContext->encodeIdent($key, true));
+				$expr[] = $val->render($sqlContext, $sqlContext->encodeName($key, true));
 			}
 			
 			else {
@@ -376,14 +416,19 @@ class Sidekick {
 	}
 	
 	// TODO: Extended insert?
-	protected function renderValues(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderValues(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_VALUES;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		
+		// TRICKY: We explicitly check for null, as empty array is allowed (generates INSERT INTO ... DEFAULT VALUES).
+		if ($columns === null) return null; 
+		if (!$columns) return $sqlContext->getServerType() === 'mysql' ? 'VALUES ()' : 'DEFAULT VALUES';
+		
 		$cols = [];
 		$vals = [];
 		
-		foreach ($fields as $key => $val) {
-			$cols[] = $sqlContext->encodeIdent($key);
+		foreach ($columns as $key => $val) {
+			$cols[] = $sqlContext->encodeName($key, true);
 				
 			// If the value is a scalar or null it's rendered as a simple col-set-to-value (null becomes SQL NULL):
 			// (`key`, ...) VALUES ("value", ...)
@@ -394,7 +439,7 @@ class Sidekick {
 			// If the value is an expression, we render it and give it the encoded key as subject (typically ignored):
 			// (`key`, ...) VALUES (expr, ...)
 			elseif ($val instanceof Expr) {
-				$expr[] = $val->render($sqlContext, $sqlContext->encodeIdent($key));
+				$vals[] = $val->render($sqlContext, $sqlContext->encodeName($key, true));
 			}
 			
 			else {
@@ -402,27 +447,30 @@ class Sidekick {
 			}
 		}
 		
+		//var_dump(['VALUES' => $fields, 'SQL' => [$columns, $cols, $vals]]);
 		$mask = $maskPrev;
 		return '(' . implode(', ', $cols) . ') VALUES (' . implode(', ', $vals) . ')';
 	}
 	
-	protected function renderSet(SqlContext $sqlContext, & $mask, $tableSchema, $fields) {
+	protected function renderSet(SqlContext $sqlContext, & $mask, $rsetSchema, $fields) {
 		$maskPrev = $mask; $mask |= SC::C_SET;
-		$fields = $this->encodeClause($sqlContext, $tableSchema, $fields);
+		$columns = $this->encodeClause($sqlContext, $rsetSchema, $fields);
+		if (!$columns) return null;
+		
 		$expr = [];
 		
-		foreach ($fields as $key => $val) {
+		foreach ($columns as $key => $val) {
 			// If the value is a scalar or null it's rendered as a simple col-set-to-value (null becomes SQL NULL):
 			// SET `key` = "value"
 			if ($val === null || is_scalar($val)) {
-				$vals[] = $sqlContext->encodeIdent($key, true) . ' = ' . $sqlContext->encodeValue($val);
+				$expr[] = $sqlContext->encodeName($key, true) . ' = ' . $sqlContext->encodeValue($val);
 			} 
 			
 			// If the value is an expression, we render it as a col-set-to-expression and give it the encoded key as
 			// subject (typically ignored):
 			// SET `key` = expr
 			elseif ($val instanceof Expr) {
-				$expr[] = $sqlContext->encodeIdent($key, true) . ' = ' . $val->render($sqlContext, null);
+				$expr[] = $sqlContext->encodeName($key, true) . ' = ' . $val->render($sqlContext, null);
 			}
 			
 			else {
@@ -431,43 +479,49 @@ class Sidekick {
 		}
 		
 		$mask = $maskPrev;
-		return implode(' ', $expr);
+		return implode(', ', $expr);
 	}
 	
-	protected function renderJoin(SqlContext $sqlContext, & $mask, $tableSchema, $usedJoins) {
+	// FIXME: Doesn't trigger the record handler, it should. We should figure out a consistent $columnsOut format first.
+	protected function renderJoin(SqlContext $sqlContext, & $mask, $rsetSchema, $usedJoins) {
+		if (!$usedJoins) return null;
+		
 		$maskPrev = $mask; $mask |= SC::C_JOIN;
+		
 		$expr = [];
-		$joins = $tableSchema['joins'];
+		$joins = $rsetSchema['joins'];
 		
 		foreach ($usedJoins as $joinAlias => $nothing) {
 			if (!isset($joins[$joinAlias])) throw new \Exception('The statement refers to non-existing join alias "' . $joinAlias . '".');
 			
-			list($tableName, $condition) = $joins[$joinAlias];
+			list($type, $table, $condition) = $joins[$joinAlias];
 			
-			$join = 'JOIN ' . $sqlContext->encodeIdent($tableName) . ' ' . $sqlContext->encodeIdent($joinAlias) . ' ON ';
+			$join = $type . ' JOIN ' . $this->renderFrom($sqlContext, $maskPrev, $table, $joinAlias) . ' ';
 			
-			if ($condition instanceof Expr) {
-				$join .= $condition->render($sqlContext, null);
-			} else {
-				$matches = [];
-				
-				// TODO: Support columns with table aliases here that can trigger a join (recursive join conditions).
-				// For now we assume keys implicitly refer to the root table ("this") and the values refer to the newly
-				// joined table.
-				$thisEn = $sqlContext->encodeIdent('this');
-				$thatEn = $sqlContext->encodeIdent($joinAlias);
-				
-				// Should we support [$key => new Expr()]? Probably. For now, we don't.
-				foreach ($condition as $key => $val) {
-					if (is_int($key)) {
-						$valEn = $sqlContext->encodeIdent($val);
-						$matches[] = $thisEn . '.' . $valEn . ' = ' . $thatEn . '.' . $valEn;
-					} else {
-						$matches[] = $thisEn . '.' . $sqlContext->encodeIdent($key) . ' = ' . $thatEn . '.' . $sqlContext->encodeIdent($val);
+			if ($type !== 'CROSS' || $type !== 'NATURAL') {
+				if ($condition instanceof Expr) {
+					$join .= $condition->render($sqlContext, null);
+				} else {
+					$matches = [];
+					
+					// TODO: Support columns with table aliases here that can trigger a join (recursive join conditions).
+					// For now we assume keys implicitly refer to the root table ("this") and the values refer to the newly
+					// joined table.
+					$thisEn = $sqlContext->encodeName('this');
+					$thatEn = $sqlContext->encodeName($joinAlias);
+					
+					// Should we support [$key => new Expr()]? Probably. For now, we don't.
+					foreach ($condition as $key => $val) {
+						if (is_int($key)) {
+							$valEn = $sqlContext->encodeName($val);
+							$matches[] = $thisEn . '.' . $valEn . ' = ' . $thatEn . '.' . $valEn;
+						} else {
+							$matches[] = $thisEn . '.' . $sqlContext->encodeName($key) . ' = ' . $thatEn . '.' . $sqlContext->encodeName($val);
+						}
 					}
+					
+					$join .= 'ON ' . implode(' ', $matches);
 				}
-				
-				$join .= implode(' ', $matches);
 			}
 			
 			$expr[] = $join;
@@ -477,138 +531,185 @@ class Sidekick {
 		return implode(' ', $expr);
 	}
 	
-	protected function encodeClause(SqlContext $sqlContext, $tableSchema, $fieldsIn) {
-		$handlers = $this->getHandlersFor($sqlContext->getMask(), $tableSchema, $fieldsIn);
-		$fieldsOut = [];
+	// FIXME: Doesn't trigger the record handler, it should. We should figure out a consistent $columnsOut format first.
+	protected function renderFrom(SqlContext $sqlContext, & $mask, $table, $alias = null) {
+		$maskPrev = $mask; $mask |= SC::C_FROM;
 		
-		/* @var FieldHandler $handler */
-		foreach ($handlers as $handler) {
-			$handler->encodeClause($sqlContext, $fieldsIn, $fieldsOut); 
+		if ($table instanceof Expr) {
+			$sql = '(' . $table->render($sqlContext, null) . ')';
+		} else {
+			if ($table === $alias) $alias = null; // This happens sometimes, we can eliminate the alias when it does.
+			$sql = $sqlContext->encodeName($table);
 		}
 		
-		// TODO: We should allow this in some circumstances (say handlers which compute fields entirely "offline", or
-		// use cache etc.), but for now we place this restriction that if fields are present, output should be as well,
-		// because the render*() methods logic is not prepared to handle this situation, resulting in malformed queries.
-		if (!$fieldsOut) {
-			throw new \Exception('The field handlers produced no output for ' . InternalUtils::contextMaskToString($sqlContext->getMask()) . '.');
+		if ($alias !== null) {
+			if ($alias === 'this') $sql .= ' this';
+			else $sql .= ' ' . $sqlContext->encodeName($alias);
 		}
 		
-		return $fieldsOut;
+		$mask = $maskPrev;
+		return $sql;
 	}
 	
-	protected function decodeRows($tableSchema, $selectedFields, $rowsIn) {
-		$handlers = $this->getHandlersFor(0, $tableSchema, $selectedFields);
-		$rowsOut = [];
+	protected function encodeClause(SqlContext $sqlContext, $rsetSchema, $fieldsIn) {
+		$mask = $sqlContext->getMask();
+		$columnsOut = [];
 		
-		/* @var FieldHandler $handler */
-		foreach ($handlers as $handler) {
-			$handler->decodeRows($selectedFields, $rowsIn, $rowsOut);
+		// TODO: Optimize?
+		if (isset($rsetSchema['recordCodec'])) {
+			/* @var $recordCodec Codec */
+			$recordCodec = $rsetSchema['recordCodec'];
+			
+			if (($recordCodec->getMask() & $mask) === $mask) {
+				$recordCodec->encodeClause($sqlContext, $fieldsIn, $columnsOut);
+			}
 		}
 		
-		return $rowsOut;
+		if ($fieldsIn) {
+			$codecs = $this->getCodecsFor($mask, $rsetSchema, $fieldsIn);
+			
+			/* @var Codec $codec */
+			foreach ($codecs as $codec) {
+				$codec->encodeClause($sqlContext, $fieldsIn, $columnsOut); 
+			}
+		}
+		
+		return $columnsOut;
 	}
 	
-	protected function decodeGeneratedPK(SqlContext $sqlContext, $tableSchema, $generatedValue) {
-		// This method performs a slightly awkward dance, simulating a user selecting the generated PK field, then
-		// satisfying it through the LAST INSERT ID we already have, so we can decode it through the handlers.
-		// The end result is we have the id the user wants to have returned after executing an insert.
+	protected function decodeRows($rsetSchema, $selectedFields, $rowsIn) {
+		$recordsOut = [];
 		
-		// For composite PK we take the first col for now, support for more needs research.
-		$generatedFieldName = $tableSchema['pkFields'][0];
+		if ($selectedFields) {
+			$codecs = $this->getCodecsFor(0, $rsetSchema, $selectedFields);
+		
+			/* @var Codec $codec */
+			foreach ($codecs as $codec) {
+				$codec->decodeRows($selectedFields, $rowsIn, $recordsOut);
+			}
+		}
+	
+		// TODO: Optimize? We can have a flag for this in the mask which is used only for decoding (for all codecs).
+		if (isset($rsetSchema['recordCodec'])) {
+			/* @var $recordCodec Codec */
+			$recordCodec = $rsetSchema['recordCodec'];
+			$recordCodec->decodeRows($selectedFields, $rowsIn, $recordsOut);
+		}
+		
+		return $recordsOut;
+	}
+	
+	// FIXME: We don't trigger the record handler while decoding identity. Should we? Decide and document.
+	protected function decodeIdentity(SqlSession $sqlSession, $rsetSchema, $identityValue) {
+		$identityFieldName = $rsetSchema['identityField'];
+		$identityColumnName = $rsetSchema['identityColumn'];
+		
+		// TODO: This kind of processing is seen frequently in both Sidekick and Codec instances. It should be moved to
+		// a public Utils class (with option whether we want the col to have table alias in, stripped, or stripped if 
+		// 'this' only).
+		if ($identityColumnName === null) {
+			$identityColumnName = $identityFieldName;
+		} else {
+			$pos = strpos($identityColumnName, '.');
+			if ($pos !== false) $identityColumnName = substr($identityColumnName, $pos + 1);
+		}
 		
 		// TODO: This kind of checking should be moved to the config.
-		if (!isset($tableSchema['fieldIndex'][$generatedFieldName])) {
-			throw new \Exception('Primary key column "' . $generatedFieldName . '" is not in the list of defined public fields.');
+		if (!isset($rsetSchema['fieldIndex'][$identityFieldName])) {
+			throw new \Exception('Identity field "' . $identityFieldName . '" is not in the list of defined public fields.');
 		}
 		
-		$handlerIndex = $tableSchema['fieldIndex'][$generatedFieldName];
+		/* @var Codec $codec */
+		$codecIndex = $rsetSchema['fieldIndex'][$identityFieldName];
+		$codec = $rsetSchema['fieldConfigs'][$codecIndex];
+		$fieldsIn = [$identityFieldName => null];
+		$name = $rsetSchema['name'];
 		
-		/* @var FieldHandler $handler */
-		$handler = $tableSchema['fieldHandlers'][$handlerIndex][2];
-		$fieldsIn = [$generatedFieldName => null];
-		$fieldsOut = [];
-		$handler->encodeClause($sqlContext, $fieldsIn, $fieldsOut);
+		// We simulate a select query result set for the column we have.
+		$rowsIn = [[$identityColumnName => $identityValue]];
+		$recordsOut = [];
+		$codec->decodeRows($fieldsIn, $rowsIn, $recordsOut);
 		
-		// We only support the basic scenario where the PK is mapped to a select of a single simple column, so we check
-		// if that's what the handler produced.
-		if (count($fieldsOut) != 1 || reset($fieldsOut) !== null) {
-			// TODO: Word this error message better.
-			throw new \Exception('The handler for the given generated PK field "" produced a complex select clause that we don\'t support for decoding generated PK from an insert statement.');
+		if (!isset($recordsOut[0][$identityFieldName])) {
+			// This shouldn't occur, unless the codec is buggy, but it's best to be clear.
+			throw new \Exception('The codec for the identity field didn\'t produce a row containing it.');
 		}
 		
-		$internalFieldName = key($fieldsOut); // We select first key after the reset() above.
-		
-		// We simulate a select query for the column specified in $fieldsOut, with one row in the result set.
-		$rowsIn = [[$internalFieldName => $generatedValue]];
-		$rowsOut = [];
-		$handler->decodeRows($fieldsIn, $rowsIn, $rowsOut);
-		
-		if (!isset($rowsOut[0][$generatedFieldName])) {
-			// This shouldn't occur, unless the handler is buggy, but it's best to be clear.
-			throw new \Exception('The handler for the generated PK field didn\'t produce a row containing it.');
-		}
-		
-		return $rowsOut[0][$generatedFieldName];
+		return $recordsOut[0][$identityFieldName];
 	}
 	
-	// $mask is 0 when fetching handlers for decodeRows() only.
-	protected function getHandlersFor($mask, $tableSchema, $fields) {
-		$fieldHandlers = $tableSchema['fieldConfigs'];
-		$fieldIndex = $tableSchema['fieldIndex'];
-		$selectedHandlers = [];
+	protected function getCodecsFor($mask, $rsetSchema, $fields) {
+		$fieldCodecs = $rsetSchema['fieldConfigs'];
+		$fieldIndex = $rsetSchema['fieldIndex'];
+		$selectedCodecs = [];
 		
 		foreach ($fields as $field => $value) {
 			if (isset($fieldIndex[$field])) {
 				$index = $fieldIndex[$field];
 				
-				if (!isset($selectedHandlers[$index])) {
-					$handler = $fieldHandlers[$index];
-					$handlerMask = $handler->getMask();
+				if (!isset($selectedCodecs[$index])) {
+					$codec = $fieldCodecs[$index];
+					$codecMask = $codec->getMask();
 					
-					if ($mask && ($handlerMask & $mask) == 0) {
+					// $mask is null when fetching codecs for decodeRows() only.
+					if ($mask !== null && ($codecMask & $mask) !== $mask) {
+						// TODO: Be more specific which part of the mask doesn't match (clause or statement).
 						throw new \Exception(
-							'Handler for field "' . $field . '" in table ' . 
-							$this->tableNameForDisplay($tableSchema) . ' is not designed to be used in context: ' . InternalUtils::contextMaskToString($mask) . '.'
+							'Codec for field "' . $field . '" in record set ' . 
+							$this->rsetNameForDisplay($rsetSchema) . ' is not designed to be used in context: ' . CodecUtils::contextMaskToString($mask) . '.'
 						);
 					}
 					
-					$selectedHandlers[$index] = $handler;
+					$selectedCodecs[$index] = $codec;
 				}
 			} else {
 				throw new \Exception(
-					'Undeclared field "' . $field . '" for table ' . 
-					$this->tableNameForDisplay($tableSchema) . '.'
+					'Undeclared field "' . $field . '" for record set ' . 
+					$this->rsetNameForDisplay($rsetSchema) . '.'
 				);
 			}
 		}
-		return $selectedHandlers;
+		
+		return $selectedCodecs;
 	}
 	
-	protected function splitRowByPK($tableSchema, $row) {
-		if ($tableSchema['pkFields'] === null) throw new \Exception('The operation cannot be performed as table ' . $tableSchema['name'] . ' has no defined primary key column(s).');
+	protected function splitRowByPK($rsetSchema, $record) {
+		$pkFieldSets = $rsetSchema['pkFieldSets'];
 		
-		// TODO: Support composite PK.
-		if (count($tableSchema['pkFields'] === null) > 1) throw new \Exception('No support for composite PK yet.');
-		
-		$pkFields = $tableSchema['pkFields'];
-		$pkFirstField = $pkFields[0];
-		
-		if (isset($row[$pkFirstField]) || key_exists($pkFirstField, $row)) {
-			$pkValue = $row[$pkFirstField];
-			unset($row[$pkFirstField]);
-			return [[$pkFirstField => $pkValue], $row];
+		if ($pkFieldSets === null) {
+			throw new \Exception('The operation cannot be performed as record set ' . $this->rsetNameForDisplay($rsetSchema) . ' has no defined primary key column(s).');
 		}
+		
+		$pk = [];
+		
+		// TODO: We can possibly optimize this when we have an identity col only (not even produce the $pkFieldSets in config)?
+		foreach ($pkFieldSets as $pkFieldSet) {
+			foreach ($pkFieldSet as $pkField) {
+				if (isset($record[$pkField]) || key_exists($pkField, $record)) {
+					$pk[$pkField] = $record[$pkField];
+					unset($record[$pkField]);
+				} else {
+					$pk = [];
+					continue 2;
+				}
+			}
+			
+			if ($pk) return [$pk, $record];
+		}
+		
+		throw new \Exception('The operation cannot be performed as the given record(s) for record set ' . $this->rsetNameForDisplay($rsetSchema) . ' don\'t contain a valid set of fields specifying the full primary key.');
 	}
 	
-	protected function getTableSchema($tableName) {
-		if (!isset($this->schema['tables'][$tableName])) throw new \Exception('Table name ' . $tableName . ' is not defined in the given schema.');
-		return $this->schema['tables'][$tableName];
+	protected function getRecordSetSchema($rsetName) {
+		if (!isset($this->schema['recordSets'][$rsetName])) throw new \Exception('Record set name ' . $rsetName . ' is not defined in the given schema.');
+		return $this->schema['recordSets'][$rsetName];
 	}
 	
-	protected function tableNameForDisplay($tableSchema) {
-		$exName = $tableSchema['name'];
-		$inName = $tableSchema['internalName'];
-		if ($exName !== $inName) $name = '"' . $exName . '" ("' . $inName . '")'; else $name = '"' . $exName . '"';
+	protected function rsetNameForDisplay($rsetSchema) {
+		$rsetName = '"' . $rsetSchema['name'] . '"';
+		$table = $rsetSchema['table'];
+		$tableName = $table instanceof Expr ? 'derived table' : 'table "' . $table . '"';
+		if ($rsetName !== $tableName) $name = $rsetName . ' (' . $tableName . ')'; else $name = $rsetName;
 		return $name;
 	}
 	

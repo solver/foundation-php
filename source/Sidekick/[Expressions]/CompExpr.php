@@ -13,8 +13,6 @@
  */
 namespace Solver\Sidekick;
 
-use Solver\Sql\SqlSession;
-
 /**
  * Supports a set of basic comparison operators. A bit of a stand-in, until we have a more comprehensive solution for
  * building complex expressions in Sidekick. 

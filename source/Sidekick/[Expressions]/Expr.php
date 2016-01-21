@@ -13,6 +13,9 @@
  */
 namespace Solver\Sidekick;
 
+// TODO: Because not all expressions have a subject, and transformed() applies only for values that interact with the 
+// subject we probably need to have a separate interface ExprWithSubject { transformed(); renderWithSubject(); } and 
+// have this one be just render(SqlContext $sql): string, w/o transformed() and $subject.
 interface Expr {
 	/**
 	 * Returns a clone of the expression, with every value it holds processed through the given closure.

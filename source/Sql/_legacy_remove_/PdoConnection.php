@@ -119,7 +119,7 @@ abstract class PdoConnection implements Connection
 	
 	
 	/**
-	 * Stores the proper valid last insert id for MySQL/SQLite. See getLastId().
+	 * Stores the proper valid last insert id for MySQL/SQLite. See getLastIdentity().
 	 * 
 	 * @var int
 	 */
@@ -419,7 +419,7 @@ abstract class PdoConnection implements Connection
 	}
 	
 	
-	public function getLastId($safeFetch = false) 
+	public function getLastIdentity($safeFetch = false) 
 	{
 		if ($this->serverName == 'mysql') {
 			if ($this->handle === null) $this->open();

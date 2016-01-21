@@ -31,6 +31,9 @@ class InExpr implements Expr {
 	 * @see \Solver\Sidekick\Expr::render()
 	 */
 	public function render(SqlContext $sqlContext, $subject) {
-		return $subject . ' IN ' . ' (' . implode(', ', $sqlContext->encodeValue($this->valueList)) . ')';
+		$valuesEn = $this->valueList;
+		foreach ($valuesEn as & $v) $sqlContext->encodeValue($v); unset($v);
+		
+		return $subject . ' IN ' . ' (' . implode(', ', $valuesEn) . ')';
 	}
 }

@@ -15,15 +15,11 @@ namespace Solver\Logging;
 
 // TODO: Document.
 interface StatusLog extends Log {
-	const ERROR_LABEL = 'error';
-	const WARNING_LABEL = 'warning';
-	const INFO_LABEL = 'info';
-	const SUCCESS_LABEL = 'success';
-	
-	const ERROR_FLAG = 1;
-	const WARNING_FLAG = 2;
-	const INFO_FLAG = 4;
-	const SUCCESS_FLAG = 8;
+	// We use bit flags for the mask, and string labels for the actual events. TODO: Switch entirely to ints? Consider.
+	const T_ERROR = 1;
+	const T_WARNING = 2;
+	const T_INFO = 4;
+	const T_SUCCESS = 8;
 	
 	/**
 	 * StatusLog implementations should prefer this as a default event type mask, unless they have specific reasons to
@@ -31,15 +27,15 @@ interface StatusLog extends Log {
 	 * 
 	 * @var int
 	 */
-	const DEFAULT_MASK = self::ERROR_FLAG | self::WARNING_FLAG | self::INFO_FLAG | self::SUCCESS_FLAG;
+	const T_DEFAULT = self::T_ERROR | self::T_WARNING | self::T_INFO | self::T_SUCCESS;
 	
 	/**
-	 * A mask including the flags for supported status event types. Currently matches DEFAULT_MASK, but in the future
+	 * A mask including the flags for supported status event types. Currently matches T_DEFAULT, but in the future
 	 * they might diverge. Use the semantically correct constant for your use case.
 	 *  
 	 * @var int
 	 */
-	const FULL_MASK = self::DEFAULT_MASK;
+	const T_ALL = self::T_DEFAULT;
 	
 	/**
 	 * Returns the bit flag mask for the event types the log will record. See the *_FLAG constants.

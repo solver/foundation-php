@@ -84,7 +84,7 @@ class ObjectFromValueFormat implements Format, FastAction {
 			}
 		}
 		
-		if ($mask & SL::ERROR_FLAG) {
+		if ($mask & SL::T_ERROR) {
 			ITU::addErrorTo($events, $path, 'Please provide a valid primitive value type.');	
 		}
 		

@@ -22,11 +22,11 @@ class QueryStatement extends AbstractStatement {
 		$this->finalize = $finalize;
 	}
 	
-	function getOne($col = null) {
-		return $this->finalize->__invoke($this->render(), false, $col);
+	function getOne($fieldOrIndex = null) {
+		return $this->finalize->__invoke($this->render(), false, $fieldOrIndex);
 	}
 	
-	function getAll($col = null) {
-		return $this->finalize->__invoke($this->render(), true, $col);
+	function getAll($fieldOrIndex = null) {
+		return $this->finalize->__invoke($this->render(), true, $fieldOrIndex);
 	}
 }

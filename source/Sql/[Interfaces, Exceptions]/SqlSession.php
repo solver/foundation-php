@@ -85,6 +85,20 @@ interface SqlSession {
 	public function close();
 	
 	/**
+	 * Returns the RDBMS type as an all-lowercase string. Here are the recommended values for popular SQL databases:
+	 * 
+	 * - MySQL: "mysql" (also for MariaDB)
+	 * - PostgreSQL: "pgsql"
+	 * - SQLite: "sqlite"
+	 * - Oracle DB: "oracle"
+	 * - Microsoft SQL Server: "mssql"
+	 *
+	 * @return string
+	 */
+	public function getServerType();
+	
+	
+	/**
 	 * Runs a query, returns a result set object.
 	 * 
 	 * @param string $sql
@@ -108,14 +122,21 @@ interface SqlSession {
 	public function execute($sql);
 	
 	/**
-	 * Returns the last insert id from an insert command passed to execute() for the current connection.
+	 * Returns the last value generated as row identity in an insert command for the current connection.
 	 * 
-	 * TODO: This should be a separate interface. Also, rename to getLastSerial?
+	 * TODO: We might need to move this to another interface. Some connection require passing a table, some don't
+	 * support passing a table. Research.
+	 * 
+	 * Known as:
+	 * 
+	 *  - "Auto-increment" column in MySQL and SQLite.
+	 *  - "Serial" column in PostgreSQL.
+	 *  - "Identity" column in SQL Server and Oracle.
 	 * 
 	 * @return string|int
 	 * Last insert id, or 0 if there is none.
 	 */
-	public function getLastInsertId(); 
+	public function getLastIdentity();
 	
 	/**
 	 * Encodes a value for use as an SQL literal. It has the following enhancements over the typical quote() method 
@@ -139,7 +160,7 @@ interface SqlSession {
 	 * Encodes a string as an SQL identifier. Ensures the identifier escapes illegal characters and doesn't collide with
 	 * SQL keywords.
 	 * 
-	 * @param string $ident
+	 * @param string $name
 	 * String identifier to encode.
 	 * 
 	 * @param bool $respectDots
@@ -150,7 +171,7 @@ interface SqlSession {
 	 * @return string
 	 * Encoded identifier.
 	 */
-	public function encodeIdent($ident, $respectDots = false);
+	public function encodeName($name, $respectDots = false);
 	
 	/**
 	 * Begins an SQL transaction.
@@ -174,7 +195,7 @@ interface SqlSession {
 	 * comments on the self::TF_* constants for more information.
 	 * 
 	 * @return mixed
-	 * Returns a transaction id which you need to pass to commit() or rollback().
+	 * Returns a non-null transaction id which you need to pass to commit() or rollback().
 	 */
 	public function begin($isolation = null, $fulfillment = null);
 	

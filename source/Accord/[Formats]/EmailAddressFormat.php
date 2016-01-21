@@ -45,7 +45,7 @@ class EmailAddressFormat implements Format, FastAction {
 		
 		badEmail:
 			
-		if ($mask && SL::ERROR_FLAG) ITU::addErrorTo($events, $path, 'Please fill in a valid email address.');
+		if ($mask && SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please fill in a valid email address.');
 		$output = null; 
 		return null;
 	}

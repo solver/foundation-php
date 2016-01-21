@@ -17,10 +17,10 @@ namespace Solver\Sidekick;
  * This expression type simply renders the string given to the constructor. The subject parameter is ignored.
  * 
  * It's *highly* recommended to avoid raw expressions when using a preconfigured Sidekick as a repository. This class
- * is intended to be used in field handlers (FieldHandler) and other handlers that belong strictly to the Sidekick
+ * is intended to be used in field handlers (Codec) and other handlers that belong strictly to the Sidekick
  * schema and configuration.
  */
-interface RawExpr {
+class RawExpr implements Expr {
 	protected $stringExpr;
 	
 	public function __construct($stringExpr) {

@@ -28,6 +28,6 @@ interface ColumnExpr {
 	}
 	
 	function render(SqlContext $sqlContext, $subject) {
-		return $subject . ' = ' . $sqlContext->encodeColumn($this->identName);
+		return $subject . ' = ' . $sqlContext->encodeName($this->identName);
 	}
 }

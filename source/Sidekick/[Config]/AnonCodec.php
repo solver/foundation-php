@@ -13,23 +13,23 @@
  */
 namespace Solver\Sidekick;
 
-class AnonFieldHandler implements FieldHandler {
+class AnonCodec implements Codec {
 	protected $mask, $fields, $encodeClause, $decodeRows;
 	
 	/**
 	 * @param int $mask
 	 * The value to be returned by getMask().
 	 * 
-	 * @param string[] $fields
-	 * The value to be returned by getHandledFields().
+	 * @param string[]|null $fields
+	 * The value to be returned by getFields(). Can be null for global handlers.
 	 * 
 	 * @param \Closure|null $encodeClause
 	 * Closure implementing encodeClause(), or null if you don't want to define this method. If Sidekick invokes this
-	 * method and you have passed null, AnonField will throw an exception.
+	 * method and you have passed null, AnonCodec silently does nothing.
 	 * 
 	 * @param \Closure|null $decodeRows
 	 * Closure implementing decodeRows(), or null if you don't want to define this method. If Sidekick invokes this
-	 * method and you have passed null, AnonField will throw an exception.
+	 * method and you have passed null, AnonCodec silently does nothing.
 	 */
 	public function __construct($mask, $fields, $encodeClause, $decodeRows) {
 		$this->mask = $mask;
@@ -40,7 +40,7 @@ class AnonFieldHandler implements FieldHandler {
 	
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sidekick\FieldHandler::getMask()
+	 * @see \Solver\Sidekick\Codec::getMask()
 	 */
 	public function getMask() {
 		return $this->mask;
@@ -48,33 +48,29 @@ class AnonFieldHandler implements FieldHandler {
 
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sidekick\FieldHandler::getHandledFields()
+	 * @see \Solver\Sidekick\Codec::getFields()
 	 */
-	public function getHandledFields() {
+	public function getFields() {
 		return $this->fields;
 	}
 
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sidekick\FieldHandler::encodeClause()
+	 * @see \Solver\Sidekick\Codec::encodeClause()
 	 */
 	public function encodeClause(SqlContext $sqlContext, $fieldsIn, & $columnsOut) {
 		if ($this->encodeClause) {
 			return $this->encodeClause->__invoke($sqlContext, $fieldsIn, $columnsOut);
-		} else {
-			throw new \Exception('Method encodeClause() is not defined.');
 		}
 	}
 	
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sidekick\FieldHandler::decodeRows()
+	 * @see \Solver\Sidekick\Codec::decodeRows()
 	 */
 	public function decodeRows($selectedFields, $rowsIn, & $recordsOut) {
 		if ($this->decodeRows) {
 			return $this->decodeRows->__invoke($selectedFields, $rowsIn, $recordsOut);
-		} else {
-			throw new \Exception('Method decodeRows() is not defined.');
 		}
 	}
 }

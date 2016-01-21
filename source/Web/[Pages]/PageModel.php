@@ -79,7 +79,7 @@ class PageModel extends DataBox implements StatusMemoryLog {
 	}
 
 	public static function getMask() {
-		return StatusLog::DEFAULT_MASK;
+		return StatusLog::T_DEFAULT;
 	}
 	
 	public static function log(array ...$events) {

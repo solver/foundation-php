@@ -123,8 +123,8 @@ class LogUtils {
 	
 	public static function getPathMapFilter(array $map) {
 		// TODO: Move the logic here from applyPathMap so we can compile the map once, then reuse it.
-		return function () use ($map) {
-			
+		return function ($events) use ($map) {
+			return self::applyPathMapFilter($events, $map);
 		};
 	}
 	

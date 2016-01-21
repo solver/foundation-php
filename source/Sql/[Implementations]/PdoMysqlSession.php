@@ -23,12 +23,20 @@ class PdoMysqlSession extends PdoSession {
 	
 	/**
 	 * {@inheritDoc}
-	 * @see \Solver\Sql\SqlSession::encodeIdent()
+	 * @see \Solver\Sql\SqlSession::getServerType()
 	 */
-	public function encodeIdent($identifier, $respectDots = false) {
+	public function getServerType() {
+		return 'mysql';
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * @see \Solver\Sql\SqlSession::encodeName()
+	 */
+	public function encodeName($name, $respectDots = false) {
 		return $respectDots 
-			? '`' . \str_replace(['`', '.'], ['``', '`.`'], $identifier) . '`'
-			: '`' . \str_replace('`', '``', $identifier) . '`';
+			? '`' . \str_replace(['`', '.'], ['``', '`.`'], $name) . '`'
+			: '`' . \str_replace('`', '``', $name) . '`';
 	}
 	
 	/**
