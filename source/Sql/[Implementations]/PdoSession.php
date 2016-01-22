@@ -299,7 +299,7 @@ abstract class PdoSession implements SqlSession {
 			$fulfillment = self::TF_REAL;
 		} else {
 			if ($fulfillment === null) {
-				$fulfillment === self::TF_REAL;
+				$fulfillment = self::TF_REAL;
 			}
 			
 			if ($fulfillment === self::TF_REAL) {
