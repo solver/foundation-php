@@ -186,7 +186,14 @@ class SqlUtils {
 		if (empty($rows)) return;
 		
 		$tblQ = $sqlSess->encodeName($table);
-		$pkColsQ = $sqlSess->encodeName($pkCols);
+		
+		if (is_array($pkCols)) {
+			foreach ($pkCols as $i => $pkCol) {
+				$pkColsQ[$i] = $sqlSess->encodeName($pkCols[$i]);	
+			}
+		} else {
+			$pkColsQ = $sqlSess->encodeName($pkCols);
+		}
 		
 		if (\is_array($pkCols)) {
 			foreach ($rows as $rk => $row) {
@@ -214,7 +221,9 @@ class SqlUtils {
 			}
 		} else {
 			foreach ($rows as $rk => $row) {
-				$row = $sqlSess->encodeValue($row);
+				foreach ($row as $i => $val) {
+					$row[$i] = $sqlSess->encodeValue($val);
+				}
 				
 				$setArr = array();
 				
