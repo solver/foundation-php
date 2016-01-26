@@ -52,7 +52,7 @@ class DefaultStatusMemoryLog extends DelegatingStatusLog implements StatusMemory
 	 * @see \Solver\Logging\ErrorMemoryLog::hasErrors()
 	 */
 	public function hasErrors() {
-		return (bool) $this->lastError !== null;
+		return (bool) ($this->lastError !== null);
 	}
 
 	/**
