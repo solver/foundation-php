@@ -65,7 +65,7 @@ class ExpressLog extends DefaultStatusMemoryLog {
 		if ($this->hasErrors()) throw new ActionException($this->log ?: $this);
 	}
 	
-	public function throwError(array $path = null, $message = null, $code = null, array $details = null) {
+	public function throwError($path = null, $message = null, $code = null, array $details = null) {
 		$this->addError($path, $message, $code, $details);
 		throw new ActionException($this->log ?: $this);
 	}
