@@ -122,7 +122,9 @@ class SqlUtils {
 			$valSeq = array();
 			
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
-				$row = $sqlSess->encodeValue($rows[$i]);
+				foreach ($row as $k => $v) {
+					$row[$k] = $sqlSess->encodeValue($rows[$i][$k]);
+				}
 				
 				$vals = array();
 				
