@@ -77,9 +77,12 @@ class SqlUtils {
 	 * 
 	 * @param array $row
 	 * Hashmap representing row (automatically encoded).
+	 * 
+	 * @param bool $replace
+	 * Default false. If true, builds a REPLACE query (INSERT or UPDATE) instead of an INSERT query.
 	 */
-	public static function insert(PdoMysqlSession $sqlSess, $table, array $row) {
-		self::insertMany($sqlSess, $table, array($row));
+	public static function insert(PdoMysqlSession $sqlSess, $table, array $row, $replace = false) {
+		self::insertMany($sqlSess, $table, array($row), false, $replace);
 	}
 
 	/**
@@ -97,8 +100,11 @@ class SqlUtils {
 	 * @param bool $extended
 	 * Optional (default = false). If true, the engine will attempt to insert all passed rows in a single extended
 	 * insert query. This requires that all rows to be inserted have the same columns.
+	 * 
+	 * @param bool $replace
+	 * Default false. If true, builds a REPLACE query (INSERT or UPDATE) instead of an INSERT query.
 	 */
-	public static function insertMany(PdoMysqlSession $sqlSess, $table, array $rows, $extended = false) {
+	public static function insertMany(PdoMysqlSession $sqlSess, $table, array $rows, $extended = false, $replace = false) {
 		if (empty($rows)) return;
 		
 		$tblQ = $sqlSess->encodeName($table);
@@ -108,7 +114,8 @@ class SqlUtils {
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
 				$row = [];
 				foreach ($rows[$i] as $k => $v) $row[$sqlSess->encodeName($k)] = $sqlSess->encodeValue($v);
-				$sql = 'INSERT INTO ' . $tblQ . ' (' . \implode(',', \array_keys($row)).') VALUES (' . \implode(',', $row) . ')';
+				if ($replace) $type = 'REPLACE'; else $type = 'INSERT';
+				$sql = $type . ' INTO ' . $tblQ . ' (' . \implode(',', \array_keys($row)).') VALUES (' . \implode(',', $row) . ')';
 				$sqlSess->execute($sql);
 			}
 		}
@@ -142,7 +149,8 @@ class SqlUtils {
 				$valSeq[] = '(' . \implode(',', $vals) . ')';
 			}
 			
-			$sql = 'INSERT INTO '.$tblQ.' (' . implode(',', $colsQ) . ') VALUES ' . implode(',', $valSeq);
+			if ($replace) $type = 'REPLACE'; else $type = 'INSERT';
+			$sql = $type . ' INTO '.$tblQ.' (' . implode(',', $colsQ) . ') VALUES ' . implode(',', $valSeq);
 
 			$sqlSess->execute($sql);
 		}
