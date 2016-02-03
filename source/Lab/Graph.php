@@ -15,10 +15,28 @@ use Solver\SqlX\SqlUtils;
  * 
  * You can create multiple links with the same fromId and name to link a set of nodes (i.e. an unordered collection).
  * 
- * TODO: Document exact SQL schema expectations and semantics.
+ * #NodeId: string; Node id, typically a foreign key to an autoincrementing positive bigint in another table.
+ * #Name: string; Typically varchar or enum of a reasonable length (255 or less) for holding a name (a "field name"),
+ * which identifies the relationship that the link describes, for example "children", "parent", and so on.
  * 
- * #EntityId: string; MySQL primary key (typically an autoincrementing positive bigint).
- * #Name: string; Up to 128 chars;
+ * Expected SQL schema for the "edge" table:
+ * 
+ * - fromId: #NodeId; Node id linking to another.
+ * - toId: #NodeId; Entity id being linked.
+ * - name: #Name;
+ * 
+ * To avoid duplicate links, set all three coluhmns as a composite primary key for the table. You might want to add also
+ * non-unique indexes for the following common lookups, depending on your uses cases:
+ * 
+ * Very common:
+ * 
+ * - Just column "fromId".
+ * - Column "fromId" + "name".
+ * 
+ * Less common:
+ * 
+ * - Just column "toId".
+ * - Column "toId" + "name".
  */
 class Graph {
 	protected $sess, $table;
@@ -38,10 +56,10 @@ class Graph {
 	 * The operation is idempotent, creating a link when a link with the same parameters exists has no effect.
 	 * 
 	 * @param string $fromId
-	 * #EntityId; Node linking to another node.
+	 * #NodeId; Node linking to another node.
 	 * 
 	 * @param string $toId
-	 * #EntityId; Node being linked to.
+	 * #NodeId; Node being linked to.
 	 * 
 	 * @param string $name
 	 * #Name; Link name.
@@ -64,10 +82,10 @@ class Graph {
 	 * TODO: Prevent overly broad conditions (like passing null for all fields, thus erasing the entire graph?).
 	 * 
 	 * @param string $fromId
-	 * #EntityId; Delete links where this node points to any another.
+	 * #NodeId; Delete links where this node points to any another.
 	 * 
 	 * @param string $toId
-	 * #EntityId; Delete links that point to this node.
+	 * #NodeId; Delete links that point to this node.
 	 * 
 	 * @param null|string $name
 	 * #Name; Name to filter by.
@@ -85,10 +103,10 @@ class Graph {
 	 * The operation is idempotent, copying a link over a link with the same content has no effect.
 	 * 
 	 * @param string $sourceFromId
-	 * #EntityId; Linking node to copy from.
+	 * #NodeId; Linking node to copy from.
 	 * 
 	 * @param string $targetFromId
-	 * #EntityId; Linking node to copy to (this node will be pointing to the same nodes afterwards).
+	 * #NodeId; Linking node to copy to (this node will be pointing to the same nodes afterwards).
 	 * 
 	 * @param null|string $name
 	 * null|#Name; If specified, copies only links with that name, otherwise, links with any name.
@@ -108,13 +126,13 @@ class Graph {
 	 * Returns the unique link names this node has for all nodes it links to. 
 	 *  
 	 * @param string $fromId
-	 * #EntityId;
+	 * #NodeId;
 	 * 
 	 * @return array
 	 * list<#Link>;
 	 * 
 	 * #Link: dict...
-	 * - id: #EntityId; Node is this link refers to.
+	 * - id: #NodeId; Node is this link refers to.
 	 * - name: null|string; Link name (may be null if the link is not named).
 	 */
 	public function getLinks($fromId, $name = null) {
@@ -128,7 +146,7 @@ class Graph {
 	 * Returns the unique link names this node has for all nodes it links to. 
 	 *  
 	 * @param string $fromId
-	 * #EntityId;
+	 * #NodeId;
 	 * 
 	 * @return string[]
 	 */
