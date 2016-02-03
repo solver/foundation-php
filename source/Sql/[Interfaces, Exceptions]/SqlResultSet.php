@@ -15,6 +15,6 @@ namespace Solver\Sql;
 
 // TODO: Extract interface from implementation.
 interface SqlResultSet {
-	function getOne();
-	function getAll();
+	function getOne($field = null);
+	function getAll($field = null);
 }
