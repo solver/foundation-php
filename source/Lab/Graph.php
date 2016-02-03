@@ -13,8 +13,7 @@ use Solver\SqlX\SqlUtils;
  * - toId = baz
  * - name = bar
  * 
- * You can create multiple links of the same name to link a collection of nodes (in a 1:N relationship, as seen from the
- * point of view of the fromId node).
+ * You can create multiple links with the same fromId and name to link a set of nodes (i.e. an unordered collection).
  * 
  * TODO: Document exact SQL schema expectations and semantics.
  * 
@@ -36,6 +35,8 @@ class Graph {
 	/**
 	 * Creates a new link.
 	 * 
+	 * The operation is idempotent, creating a link when a link with the same parameters exists has no effect.
+	 * 
 	 * @param string $fromId
 	 * #EntityId; Node linking to another node.
 	 * 
@@ -52,7 +53,7 @@ class Graph {
 			'fromId' => $fromId,
 			'toId' => $toId,
 			'name' => $name,
-		]);
+		], true);
 	}
 	
 	/**
@@ -81,6 +82,8 @@ class Graph {
 	/**
 	 * Copies the linked node(s) of one linking node to another.
 	 * 
+	 * The operation is idempotent, copying a link over a link with the same content has no effect.
+	 * 
 	 * @param string $sourceFromId
 	 * #EntityId; Linking node to copy from.
 	 * 
@@ -98,7 +101,7 @@ class Graph {
 		
 		$where = $this->getBoolSql($sourceFromId, null, $name);
 		$targetFromIdEn = $sess->encodeValue($targetFromId);
-		$sess->execute("INSERT INTO $tableEn SELECT $targetFromIdEn AS fromId, toId, name FROM $tableEn WHERE $where");
+		$sess->execute("REPLACE INTO $tableEn SELECT $targetFromIdEn AS fromId, toId, name FROM $tableEn WHERE $where");
 	}
 	
 	/**
