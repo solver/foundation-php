@@ -361,6 +361,7 @@ class StringFormat implements Format, FastAction {
 		if ($this->functions) {
 			return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
 		} else {
+			$output = $input;
 			return true;
 		}
 	}
