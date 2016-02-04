@@ -78,9 +78,10 @@ class Graph {
 		$row = ['type' => $type];
 		if ($id !== null) $row['id'] = $id;
 		
-		SqlUtils::insert($sess, $linkTable, $row, true);
+		SqlUtils::insert($sess, $nodeTable, $row, true);
 		
 		if ($id === null) $id = $sess->getLastIdentity();
+		
 		return $id;
 	}
 	
