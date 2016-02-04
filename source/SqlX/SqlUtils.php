@@ -522,7 +522,9 @@ class SqlUtils {
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' (' . \implode(',', $sqlSess->encodeValue($val)) . ')';
+						$valEn = [];
+						foreach ($val as $subVal) $valEn[] = $sqlSess->encodeValue($subVal);
+						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' (' . \implode(',', $valEn) . ')';
 						break;
 						
 					case '!IN':
