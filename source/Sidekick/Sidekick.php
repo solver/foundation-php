@@ -18,7 +18,9 @@ use Solver\Sql\SqlSession;
 use Solver\Sidekick\SqlContext as SC;
 
 // TODO: Support linking like Solver\Lab\Graph and the rest Graph does (thus making Graph obsolete). Also we need to
-// support "joins" on create (multi-insert automatically depending on the fields given).
+// support "joins" on create (multi-insert automatically depending on the fields given). It should be possible to
+// enforce a join so required fields are not missed. Probably as a parameter (create a record of [this, this, this] type
+// ).
 // FIXME: In some clauses (and statement classes) it's not very strict where you can pass keys/values/expressions with
 // certain interpretations, and we need to lock down and define all this a little bit better.
 // FIXME: We should probably require that columns in read context specify alias always (alias.column) to avoid
