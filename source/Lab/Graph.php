@@ -144,15 +144,28 @@ class Graph {
 	 * 
 	 * @param string $name
 	 * #LinkName; Link name.
+	 * 
+	 * @param bool $replacePrevious
+	 * Default false. If true, any previous link(s) from the same node, with the same id, will be removed before this
+	 * one is added.
+	 * 
+	 * @return void
 	 */
-	public function link($fromId, $toId, $name) {
+	public function link($fromId, $toId, $name, $replacePrevious = false) {
 		list($sess, $nodeTable, $nodeTableEn, $linkTable, $linkTableEn) = $this->getCommon();
 		
-		SqlUtils::insert($sess, $linkTable, [
-			'fromId' => $fromId,
-			'toId' => $toId,
-			'name' => $name,
-		], true);
+		$sess->transactional(null, $sess::TF_VIRTUAL, function () use ($fromId, $toId, $name, $replacePrevious, $sess, $linkTable, $linkTableEn) {
+			if ($replacePrevious) {
+				$sql = SqlUtils::encodeInto($sess, "DELETE FROM $linkTableEn WHERE fromId = ? AND name = ?", [$fromId, $name]);
+				$sess->execute($sql);
+			}
+			
+			SqlUtils::insert($sess, $linkTable, [
+				'fromId' => $fromId,
+				'toId' => $toId,
+				'name' => $name,
+			], true);
+		});		
 	}
 	
 	/**
@@ -194,6 +207,10 @@ class Graph {
 	 * 
 	 * TODO: Support "name filter" function that can remap (rename) source names to something else (or omit entire 
 	 * names from the copy operation by returning null).
+	 * 
+	 * TODO: Support "replacePrevious" style flag for this method, like link(). We might need to have a map of names
+	 * setting this property to true and false, for each, respectively (this should be optional as it'll slow down 
+	 * execution).
 	 */
 	public function copyLinks($sourceFromId, $targetFromId, $name = null) {
 		list($sess, $nodeTable, $nodeTableEn, $linkTable, $linkTableEn) = $this->getCommon();
