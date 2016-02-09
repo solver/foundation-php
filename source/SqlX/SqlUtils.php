@@ -618,4 +618,31 @@ class SqlUtils {
 		
 		return implode(', ', $identExpr);		
 	}
+	
+	/**
+	 * Renders an IN expression, complete with the encoded column name, like this:
+	 * 
+	 * `foo` IN (1, 2, 3)
+	 * 
+	 * @param \Solver\Sql\PdoMysqlSession $sqlSess
+	 * Database connection instance to quote/render against.
+	 * 
+	 * @param string $colName
+	 * Column name (unencoded, plain text).
+	 * 
+	 * @param array $values
+	 * list<scalar>; Values to test against.
+	 * 
+	 * @return string
+	 * An SQL expression.
+	 */
+	public static function in(PdoMysqlSession $sqlSess, $colName, array $values) {
+		$valuesQ = [];
+		
+		foreach ($values as $value) {
+			$valuesQ[] = $sqlSess->encodeValue($value);
+		}
+		
+		return $sqlSess->encodeName($colName) . ' IN (' . implode(', ', $valuesQ) . ')';
+	}
 }
