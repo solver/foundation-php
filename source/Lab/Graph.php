@@ -6,7 +6,12 @@ use Solver\SqlX\SqlUtils;
 use Optilocal\SaTool\Utils;
 
 /**
+ * TODO: Merge this into Sidekick? then we can also have constructors, destructors, and trait-aware updates, gets etc.
+ * 
  * Helpers for dealing with directed graphs expressed as two SQL tables: node and link.
+ * 
+ * You're expected to use additional tables for storing node state, and have their primary key be a foreign key
+ * pointing node.id (1:1 relationship).
  * 
  * #NodeId: string; Node id, typically a foreign key to an autoincrementing positive bigint in another table.
  * 
@@ -14,17 +19,9 @@ use Optilocal\SaTool\Utils;
  * "field name"), which identifies the relationship that the link describes, for example "children", "parent", and so
  * on.
  * 
- * #NodeType: string; The format is identical  to #LinkName, the semantics are a name which clarifies the "type" of the
- * node, which can be used by application to join additional table(s) on the primary key field for additional fields 
- * holding state and meta information for the node. 
- * 
  * Expected SQL schema for the "node" table:
  * 
- * - id: #NodeId; Node id.
- * - type: #NodeType;
- * 
- * Where the "id" column would typically be an autoincrementing primary key. You might want to add a non-unique index
- * on the type, if you want to be able to select all node instances of a given type.
+ * - id: #NodeId; Node id. Typically an autoincrementing primary key.
  * 
  * Expected SQL schema for the "link" table:
  * 
@@ -61,10 +58,7 @@ class Graph {
 	
 	/**
 	 * Creates a new node, returns its id.
-	 * 
-	 * @param string $type
-	 * #NodeType;
-	 * 
+	 *  
 	 * @param null|string $id
 	 * null|#NodeId; You shouldn't specify an id here if you're using an autoincrementing primary key, but you can 
 	 * supply one if you don't.
@@ -72,10 +66,10 @@ class Graph {
 	 * @return string
 	 * #NodeId;
 	 */
-	public function createNode($type, $id = null) {
+	public function createNode($id = null) {
 		list($sess, $nodeTable, $nodeTableEn, $linkTable, $linkTableEn) = $this->getCommon();
 		
-		$row = ['type' => $type];
+		$row = [];
 		if ($id !== null) $row['id'] = $id;
 		
 		SqlUtils::insert($sess, $nodeTable, $row, true);
