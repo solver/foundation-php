@@ -645,4 +645,32 @@ class SqlUtils {
 		
 		return $sqlSess->encodeName($colName) . ' IN (' . implode(', ', $valuesQ) . ')';
 	}
+	
+	/**
+	 * Returns a full row by id (primary key column named "id"; a common case).
+	 * 
+	 * @param PdoMysqlSession $sqlSess
+	 * @param string $tableName
+	 * @param string $id
+	 * @return array
+	 */
+	public static function getById(PdoMysqlSession $sqlSess, $tableName, $id) {
+		$tableEn = $sqlSess->encodeName($tableName);
+		$sql = self::encodeInto($sqlSess, "SELECT * FROM $tableEn WHERE id = ?", [$id]);
+		return $sqlSess->query($sql)->getOne();
+	}
+	
+	/**
+	 * Check a row id for existence (primary key column named "id"; a common case).
+	 * 
+	 * @param PdoMysqlSession $sqlSess
+	 * @param string $tableName
+	 * @param string $id
+	 * @return array
+	 */
+	public static function hasId(PdoMysqlSession $sqlSess, $tableName, $id) {
+		$tableEn = $sqlSess->encodeName($tableName);
+		$sql = self::encodeInto($sqlSess, "SELECT id FROM $tableEn WHERE id = ?", [$id]);
+		return (bool) $sqlSess->query($sql)->getOne();
+	}
 }
