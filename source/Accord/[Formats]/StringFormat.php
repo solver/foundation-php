@@ -348,7 +348,7 @@ class StringFormat implements Format, FastAction {
 		if (!\is_string($input)) {
 			// We tolerate certain scalars by automatically converting them to strings.
 			if (\is_int($input) || \is_float($input) || \is_bool($input)) {
-				$output = (string) $input;
+				$input = (string) $input;
 			} else {
 				if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
 			
