@@ -38,40 +38,83 @@ use Solver\Accord\InternalTransformUtils as ITU;
 class BoolFormat implements Format, FastAction {
 	use ApplyViaFastApply;
 	
+	protected $functions = [];
+	
 	public function fastApply($input = null, & $output = null, $mask = 0, & $events = null, $path = null) {
+		$success = false;
 		switch (\gettype($input)) {
 			case 'boolean':
-				$output = $input; 
-				return true;
+				$success = true;
+				break;
 			
 			case 'integer':
 			case 'double':
 				if ($input == 0) {
-					$output = false;
-					return true;
+					$input = false;
+					$success = true;
+					break;
 				}
 				if ($input == 1) {
-					$output = true;
-					return true;
+					$input = true;
+					$success = true;
+					break;
 				}
 				break;
 				
 			case 'string':
 				if ($input === '' || $input === '0' || $input === 'false') { 
-					$output = false; 
-					return true;
+					$input = false; 
+					$success = true;
+					break;
 				}
 				if ($input === '1' || $input === 'true') {
-					$output = true;
-					return true;
+					$input = true;
+					$success = true;
+					break;
 				}
 				break;
 		}
 		
-		if ($input instanceof ToValue) return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+		if (!$success && ($input instanceof ToValue)) {
+			return $this->fastApply($input->toValue(), $output, $mask, $events, $path);
+		}
 		
-		if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a valid boolean.');		
-		$output = null; 
-		return false;
+		if (!$success) {
+			if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, 'Please provide a valid boolean.');		
+			$output = null; 
+			return false;
+		}
+		
+		return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
+	}
+	
+	public function isTrue() {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if ($input !== true) {
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a boolean true value.");
+				$output = null;
+				return false;
+			} else {
+				$output = $input;
+				return true;
+			}
+		};
+		
+		return $this;
+	}
+	
+	public function isFalse() {
+		$this->functions[] = static function ($input, & $output, $mask, & $events, $path) {
+			if ($input !== false) {
+				if ($mask & SL::T_ERROR) ITU::addErrorTo($events, $path, "Please provide a boolean false value.");
+				$output = null;
+				return false;
+			} else {
+				$output = $input;
+				return true;
+			}
+		};
+		
+		return $this;
 	}
 }
