@@ -649,6 +649,8 @@ class SqlUtils {
 	/**
 	 * Returns a full row by id (primary key column named "id"; a common case).
 	 * 
+	 * TODO: Add FOR UPDATE flag.
+	 * 
 	 * @param PdoMysqlSession $sqlSess
 	 * @param string $tableName
 	 * @param string $id
@@ -662,6 +664,8 @@ class SqlUtils {
 	
 	/**
 	 * Check a row id for existence (primary key column named "id"; a common case).
+	 * 
+	 * TODO: Add FOR UPDATE flag.
 	 * 
 	 * @param PdoMysqlSession $sqlSess
 	 * @param string $tableName
