@@ -522,9 +522,14 @@ class SqlUtils {
 						if (!is_array($val)) {
 							throw new \Exception('Invalid value list format.');
 						}
-						$valEn = [];
-						foreach ($val as $subVal) $valEn[] = $sqlSess->encodeValue($subVal);
-						$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' (' . \implode(',', $valEn) . ')';
+						
+						if (!$val) {
+							$exprList[] = '1 = 1';
+						} else {
+							$valEn = [];
+							foreach ($val as $subVal) $valEn[] = $sqlSess->encodeValue($subVal);
+							$exprList[] = $sqlSess->encodeName($col) . ' ' . $type . ' (' . \implode(',', $valEn) . ')';
+						}
 						break;
 						
 					case '!IN':
@@ -637,6 +642,8 @@ class SqlUtils {
 	 * An SQL expression.
 	 */
 	public static function in(PdoMysqlSession $sqlSess, $colName, array $values) {
+		if (!$values) return '1 = 1';
+		
 		$valuesQ = [];
 		
 		foreach ($values as $value) {
