@@ -85,7 +85,12 @@ class BoolFormat implements Format, FastAction {
 			return false;
 		}
 		
-		return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
+		if ($this->functions) {
+			return ITU::fastApplyFunctions($this->functions, $input, $output, $mask, $events, $path);
+		} else {
+			$output = $input;
+			return true;
+		}
 	}
 	
 	public function isTrue() {
