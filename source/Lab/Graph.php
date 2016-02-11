@@ -230,7 +230,7 @@ class Graph {
 	 * list<#Link>;
 	 * 
 	 * #Link: dict...
-	 * - id: #NodeId; Node is this link refers to.
+	 * - id: #NodeId; Node this link refers to.
 	 * - name: null|string; Link name (may be null if the link is not named).
 	 */
 	public function getLinks($fromId, $name = null) {

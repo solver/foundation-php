@@ -21,6 +21,8 @@ use Solver\Accord\InternalTransformUtils as ITU;
  * TODO: Add subset($dictFormat, ...$fields) or similar: an ability to create a partial clone only of selected fields.
  * TODO: Add ignoreRest() /no warnings on rest/ rejectRest() /errors on rest/ to complement addRest() and we need a
  * method for the default behavior warnOnRest() or similar.
+ * TODO: Add a format for requiring alternate fields (x, y or a, b), a specific case of OrFormat. We have this in
+ * Sidekick fields. A DictFormat-specific union with alternate fields. ->requireEither(['foo', 'bar'], ['baz']).
  */
 class DictFormat implements Format, FastAction {
 	use ApplyViaFastApply;
