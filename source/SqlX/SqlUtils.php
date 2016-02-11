@@ -105,7 +105,7 @@ class SqlUtils {
 	 * Default false. If true, builds a REPLACE query (INSERT or UPDATE) instead of an INSERT query.
 	 */
 	public static function insertMany(PdoMysqlSession $sqlSess, $table, array $rows, $extended = false, $replace = false) {
-		if (empty($rows)) return;
+		if (!$rows) return;
 		
 		$tblQ = $sqlSess->encodeName($table);
 		
@@ -123,12 +123,15 @@ class SqlUtils {
 		// Single extended insert (cols specified for each row should match).
 		else {
 			$cols = \array_keys($rows[0]);
-			$colsQ = $sqlSess->encodeName($cols);
+			$colsQ = [];
+			foreach ($cols as $col) $colsQ[] = $sqlSess->encodeName($col);
 			
 			// When imploded, forms the VALUES part of the query.
 			$valSeq = array();
 			
 			for($i = 0, $max = \count($rows); $i < $max; $i++) {
+				$row = $rows[$i];
+				
 				foreach ($row as $k => $v) {
 					$row[$k] = $sqlSess->encodeValue($rows[$i][$k]);
 				}
