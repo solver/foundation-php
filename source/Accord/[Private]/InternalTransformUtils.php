@@ -82,8 +82,13 @@ class InternalTransformUtils {
 	 * Transformed value (or null).
 	 */
 	public static function fastApplyFunctions($functions, $input, & $output, $mask, & $events, $path) {
-		foreach ($functions as $function) {
-			if (!$function($input, $output, $mask, $events, $path)) return false;
+		if ($functions) {
+			foreach ($functions as $function) {
+				if (!$function($input, $output, $mask, $events, $path)) return false;
+				$input = $output;
+			}
+		} else {
+			$output = $input;
 		}
 		return true;
 	}
