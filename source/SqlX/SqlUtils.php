@@ -524,7 +524,7 @@ class SqlUtils {
 						}
 						
 						if (!$val) {
-							$exprList[] = '1 = 1';
+							throw new \Exception('Provide at least one value for IN expression.');
 						} else {
 							$valEn = [];
 							foreach ($val as $subVal) $valEn[] = $sqlSess->encodeValue($subVal);
@@ -642,7 +642,7 @@ class SqlUtils {
 	 * An SQL expression.
 	 */
 	public static function in(PdoMysqlSession $sqlSess, $colName, array $values) {
-		if (!$values) return '1 = 1';
+		if (!$values) throw new \Exception('Provide at least one value for IN expression.');
 		
 		$valuesQ = [];
 		
