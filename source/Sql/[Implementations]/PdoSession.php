@@ -160,7 +160,7 @@ abstract class PdoSession implements SqlSession {
 			
 			$statement = new PdoResultSet($this, $handle);
 		} catch (PDOException $e) {
-			throw new SqlException($e->getMessage(), $e->getCode(), null, $e);
+			throw new SqlException($e->getMessage() . ' for query "' . $sql . '"', $e->getCode(), null, $e);
 		}
 		
 		return $statement;
@@ -187,7 +187,7 @@ abstract class PdoSession implements SqlSession {
 				$this->lastId = $lastId;
 			}
 		} catch (PDOException $e) {
-			throw new SqlException($e->getMessage(), $e->getCode(), null, $e);
+			throw new SqlException($e->getMessage() . ' for query "' . $sql . '"', $e->getCode(), null, $e);
 		}
 		
 		return $affectedRows;
