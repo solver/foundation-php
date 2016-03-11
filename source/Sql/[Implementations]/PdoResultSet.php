@@ -127,6 +127,7 @@ class PdoResultSet implements SqlResultSet {
 				
 				foreach ($row as $k => $v) {
 					if ($k == $field) {
+						$index = $k;
 						break;
 					}
 					
