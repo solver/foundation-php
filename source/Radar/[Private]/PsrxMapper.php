@@ -15,18 +15,18 @@ namespace Solver\Radar;
 
 class PsrxMapper {
 	public function map($sourceRootDir, $dir, $namespace = null, $compiledDir, $callback) {
-		$configHost = static function ($cfg, $__file__) {
-			require $__file__;
-		};
-		
-		$scanDir = function ($dir, $namespace, $rules) use ($sourceRootDir, & $scanDir, $compiledDir, $callback, $configHost) {
+		$scanDir = function ($dir, $namespace, $rules) use ($sourceRootDir, & $scanDir, $compiledDir, $callback) {
 			$namespace = \trim($namespace, '\\');
 			
-			if (file_exists($sourceRootDir . '/' . $dir . '/__config.php')) {
+			$configuratorPath = $sourceRootDir . '/' . $dir . '/__config.php';
+			
+			if (file_exists($configuratorPath)) {
 				$config = new PsrxConfig(function ($type, $name, $handler, $handlerOptions) use (& $rules) {
 					$rules[] = [$type, $name, $handler, $handlerOptions];
 				});
-				$configHost($config, $sourceRootDir . '/' . $dir . '/__config.php');
+				
+				$configurator = require $configuratorPath;
+				$configurator($config);
 			}
 			
 			try {
