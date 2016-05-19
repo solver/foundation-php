@@ -65,7 +65,7 @@ class PdoMysqlPool extends PdoPool {
 		// TODO: We should expose the charset parameter in $config.
 		return new \PDO('mysql:host=' . $config['host'].
 			(isset($config['port'])?':' . $config['port']:'').
-			';dbname=' . $config['database'] . ';charset=utf8',
+			';dbname=' . $config['database'] . ';charset=utf8mb4',
 			$config['user'], 
 			$config['password']
 		);

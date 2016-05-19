@@ -239,7 +239,7 @@ abstract class PdoSession implements SqlSession {
 		if (is_int($value) && $value >= 0) return (string) $value;
 		
 		if ((is_float($value) && floor($value) === $value && $value >= 0) ||
-			(is_string($value) && ctype_digit($value) && $value[0] !== '0')) {
+			(is_string($value) && ctype_digit($value) && isset($value[0]) && $value[0] !== '0')) {
 			
 			$value = (string) $value;
 			$len = strlen($value);
