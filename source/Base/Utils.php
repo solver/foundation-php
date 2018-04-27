@@ -66,15 +66,15 @@ class Utils {
 		if (strpos($contentType, 'application/json') === 0) {
 			$body = json_decode(stream_get_contents(fopen('php://input', 'r')), true);
 		} else {
-			$body = $_FILES ? self::injectUploadedFiles($_POST, $_FILES) : $_POST;
+			$body = $_FILES ? self::injectUploadedFiles($_POST ?? [], $_FILES ?? []) : $_POST ?? [];
 		}
 		
 		return [
-			'query' => $_GET,
+			'query' => $_GET ?? [],
 			'body' => $body,
-			'cookies' => $_COOKIE,
-			'server' => $_SERVER,
-			'env' => $_ENV,
+			'cookies' => $_COOKIE ?? [],
+			'server' => $_SERVER ?? [],
+			'env' => $_ENV ?? [],
 		];
 	}
 	
