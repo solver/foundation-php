@@ -89,7 +89,7 @@ abstract class AbstractTemplate {
 	 * 
 	 * @var array
 	 */
-	private $tagFuncStack;
+	private $tagFuncStack = [];
 	
 	/**
 	 * TODO: Unify all stacks, add render/import templates to the stack (will improve content reporting during errors).
@@ -98,7 +98,7 @@ abstract class AbstractTemplate {
 	 * 
 	 * @var array
 	 */
-	private $tagParamStack;
+	private $tagParamStack = [];
 	
 	/**
 	 * See method tag().
@@ -198,7 +198,8 @@ abstract class AbstractTemplate {
 			return $result;
 		} finally {
 			// During normal exit $this->obLevel is 0, so this is only for abnormal conditions.
-			while ($this->obLevel--) ob_end_flush();
+            // TODO: In case of errors this doesn't seem to behave right. Everything is escaped.
+		    while ($this->obLevel--) ob_end_flush();
 		}
 	}	
 	
@@ -222,7 +223,7 @@ abstract class AbstractTemplate {
 		if ($path === null) {
 			$this->abortWithError('Template "' . $templateId . '" not found.');
 		}
-		
+
 		$tagFuncStackDepth = \count($this->tagFuncStack);
 		$tagParamStackDepth = \count($this->tagParamStack);
 		$scope = $this->scope;
